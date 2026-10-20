@@ -43,13 +43,13 @@
     background: var(--bg);
     color: var(--label);
     min-height: 100vh;
-    padding: var(--s3) var(--s2) calc(var(--s5) + 60px);
+    padding: 12px var(--s2) calc(var(--s5) + 60px);
   }
   .wrap { max-width: 460px; margin: 0 auto; }
   [hidden] { display: none !important; }
 
-  header { text-align: center; margin-bottom: var(--s3); }
-  header h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.024em; margin: 0; }
+  header { text-align: center; margin-bottom: 12px; }
+  header h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.024em; margin: 0; }
 
   .card {
     background: var(--surface);
@@ -97,6 +97,28 @@
   .field input:focus { outline: none; border-color: var(--accent); background: var(--surface); }
   .field-note { font-size: 14px; line-height: 1.45; color: var(--label-3); margin-top: var(--s1); }
   .field-note.warn { color: var(--amber-text); font-weight: 600; }
+  /* Match format picker — 2x2 grid so the whole setup screen fits on a phone
+     without scrolling (2026-10-02, Kenny) */
+  .fmt { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s1); }
+  .fmt button {
+    position: relative; text-align: left; min-height: 60px; padding: 9px 12px; border-radius: var(--r-sm);
+    background: var(--fill); color: var(--label); border: 2px solid transparent;
+    font-size: 17px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2;
+  }
+  .fmt button small { display: block; font-size: 15px; font-weight: 500; color: var(--label-2); margin-top: 2px; }
+  .fmt button.on { border-color: var(--accent); background: var(--accent-dim); }
+  .fmt button.on::after { content: "✓"; position: absolute; right: 10px; top: 8px;
+                          font-size: 20px; color: var(--accent); font-weight: 800; }
+  .fmt-note { font-size: 14px; line-height: 1.4; color: var(--label-2); margin-top: var(--s1); min-height: 2.8em; }
+  /* compact setup screen */
+  #stSetup .card { padding: 18px; }
+  #stSetup .step-title { font-size: 22px; margin-bottom: 10px; }
+  #stSetup .field + .field { margin-top: 14px; }
+  #stSetup .field label { margin-bottom: 6px; }
+  #stSetup .field input { min-height: 48px; padding: 10px 14px; }
+  #stSetup .field-note { font-size: 13px; margin-top: 6px; }
+  #stSetup .setup-go { position: sticky; bottom: calc(10px + env(safe-area-inset-bottom)); margin-top: 12px; }
+  #stSetup .setup-go .btn { min-height: 62px; box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
 
   /* Buttons */
   button { font-family: inherit; -webkit-appearance: none; appearance: none; border: none; cursor: pointer; }
@@ -117,6 +139,13 @@
     font-weight: 600; font-size: 17px; min-height: 54px;
   }
   .btn-plain.danger { color: var(--red); }
+  /* 2026-10-19: one-tap time-out (the video skips the dead time automatically) */
+  .timeout-btn { margin-top: 14px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: var(--surface); color: var(--label); border: 2px dashed rgba(0,0,0,0.18);
+    font-weight: 700; font-size: 18px; min-height: 58px; border-radius: var(--r-md); }
+  .timeout-btn .to-sub { display: none; font-size: 13px; font-weight: 600; opacity: 0.8; }
+  .timeout-btn.on { background: #FFB020; color: #1d1400; border: 2px solid #E09400; flex-direction: column; gap: 2px; }
+  .timeout-btn.on .to-sub { display: block; }
   .btn.armed { background: var(--amber-dim); color: var(--amber-text); box-shadow: inset 0 0 0 2px currentColor; }
   .btn-link {
     background: none; color: var(--accent-text); font-size: 16px; font-weight: 600;
@@ -263,15 +292,27 @@
       <h2 class="step-title">Who's playing?</h2>
       <div class="field">
         <label for="team1Name">Our team</label>
-        <input type="text" id="team1Name" value="Home Team" maxlength="30" autocomplete="off">
+        <input type="text" id="team1Name" value="Venom Rebels" maxlength="30" autocomplete="off">
       </div>
       <div class="field">
         <label for="team2Name">Opponent</label>
         <input type="text" id="team2Name" value="" placeholder="Type the other team's name" maxlength="30" autocomplete="off" autocapitalize="words">
-        <div class="field-note" id="nameNote">This shows on the scoreboard in the video.</div>
+        <div class="field-note" id="nameNote">Shows on the scoreboard in the video.</div>
+      </div>
+      <div class="field">
+        <label>Sets (ask the ref if unsure)</label>
+        <div class="fmt" id="fmtPick">
+          <button type="button" data-fmt="bo3">Sets to 25<small>Best 2 of 3</small></button>
+          <button type="button" data-fmt="2of2">Sets to 25<small>2 sets only</small></button>
+          <button type="button" data-fmt="bo3-15">Sets to 15<small>Best 2 of 3</small></button>
+          <button type="button" data-fmt="2of2-15">Sets to 15<small>2 sets only</small></button>
+          <button type="button" data-fmt="scrim">Scrimmage<small>Sets to 25 · until time's up</small></button>
+          <button type="button" data-fmt="scrim-15">Scrimmage<small>Sets to 15 · until time's up</small></button>
+        </div>
+        <div class="fmt-note" id="fmtNote"></div>
       </div>
     </div>
-    <div class="stack" style="margin-top: var(--s3);">
+    <div class="setup-go">
       <button class="btn btn-big btn-dark" id="setupNext" disabled>Next</button>
     </div>
   </section>
@@ -282,7 +323,7 @@
       <h2 class="step-title">Ready to start</h2>
       <p class="step-sub" id="readyTeams"></p>
       <ol class="steps">
-        <li><span class="num">1</span><span>Press <b>RECORD</b> on the camera.</span></li>
+        <li><span class="num">1</span><span>Press <b>RECORD</b> on the camera <b>a few minutes before the first serve</b> (the extra is trimmed off automatically).</span></li>
         <li><span class="num">2</span><span>At the same moment, tap the green <b>START</b> button below.</span></li>
       </ol>
     </div>
@@ -320,6 +361,11 @@
       </span>
       <span class="score" id="t2Score">0</span>
     </button>
+    <button class="btn timeout-btn" id="timeoutBtn" type="button">
+      <span id="timeoutLabel">⏸&nbsp; Time-out</span>
+      <span class="to-sub" id="timeoutSub">The video skips it · ends at the next point · tap to cancel</span>
+    </button>
+    <button class="btn btn-plain" id="timeUpBtn" hidden style="margin-top:var(--s2)">Time's up — end the scrimmage</button>
 
     <details class="more" id="playMore">
       <summary>More options</summary>
@@ -328,7 +374,8 @@
         <button class="btn btn-plain" id="t1Minus">Remove a point from <span class="n1">Our Team</span></button>
         <button class="btn btn-plain" id="t2Minus">Remove a point from <span class="n2">Opponent</span></button>
         <p class="more-note">"Remove a point" takes away that team's most recent point in this set, even if other points came after it.</p>
-        <button class="btn btn-plain" id="pauseBtn">Camera stopped mid-set (timeout, battery…)</button>
+        <button class="btn btn-plain" id="pauseBtn">Camera stopped mid-set (battery, card full…)</button>
+        <button class="btn btn-plain" id="forceEndBtn">End this set now (point cap / time limit)</button>
         <button class="btn btn-plain danger" id="stopBtn">End match early (forfeit / out of time)</button>
       </div>
       <div class="section-header">Sync offset</div>
@@ -356,6 +403,7 @@
       <div class="stack">
         <button class="btn btn-big btn-dark" id="breakStopped">I stopped the camera</button>
         <button class="btn btn-plain" id="breakRolling">Camera is still recording — start next set</button>
+        <button class="btn btn-plain" id="breakTimeUp" hidden>Time's up — end the scrimmage here</button>
       </div>
     </div>
     <button class="btn-link" id="breakUndo">Oops — undo that last point</button>
@@ -379,11 +427,12 @@
   <!-- ============ Match over ============ -->
   <section id="stMatchOver" hidden>
     <div class="card">
+      <p class="step-sub" id="moHead" hidden style="text-align:center;font-weight:700"></p>
       <h2 class="step-title" id="moTitle">Match over!</h2>
       <p class="result-big" id="moScore"></p>
       <ol class="steps">
-        <li><span class="num">1</span><span>Stop the camera.</span></li>
-        <li><span class="num">2</span><span>Tap <b>FINISH MATCH</b>. The scores are sent automatically.</span></li>
+        <li><span class="num">1</span><span>Keep recording about <b>30 more seconds</b> (the celebration and match summary go here), then stop the camera.</span></li>
+        <li><span class="num">2</span><span>Tap <b>FINISH MATCH</b>. The scores are sent to Kenny automatically.</span></li>
       </ol>
       <button class="btn btn-big btn-go" id="finishBtn">FINISH MATCH</button>
     </div>
@@ -405,7 +454,7 @@
       <summary>More options</summary>
       <div class="stack">
         <button class="btn btn-plain" id="exportBtn">Export match file (backup)</button>
-        <p class="more-note">Only needed if sending to Google Drive fails. On a phone this opens the share menu.</p>
+        <p class="more-note">Only needed if sending to Kenny's Drive fails. On a phone this opens the share menu.</p>
       </div>
     </details>
   </section>
@@ -425,6 +474,9 @@ let paused = false;
 let pausedTotal = 0;      // total ms the camera was stopped
 let pauseStartedAt = null;
 let events = [];
+let timeouts = [];        // 2026-10-19: time-out taps [{t: s, set}] — the video pipeline cuts the dead time
+let timeoutOpen = false;  // a time-out is in progress (ends at the next point)
+let recordings = [];      // real clock times the camera ran: [{start: ms, end: ms|null}] (2026-09-28)
 let setHistory = [];      // {set, t1, t2, winner: 1|2|0}
 let t1Score = 0, t2Score = 0, t1Sets = 0, t2Sets = 0, currentSet = 1;
 let timerInterval = null;
@@ -434,7 +486,38 @@ let namesConfirmed = false;
 let restoreData = null;   // a saved match waiting for "Continue?"
 
 const TAP_GUARD_MS = 700;  // ignore repeat taps faster than any real rally
-const MAX_SETS = 3;
+
+// Match formats (2026-09-28, from the OVA Youth Competitions Manual: formats 2/2,
+// 2/3, 3/3 are on each tournament's schedule; all sets win by 2, no cap unless
+// the schedule says so). 'best' stops once a team has 2 sets; 'all' plays every set.
+// 2026-10-02 (Kenny): 15-point formats added (12U / 4 v 4). 'pts' = points per
+// set; in the 2-sets-only formats a 1–1 match goes to the team with the most
+// total points (equal total = tie).
+const FORMATS = {
+  bo3:       { code: 'bo3',     sets: 3, mode: 'best', pts: 25, decider: 15,
+               label: 'sets to 25, best 2 of 3', desc: '2 sets to 25 · a 3rd set (to 15) only if it\'s 1–1. Win\u00a0by\u00a02.' },
+  '2of2':    { code: '2of2',    sets: 2, mode: 'all',  pts: 25, decider: 25,
+               label: 'sets to 25, 2 sets only', desc: 'Both sets to 25 are played · if 1–1, most total points wins. Win\u00a0by\u00a02.' },
+  'bo3-15':  { code: 'bo3-15',  sets: 3, mode: 'best', pts: 15, decider: 15,
+               label: 'sets to 15, best 2 of 3', desc: 'Sets to 15 (e.g. 12U, 4 v 4) · a 3rd set only if it\'s 1–1. Win\u00a0by\u00a02.' },
+  '2of2-15': { code: '2of2-15', sets: 2, mode: 'all',  pts: 15, decider: 15,
+               label: 'sets to 15, 2 sets only', desc: 'Both sets to 15 are played · if 1–1, most total points wins. Win\u00a0by\u00a02.' },
+  // 2026-10-04 (Kenny): friendly scrimmages during practice — no fixed number of
+  // sets, just sets to 25 (or 15) until practice time runs out ('open' mode).
+  // Time's up mid-set: the team ahead wins that set (a tie counts for nobody).
+  // Winner: most sets; equal sets -> most total points; equal points = tie.
+  scrim:      { code: 'scrim',    sets: 0, mode: 'open', pts: 25, decider: 25,
+               label: 'scrimmage, sets to 25', desc: 'Sets to 25 until practice time runs out · tap Time\'s up to finish (the team ahead wins an unfinished set). Win\u00a0by\u00a02.' },
+  'scrim-15': { code: 'scrim-15', sets: 0, mode: 'open', pts: 15, decider: 15,
+               label: 'scrimmage, sets to 15', desc: 'Sets to 15 until practice time runs out · tap Time\'s up to finish (the team ahead wins an unfinished set). Win\u00a0by\u00a02.' },
+  // "3 sets — all played" (3-team pools at Provincials) removed 2026-09-28 at
+  // Kenny's request — rare; End this set now / End match early cover it.
+};
+let fmt = FORMATS.bo3;
+let forcedSets = [];      // sets ended with "End this set now" (point cap / time limit)
+let timeUp = false;       // scrimmage: "Time's up" tapped — waiting for FINISH
+let timeUpForced = 0;     // the set "Time's up" ended mid-set (so Undo can take it back)
+function isLastSet(setNo) { return fmt.mode !== 'open' && setNo >= fmt.sets; }
 const el = id => document.getElementById(id);
 
 async function requestWakeLock() {
@@ -465,7 +548,26 @@ function updateTimerDisplay() { el('timeDisplay').textContent = formatTime(curre
 function teamNames() {
   return [el('team1Name').value.trim() || 'Our Team', el('team2Name').value.trim() || 'Opponent'];
 }
-function setTarget(setNo) { return setNo >= 3 ? 15 : 25; }
+function setTarget(setNo) { return (fmt.mode === 'best' && setNo >= 3) ? fmt.decider : fmt.pts; }
+// Final result from the finished sets (+ the set being played, if it's decided).
+// 2-sets-only formats: a 1–1 match is won on total points (equal = tie).
+function matchResult(extraSet) {
+  const sets = setHistory.slice();
+  if (extraSet && !sets.some(h => h.set === extraSet.set)) sets.push(extraSet);
+  let s1 = 0, s2 = 0, p1 = 0, p2 = 0;
+  for (const h of sets) {
+    p1 += h.t1; p2 += h.t2;
+    if (h.t1 > h.t2) s1++; else if (h.t2 > h.t1) s2++;
+  }
+  let winner = s1 > s2 ? 1 : (s2 > s1 ? 2 : 0), by = winner ? 'sets' : 'tie';
+  if (!winner && fmt.mode !== 'best' && p1 !== p2) { winner = p1 > p2 ? 1 : 2; by = 'points'; }
+  return { sets1: s1, sets2: s2, points1: p1, points2: p2, winner, decidedBy: by };
+}
+// Would winning a set now (with setsAfter sets) end the match?
+function winsMatch(setsAfter, setNo) { return fmt.mode === 'best' ? setsAfter >= 2 : isLastSet(setNo); }   // 'open': never
+function setWord(setsAfter, setNo) {
+  return (fmt.mode === 'best' && setsAfter >= 2) ? 'Match' : 'Set';
+}
 
 // ===========================================================================
 // SCREENS — exactly one is visible, chosen from the state
@@ -475,6 +577,7 @@ function currentStage() {
   if (!startTime) return namesConfirmed ? 'ready' : 'setup';
   if (!running) return 'done';
   if (paused) return 'resume';
+  if (timeUp) return 'matchover';
   const s = evaluateSet();
   if (s.state === 'complete') return s.matchOver ? 'matchover' : 'setbreak';
   return 'play';
@@ -495,15 +598,18 @@ function render() {
   document.querySelectorAll('.n1').forEach(e => e.textContent = n1);
   document.querySelectorAll('.n2').forEach(e => e.textContent = n2);
 
+  const open = fmt.mode === 'open';
+  el('timeUpBtn').hidden = !open; el('breakTimeUp').hidden = !open; el('stopBtn').hidden = open;
   if (stage === 'setup') refreshNameNote();
-  if (stage === 'ready') el('readyTeams').textContent = `${n1}  vs  ${n2}`;
-  if (stage === 'play') refreshScoreboard();
+  if (stage === 'ready') el('readyTeams').textContent = `${n1}  vs  ${n2}  ·  ` +
+    fmt.label;
+  if (stage === 'play') { refreshScoreboard(); refreshTimeoutBtn(); }
 
   if (stage === 'setbreak') {
     const winner = t1Score > t2Score ? n1 : n2;
     el('breakTitle').textContent = `Set ${currentSet} is over`;
     el('breakScore').textContent = `${t1Score} – ${t2Score}`;
-    el('breakWho').textContent = `${winner} win set ${currentSet}`;
+    el('breakWho').textContent = t1Score === t2Score ? `Set ${currentSet} tied` : `${winner} win set ${currentSet}`;
     el('breakRolling').textContent = `Camera is still recording — start Set ${currentSet + 1}`;
   }
   if (stage === 'resume') {
@@ -511,11 +617,19 @@ function render() {
     el('resumeTitle').textContent = betweenSets ? `Next: Set ${currentSet}` : `Camera stopped during Set ${currentSet}`;
   }
   if (stage === 'matchover') {
-    const winner = t1Score > t2Score ? n1 : n2;
-    const w = t1Score > t2Score ? t1Sets + 1 : t2Sets + 1;
-    const l = t1Score > t2Score ? t2Sets : t1Sets;
-    el('moTitle').textContent = `${winner} win!`;
-    el('moScore').textContent = `${w} – ${l} in sets`;
+    // sets after this (last) set — works for ties (2 sets both played, time limits)
+    const r = matchResult({ set: currentSet, t1: t1Score, t2: t2Score });
+    const a = r.sets1, b = r.sets2;
+    el('moHead').textContent = timeUp ? "Time's up!" : '';
+    el('moHead').hidden = !timeUp;
+    if (r.decidedBy === 'points') {
+      el('moTitle').textContent = `${r.winner === 1 ? n1 : n2} win on total points!`;
+      el('moScore').textContent = `${a} – ${b} in sets · ${Math.max(r.points1, r.points2)} – ${Math.min(r.points1, r.points2)} in points`;
+    } else {
+      el('moTitle').textContent = r.winner ? `${r.winner === 1 ? n1 : n2} win!` : 'Match tied!';
+      el('moScore').textContent = `${Math.max(a, b)} – ${Math.min(a, b)} in sets` +
+        (fmt.mode !== 'best' && !r.winner ? ` · ${r.points1} – ${r.points2} in points` : '');
+    }
   }
   if (stage === 'done') renderDone();
 }
@@ -598,10 +712,22 @@ function refreshNameNote() {
     note.textContent = `"${long}" is too long for the video scoreboard — it would show as "${fittedName(long)}". Try a shorter version.`;
   } else {
     note.className = 'field-note';
-    note.textContent = n2 ? 'Looks good.' : 'Type the opponent\'s name to continue. It shows on the scoreboard in the video.';
+    note.textContent = n2 ? 'Looks good.' : 'Shows on the scoreboard in the video.';
   }
 }
 ['team1Name', 'team2Name'].forEach(id => el(id).addEventListener('input', refreshNameNote));
+
+function refreshFormatPick() {
+  document.querySelectorAll('#fmtPick button').forEach(b => b.classList.toggle('on', b.dataset.fmt === fmt.code));
+  el('fmtNote').textContent = fmt.desc;
+}
+document.querySelectorAll('#fmtPick button').forEach(b => b.addEventListener('click', () => {
+  fmt = FORMATS[b.dataset.fmt] || FORMATS.bo3;
+  try { localStorage.setItem('vbFormat', fmt.code); } catch (e) {}   // remembered for the next match
+  refreshFormatPick();
+}));
+try { fmt = FORMATS[localStorage.getItem('vbFormat')] || FORMATS.bo3; } catch (e) {}
+refreshFormatPick();
 el('setupNext').addEventListener('click', () => {
   if (el('team2Name').value.trim() === '') return;
   namesConfirmed = true;
@@ -616,8 +742,8 @@ el('readyBack').addEventListener('click', () => { namesConfirmed = false; render
 function saveCheckpoint() {
   try {
     localStorage.setItem('vbScorekeeperCheckpoint', JSON.stringify({
-      startTime, running, paused, pausedTotal, pauseStartedAt, events, setHistory,
-      t1Score, t2Score, t1Sets, t2Sets, currentSet,
+      startTime, running, paused, pausedTotal, pauseStartedAt, events, setHistory, recordings, timeouts, timeoutOpen,
+      t1Score, t2Score, t1Sets, t2Sets, currentSet, format: fmt.code, forcedSets, timeUp, timeUpForced,
       team1Name: el('team1Name').value, team2Name: el('team2Name').value
     }));
   } catch (e) {}
@@ -653,6 +779,12 @@ el('restoreYes').addEventListener('click', () => {
   pausedTotal = data.pausedTotal || 0;
   pauseStartedAt = data.pauseStartedAt || null;
   events = data.events;
+  timeouts = data.timeouts || []; timeoutOpen = !!data.timeoutOpen;
+  recordings = data.recordings || [{ start: data.startTime, end: null }];
+  fmt = FORMATS[data.format] || FORMATS.bo3;
+  forcedSets = data.forcedSets || [];
+  timeUp = !!data.timeUp; timeUpForced = data.timeUpForced || 0;
+  refreshFormatPick();
   // Repair matches saved by an older version, where repeated End Set taps after
   // the final set stored duplicate copies of it.
   const seen = new Set();
@@ -700,7 +832,9 @@ el('startBtn').addEventListener('click', () => {
   startTime = Date.now();
   running = true;
   paused = false; pausedTotal = 0; pauseStartedAt = null;
+  recordings = [{ start: startTime, end: null }];
   events = [{ t: 0, team1: 0, team2: 0, set: currentSet }];
+  timeouts = []; timeoutOpen = false;
   startTimerAndLock();
   refreshLog();
   saveCheckpoint();
@@ -716,22 +850,20 @@ function evaluateSet() {
   const leaderName = t1Score > t2Score ? n1 : n2;
   const leaderNum = t1Score > t2Score ? 1 : 2;
 
-  if (hi >= target && (hi - lo) >= 2) {
-    const setsAfter = (leaderNum === 1 ? t1Sets : t2Sets) + 1;
-    return { state: 'complete', team: leaderNum, matchOver: setsAfter >= 2 || currentSet >= MAX_SETS };
+  const setsIfWon = (leaderNum === 1 ? t1Sets : t2Sets) + (hi > lo ? 1 : 0);
+  if (forcedSets.includes(currentSet) || (hi >= target && (hi - lo) >= 2)) {
+    return { state: 'complete', team: hi > lo ? leaderNum : 0, matchOver: winsMatch(setsIfWon, currentSet) || isLastSet(currentSet) };
   }
   if (t1Score >= target - 1 && t2Score >= target - 1) {
     if (hi === lo) return { state: 'deuce', text: `Tied ${hi}–${hi} · must win by 2` };
     const wouldWin = (hi + 1 >= target) && ((hi + 1) - lo >= 2);
     if (wouldWin) {
-      const setsAfter = (leaderNum === 1 ? t1Sets : t2Sets) + 1;
-      return { state: 'point', text: `${setsAfter >= 2 ? 'Match' : 'Set'} point — ${leaderName}` };
+      return { state: 'point', text: `${setWord(setsIfWon, currentSet)} point — ${leaderName}` };
     }
     return { state: 'deuce', text: `Advantage ${leaderName} · must win by 2` };
   }
   if (hi > 0 && (hi + 1 >= target) && ((hi + 1) - lo >= 2)) {
-    const setsAfter = (leaderNum === 1 ? t1Sets : t2Sets) + 1;
-    return { state: 'point', text: `${setsAfter >= 2 ? 'Match' : 'Set'} point — ${leaderName}` };
+    return { state: 'point', text: `${setWord(setsIfWon, currentSet)} point — ${leaderName}` };
   }
   return { state: 'none' };
 }
@@ -759,6 +891,7 @@ function tapFeedback(team) {
 function addPoint(team) {
   if (!running || paused || evaluateSet().state === 'complete' || !guardedTap()) return;
   if (team === 1) t1Score++; else t2Score++;
+  timeoutOpen = false;
   logEvent();
   tapFeedback(team);
   const [n1, n2] = teamNames();
@@ -769,19 +902,62 @@ el('t2Plus').addEventListener('click', () => addPoint(2));
 
 // ---- Quick undo snackbar: shown for 5 s after every point ----
 let snackTimer = null;
-function showSnack(text) {
+let snackUndoFn = null;
+function showSnack(text, onUndo) {
+  snackUndoFn = onUndo || null;
   el('snackText').textContent = text;
   el('snack').classList.add('show');
   clearTimeout(snackTimer);
   snackTimer = setTimeout(hideSnack, 5000);
 }
 function hideSnack() { el('snack').classList.remove('show'); }
-el('snackUndo').addEventListener('click', () => { hideSnack(); undoLast(); });
+el('snackUndo').addEventListener('click', () => { hideSnack(); if (snackUndoFn) snackUndoFn(); else undoLast(); });
+
+// ---- Time-out (2026-10-19): one tap; the next point ends it. Tap again (or UNDO) to cancel. ----
+function cancelTimeout() {
+  if (!timeoutOpen) return;
+  timeouts.pop(); timeoutOpen = false;
+  saveCheckpoint(); render();
+}
+el('timeoutBtn').addEventListener('click', () => {
+  if (!running || paused) return;
+  if (timeoutOpen) { cancelTimeout(); showSnack('Time-out cancelled'); return; }
+  timeouts.push({ t: currentElapsed(), set: currentSet });
+  timeoutOpen = true;
+  buzz(30);
+  saveCheckpoint(); render();
+  showSnack('Time-out marked — the video will skip it', cancelTimeout);
+});
+function refreshTimeoutBtn() {
+  const b = el('timeoutBtn');
+  b.classList.toggle('on', timeoutOpen);
+  el('timeoutLabel').innerHTML = timeoutOpen ? '⏸&nbsp; Time-out in progress' : '⏸&nbsp; Time-out';
+  b.disabled = !running || paused;
+}
 
 // Undo only takes back POINTS in the current set. It never un-does a set
 // change (that would leave the sets tally and completed-sets list wrong).
 function undoLast() {
   if (!running || events.length <= 1) return;
+  // Scrimmage "Time's up" by mistake: undo takes that back first (2026-10-04).
+  if (timeUp) {
+    timeUp = false;
+    if (timeUpForced) forcedSets = forcedSets.filter(s => s !== timeUpForced);
+    timeUpForced = 0;
+    saveCheckpoint();
+    showToast(`Scrimmage continues — set ${currentSet}, ${t1Score}–${t2Score}`);
+    render();
+    return;
+  }
+  // "End this set now" by mistake: undo takes that back first.
+  const lastDone = setHistory[setHistory.length - 1];
+  if (forcedSets.includes(currentSet) && !(lastDone && lastDone.set === currentSet)) {
+    forcedSets = forcedSets.filter(s => s !== currentSet);
+    saveCheckpoint();
+    showToast(`Set ${currentSet} continues — score is ${t1Score}–${t2Score}`);
+    render();
+    return;
+  }
   const last = events[events.length - 1];
   const prev = events[events.length - 2];
   if (last.set !== prev.set || (last.team1 === 0 && last.team2 === 0)) {
@@ -829,7 +1005,8 @@ el('t2Minus').addEventListener('click', () => removeLastPoint(2));
 // ===========================================================================
 // SET / CAMERA / MATCH TRANSITIONS
 // ===========================================================================
-function endSet() {
+function endSet(final) {
+  timeoutOpen = false;
   if (!running) return;
   if (t1Score === 0 && t2Score === 0) return;
   const lastDone = setHistory[setHistory.length - 1];
@@ -838,9 +1015,10 @@ function endSet() {
   if (t1Score > t2Score) { t1Sets++; winner = 1; }
   else if (t2Score > t1Score) { t2Sets++; winner = 2; }
   setHistory.push({ set: currentSet, t1: t1Score, t2: t2Score, winner });
-  // Only reset to 0-0 if another set will be played (a 2-0 win ends at set 2).
-  const matchOver = (t1Sets >= 2 || t2Sets >= 2);
-  if (!matchOver && currentSet < MAX_SETS) {
+  // Only reset to 0-0 if another set will be played (a 2-0 win ends at set 2
+  // in best-of-3; formats where every set is played stop after the last one).
+  const matchOver = final || (fmt.mode === 'best' && (t1Sets >= 2 || t2Sets >= 2)) || isLastSet(currentSet);
+  if (!matchOver) {
     currentSet++;
     t1Score = 0; t2Score = 0;
     logEvent();                       // the new set's 0-0 marker
@@ -854,6 +1032,8 @@ function pauseCamera() {
   if (!running || paused) return;
   paused = true;
   pauseStartedAt = Date.now();
+  const cur = recordings[recordings.length - 1];
+  if (cur && !cur.end) cur.end = pauseStartedAt;
   releaseWakeLock();
   saveCheckpoint();
 }
@@ -862,6 +1042,7 @@ function resumeCamera() {
   pausedTotal += (Date.now() - pauseStartedAt);
   paused = false;
   pauseStartedAt = null;
+  recordings.push({ start: Date.now(), end: null });
   requestWakeLock();
   saveCheckpoint();
 }
@@ -870,6 +1051,8 @@ function endMatch() {
   if (!running) return;
   running = false;
   if (paused) { pausedTotal += (Date.now() - pauseStartedAt); paused = false; pauseStartedAt = null; }
+  const last = recordings[recordings.length - 1];
+  if (last && !last.end) last.end = Date.now();
   clearInterval(timerInterval);
   events.push({ t: currentElapsed(), team1: t1Score, team2: t2Score, set: currentSet, isEnd: true });
   refreshLog();
@@ -886,7 +1069,39 @@ function endMatch() {
 el('breakStopped').addEventListener('click', () => { pauseCamera(); endSet(); buzz(30); render(); });
 el('breakRolling').addEventListener('click', () => { endSet(); buzz(30); render(); });
 el('resumeBtn').addEventListener('click', () => { resumeCamera(); buzz(40); render(); });
-el('finishBtn').addEventListener('click', () => { endSet(); endMatch(); buzz(60); });
+el('finishBtn').addEventListener('click', () => { endSet(timeUp); endMatch(); buzz(60); });
+
+// Scrimmage (2026-10-04): "Time's up" — on the scoring screen (mid-set: the team
+// ahead wins that set, a tie counts for nobody) or at a set break. Two taps on the
+// scoring screen. Then the usual match-over screen: keep recording ~30 s, FINISH.
+function callTimeUp() {
+  if (!running || paused) return;
+  const lastDone = setHistory[setHistory.length - 1];
+  const setDone = lastDone && lastDone.set === currentSet;
+  timeUpForced = 0;
+  if (!setDone && (t1Score || t2Score) && evaluateSet().state !== 'complete') {
+    if (!forcedSets.includes(currentSet)) { forcedSets.push(currentSet); timeUpForced = currentSet; }
+  }
+  timeUp = true;
+  saveCheckpoint();
+  buzz(40);
+  render();
+}
+let timeUpArmed = null;
+el('timeUpBtn').addEventListener('click', () => {
+  const b = el('timeUpBtn');
+  const label = "Time's up — end the scrimmage";
+  if (!timeUpArmed) {
+    b.classList.add('armed');
+    b.textContent = (t1Score || t2Score) ? `Tap again — set ${currentSet} ends at ${t1Score}–${t2Score}` : 'Tap again to end the scrimmage';
+    timeUpArmed = setTimeout(() => { timeUpArmed = null; b.classList.remove('armed'); b.textContent = label; }, 4000);
+    return;
+  }
+  clearTimeout(timeUpArmed); timeUpArmed = null;
+  b.classList.remove('armed'); b.textContent = label;
+  callTimeUp();
+});
+el('breakTimeUp').addEventListener('click', callTimeUp);
 
 // Mid-set camera stop (rare). Two taps, because a stray pause shifts every
 // later timestamp.
@@ -896,13 +1111,36 @@ el('pauseBtn').addEventListener('click', () => {
   if (!pauseArmed) {
     b.classList.add('armed');
     b.textContent = 'Tap again if the camera really stopped';
-    pauseArmed = setTimeout(() => { pauseArmed = null; b.classList.remove('armed'); b.textContent = 'Camera stopped mid-set (timeout, battery…)'; }, 4000);
+    pauseArmed = setTimeout(() => { pauseArmed = null; b.classList.remove('armed'); b.textContent = 'Camera stopped mid-set (battery, card full…)'; }, 4000);
     return;
   }
   clearTimeout(pauseArmed); pauseArmed = null;
-  b.classList.remove('armed'); b.textContent = 'Camera stopped mid-set (timeout, battery…)';
+  b.classList.remove('armed'); b.textContent = 'Camera stopped mid-set (battery, card full…)';
   el('playMore').open = false;
   pauseCamera();
+  render();
+});
+
+// End the current set at the current score (point cap or time limit on the
+// schedule). Two taps. The set then counts as won by whoever leads (a tie counts
+// for nobody), and the app moves on exactly as if the set had been won normally.
+let forceArmed = null;
+el('forceEndBtn').addEventListener('click', () => {
+  const b = el('forceEndBtn');
+  const label = 'End this set now (point cap / time limit)';
+  if (!running || paused || (t1Score === 0 && t2Score === 0)) { showToast('Score at least one point first.'); return; }
+  if (!forceArmed) {
+    b.classList.add('armed');
+    b.textContent = `Tap again to end set ${currentSet} at ${t1Score}–${t2Score}`;
+    forceArmed = setTimeout(() => { forceArmed = null; b.classList.remove('armed'); b.textContent = label; }, 4000);
+    return;
+  }
+  clearTimeout(forceArmed); forceArmed = null;
+  b.classList.remove('armed'); b.textContent = label;
+  el('playMore').open = false;
+  if (!forcedSets.includes(currentSet)) forcedSets.push(currentSet);
+  saveCheckpoint();
+  buzz(30);
   render();
 });
 
@@ -927,7 +1165,10 @@ el('stopBtn').addEventListener('click', () => {
 // ===========================================================================
 function renderDone() {
   const [n1, n2] = teamNames();
-  el('doneSummary').innerHTML = t1Sets === t2Sets
+  const r = matchResult();
+  el('doneSummary').innerHTML = r.decidedBy === 'points'
+    ? `<b>${r.winner === 1 ? n1 : n2}</b> won on total points (${Math.max(r.points1, r.points2)}–${Math.min(r.points1, r.points2)}) against ${r.winner === 1 ? n2 : n1} · ${r.sets1}–${r.sets2} in sets`
+    : t1Sets === t2Sets
     ? `<b>${n1} vs ${n2}</b> — ${t1Sets}–${t2Sets} in sets`
     : `<b>${t1Sets > t2Sets ? n1 : n2}</b> won ${Math.max(t1Sets, t2Sets)}–${Math.min(t1Sets, t2Sets)} against ${t1Sets > t2Sets ? n2 : n1}`;
   el('doneSets').innerHTML = setHistory.map(s =>
@@ -942,7 +1183,7 @@ el('newMatchBtn').addEventListener('click', () => {
   const unsent = DRIVE_URL && loadPending().length > 0;
   if (unsent && !newArmed) {
     b.classList.add('armed');
-    b.textContent = 'Not sent yet — tap again to start anyway';
+    b.textContent = 'Not sent to Kenny yet — tap again to start anyway';
     newArmed = setTimeout(() => { newArmed = null; b.classList.remove('armed'); b.textContent = 'Start a new match'; }, 5000);
     return;
   }
@@ -950,7 +1191,9 @@ el('newMatchBtn').addEventListener('click', () => {
   b.classList.remove('armed'); b.textContent = 'Start a new match';
   startTime = null; running = false; paused = false;
   pausedTotal = 0; pauseStartedAt = null;
-  events = []; setHistory = [];
+  events = []; setHistory = []; recordings = []; forcedSets = [];
+  timeouts = []; timeoutOpen = false;
+  timeUp = false; timeUpForced = 0;
   t1Score = 0; t2Score = 0; t1Sets = 0; t2Sets = 0; currentSet = 1;
   clearInterval(timerInterval);
   clearCheckpoint();
@@ -963,16 +1206,22 @@ el('newMatchBtn').addEventListener('click', () => {
 });
 
 // ===========================================================================
-// MATCH FILE (read by apply-match.lua). Unchanged format.
+// MATCH FILE (read by apply-match.lua). Same format + (2026-09-28) extra
+// startedAt / endedAt / recordings clock times for picking clips off the card.
 // ===========================================================================
 function buildMatchData() {
   const offset = parseFloat(el('offsetInput').value) || 0;
   const [n1, n2] = teamNames();
-  const targetFor = (setNo) => (setNo >= 3 ? 15 : 25);
-  const isDecided = (e) => {
+  const targetFor = setTarget;
+  // last event of each set (a set ended with "End this set now" counts as decided there)
+  const lastIdx = {};
+  events.forEach((e, i) => { lastIdx[e.set] = i; });
+  const isDecidedAt = (e, i) => {
     const hi = Math.max(e.team1, e.team2), lo = Math.min(e.team1, e.team2);
+    if (forcedSets.includes(e.set) && i === lastIdx[e.set] && hi > lo) return true;
     return hi >= targetFor(e.set) && hi - lo >= 2;
   };
+  const isDecided = (e) => isDecidedAt(e, events.indexOf(e));
   const wonBy = {};
   for (const e of events) if (isDecided(e)) wonBy[e.set] = e.team1 > e.team2 ? 1 : 2;
   const setsAt = (e) => {
@@ -993,27 +1242,63 @@ function buildMatchData() {
     out.push({ t: Math.round(Math.max(0, e.t + offset) * 1000) / 1000, set: e.set,
                score1: e.team1, score2: e.team2, sets1: s1, sets2: s2, serve });
   }
-  return { version: 1, team1: n1, team2: n2, date: localDate(), offset: 0, events: out };
+  // 2026-09-28: real clock times (phone's local time with its UTC offset), so
+  // Claude can pick the right camera clips off the card even when several
+  // matches are recorded on the same day. Extra fields — older readers ignore them.
+  const recs = (recordings.length ? recordings : (startTime ? [{ start: startTime, end: null }] : []))
+    .map(r => ({ start: localIso(r.start), end: r.end ? localIso(r.end) : null }));
+  const lastEnd = recordings.length ? recordings[recordings.length - 1].end : null;
+  // 2026-10-02: final result (incl. the total-points rule for 2-sets-only formats),
+  // from each set's last score — the video pipeline reads this.
+  const finals = {};
+  for (const e of out) finals[e.set] = e;
+  let p1 = 0, p2 = 0;
+  for (const k in finals) { p1 += finals[k].score1; p2 += finals[k].score2; }
+  const lastEv = out[out.length - 1];
+  const s1 = lastEv ? lastEv.sets1 : 0, s2 = lastEv ? lastEv.sets2 : 0;
+  let winner = s1 > s2 ? 1 : (s2 > s1 ? 2 : 0), decidedBy = winner ? 'sets' : 'tie';
+  if (!winner && fmt.mode !== 'best' && p1 !== p2) { winner = p1 > p2 ? 1 : 2; decidedBy = 'points'; }
+  return { version: 1, team1: n1, team2: n2, date: localDate(startTime || Date.now()), offset: 0,
+           format: { code: fmt.code, sets: fmt.sets, mode: fmt.mode, pts: fmt.pts, decider: fmt.decider },
+           result: { sets1: s1, sets2: s2, points1: p1, points2: p2, winner, decidedBy },
+           forcedSets: forcedSets.slice(),
+           startedAt: startTime ? localIso(startTime) : null,
+           endedAt: lastEnd ? localIso(lastEnd) : null,
+           recordings: recs, events: out,
+           // 2026-10-19: time-out taps (video pipeline cuts from tap + 5 s to just before the next serve)
+           timeouts: timeouts.map(x => ({ t: Math.round(Math.max(0, x.t + offset) * 1000) / 1000, set: x.set })) };
 }
 
 // The phone's LOCAL date (toISOString() is UTC, which rolls over at 8 pm in Toronto).
-function localDate() {
-  const d = new Date();
+// Taken from the match START (not "now"), so a match finished after midnight
+// still carries the day it was played.
+function localDate(ms) {
+  const d = new Date(ms || Date.now());
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+// e.g. "2026-09-25T13:57:31-04:00"
+function localIso(ms) {
+  const d = new Date(ms), p = n => String(n).padStart(2, '0');
+  const off = -d.getTimezoneOffset(), sign = off >= 0 ? '+' : '-', a = Math.abs(off);
+  return `${localDate(ms)}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}` +
+         `${sign}${p(Math.floor(a / 60))}:${p(a % 60)}`;
 }
 function matchFilename() {
   const [n1, n2] = teamNames();
   const safe = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-  return `${localDate()}-${safe(n1)}-vs-${safe(n2)}.json`;
+  // start time in the name (2026-09-28): two matches vs the same team on one day
+  // (pool + playoff) no longer share a file name.
+  const d = new Date(startTime || Date.now()), p = n => String(n).padStart(2, '0');
+  return `${localDate(startTime || Date.now())}-${p(d.getHours())}${p(d.getMinutes())}-${safe(n1)}-vs-${safe(n2)}.json`;
 }
 
 // ===========================================================================
-// AUTO-SEND TO GOOGLE DRIVE (scorekeeper-drive-upload.gs in your Google account)
+// AUTO-SEND TO GOOGLE DRIVE (scorekeeper-drive-upload.gs in Kenny's account)
 // Kept on the phone first, then sent; retries on reopen / back online /
 // back to foreground until Drive confirms.
 // ===========================================================================
-const DRIVE_URL = '';   // your Apps Script web-app URL (…/exec) — empty = auto-send off
-const DRIVE_KEY = 'CHANGE-ME';   // must match SECRET_KEY in scorekeeper-drive-upload.gs
+const DRIVE_URL = '';
+const DRIVE_KEY = 'CHANGE-ME';
 const PENDING_KEY = 'vbPendingUploads';
 const LASTSENT_KEY = 'vbLastSent';
 
@@ -1044,7 +1329,7 @@ async function flushDriveUploads(showProgress) {
   let list = loadPending();
   if (list.length === 0) return;
   flushing = true;
-  if (showProgress) showDriveStatus('info', `<span>Sending scores to Google Drive…</span>`);
+  if (showProgress) showDriveStatus('info', `<span>Sending scores to Kenny's Google Drive…</span>`);
   try {
     for (const item of [...list]) {
       const ctrl = new AbortController();
@@ -1074,14 +1359,14 @@ function refreshDriveStatus() {
   if (!DRIVE_URL) return;
   if (loadPending().length > 0) {
     showDriveStatus('warn',
-      `<span>Saved on this phone. It will send automatically when there's internet.</span>` +
+      `<span>Saved on this phone. It will send to Kenny automatically when there's internet.</span>` +
       `<button id="driveRetry"><span>Try now</span></button>`);
     return;
   }
   let last = null;
   try { last = JSON.parse(localStorage.getItem(LASTSENT_KEY)); } catch (e) {}
   if (last && !running && events.length > 0) {
-    showDriveStatus('done', `<span>✓ Scores sent. You're all done!</span>`);
+    showDriveStatus('done', `<span>✓ Scores sent to Kenny. You're all done!</span>`);
   }
 }
 window.addEventListener('online', () => flushDriveUploads(false));

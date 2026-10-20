@@ -59,7 +59,8 @@ Fusion composition until final render.
 ## What's in this repo
 
 ```
-├── resolve-scripts/     Lua scripts run from DaVinci Resolve's Console
+├── automation/          The full hands-off workflow (Resolve Studio + an AI assistant) — see automation/README.md
+├── resolve-scripts/     Lua scripts run from DaVinci Resolve's Console (manual workflow)
 ├── footage-conversion/  Windows HEVC→H.264 converter (.bat + .ps1)
 ├── scorekeeper/         The scorekeeping web app + optional Google Drive receiver
 ├── assets/              Serve-ball icons used by the overlay
@@ -75,12 +76,24 @@ Fusion composition until final render.
 | `resolve-scripts/build-scoreboard.lua` | Builds the entire scoreboard's Fusion node graph from scratch: bar, score cells, team names, sets, serve indicator, "SET n" tab, SET POINT / MATCH POINT tags, optional team logo, outline, sheen, drop shadow and an overall fade. Team names are anchored on their outer edge, so both sit the same distance from the ends of the bar whatever their length. Look is configurable at the top (`BAR_WIDTH`, `BAR_RAISE`, `PILL_STYLE`, fonts, colours). Run once per match. |
 | `resolve-scripts/apply-match.lua` | Reads a match JSON file (see below) and writes keyframes onto the nodes `build-scoreboard.lua` created — score, sets, set number and serve indicator as instant "step" changes, plus the motion (score/sets pops, SET POINT / MATCH POINT tags worked out from the score, set-change dips, fade in/out). Also sets the team names from the file and **automatically re-aligns each set to its clip join** (see below). |
 | `resolve-scripts/run-overlay.lua` | Convenience wrapper — runs `build-scoreboard.lua` then `apply-match.lua` back to back. |
-| `scorekeeper/volleyball-scorekeeper.html` | Self-contained scorekeeping web app with a guided, one-screen-at-a-time flow simple enough for anyone at the gym: who's playing → press record + START → two giant team buttons with a 5-second UNDO → automatic set-over screen → FINISH MATCH. Timestamps every event, survives the page being closed mid-match, and exports the JSON file the Lua scripts consume — or sends it to Google Drive automatically (below). |
+| `scorekeeper/volleyball-scorekeeper.html` | Self-contained scorekeeping web app with a guided, one-screen-at-a-time flow simple enough for anyone at the gym: who's playing → press record + START → two giant team buttons with a 5-second UNDO → automatic set-over screen → FINISH MATCH. Timestamps every event, survives the page being closed mid-match, and exports the JSON file the Lua scripts consume — or sends it to Google Drive automatically (below). A one-tap **Time-out** button (cleared by the next point) records time-outs so the automated workflow can cut them out. |
 | `scorekeeper/scorekeeper-drive-upload.gs` | Optional Google Apps Script "web app" that receives the match file from the scorekeeper and saves it into a Drive folder, so nobody has to export or email anything. |
 | `tools/make-thumbnail.py` | Builds a 1280×720 YouTube thumbnail from the match file and a frame of the finished video: date, team names, team logo, and one score tile per set. |
 | `assets/volleyball-serve-icon-bold.png` | The serve-indicator icon `build-scoreboard.lua` places on whichever team is serving (bold version, used by default). `volleyball-serve-icon.png` is the original thin-line version. |
 | `docs/fusion-scoreboard-walkthrough.md` | Manual, click-by-click guide to building the same scoreboard graph by hand in Fusion — useful for understanding what the script automates, or for customizing the look yourself. |
 | `docs/match-sample.json` | A synthetic example match file (not a real game) showing the data format `apply-match.lua` expects. |
+
+## Fully automated workflow
+
+The `automation/` folder holds the current, end-to-end version of this pipeline: one
+command per match copies the card, builds the project and scoreboard, trims the
+warm-up, cuts set breaks and time-outs (restarting just before the referee's serve
+whistle, found in the audio), normalises the sound, adds intro/FINAL screens,
+renders a review sheet for a single approval, exports one 4K60 10-bit H.265 file
+about 2.4x faster than with a live Fusion scoreboard (by pre-rendering the
+scoreboard as pictures), and prepares the YouTube upload. Details:
+[automation/README.md](automation/README.md). The manual workflow below still works
+on its own.
 
 ## Setup
 

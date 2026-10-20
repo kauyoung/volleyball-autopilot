@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="gsap.min.js"></script>
+    <script src="CustomEase.min.js"></script>
+    <script src="motion.js"></script>
+    <script src="names.js"></script>
+    <script src="match.js"></script>
+    <style>
+      @font-face { font-family: "Barlow Condensed"; font-weight: 600; src: url("fonts/barlow-condensed-latin-600-normal.woff2") format("woff2"); }
+      @font-face { font-family: "Barlow Condensed"; font-weight: 700; src: url("fonts/barlow-condensed-latin-700-normal.woff2") format("woff2"); }
+      @font-face { font-family: "Barlow Condensed"; font-weight: 800; src: url("fonts/barlow-condensed-latin-800-normal.woff2") format("woff2"); }
+
+      :root {
+        --venom: #70d549;
+        --opp: #6bbdff;
+        --ink: #040605;
+        --paper: #f2f4f1;
+        --muted: rgba(242, 244, 241, 0.55);
+        --hair: rgba(242, 244, 241, 0.16);
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 3840px; height: 2160px; overflow: hidden; background: transparent; }
+      #root { position: relative; width: 3840px; height: 2160px; overflow: hidden; background: transparent;
+        font-family: "Barlow Condensed", sans-serif; color: var(--paper); }
+      .clip { position: absolute; inset: 0; }
+      #stage { position: absolute; inset: 0; }
+
+      /* Diagonal panel wipe (14°, the same angle as the VS slashes) */
+      #panelWrap { position: absolute; inset: 0; overflow: hidden; }
+      #panel { position: absolute; top: -10%; left: -30%; width: 160%; height: 120%; background: rgba(6,9,7,0.84); transform: skewX(-14deg); }
+      #panel .edgeIn  { position: absolute; top: 0; bottom: 0; right: -14px; width: 14px; background: var(--venom); }
+      #panel .edgeOut { position: absolute; top: 0; bottom: 0; left: -14px; width: 14px; background: var(--opp); }
+
+      /* Header */
+      #kicker { position: absolute; top: 84px; left: 0; right: 0; display: flex; align-items: center; justify-content: center; gap: 28px; }
+      #kicker .rule { width: 160px; height: 3px; border-radius: 2px; background: rgba(242,244,241,0.34); }
+      #kicker .rule.l { transform-origin: 100% 50%; }
+      #kicker .rule.r { transform-origin: 0% 50%; }
+      #kicker .txt { font-weight: 700; font-size: 46px; letter-spacing: 0.16em; color: rgba(242,244,241,0.82); padding-left: 0.16em; }
+
+      /* Teams */
+      .team { position: absolute; top: 196px; width: 640px; text-align: center; }
+      #teamL { left: 170px; }
+      #teamR { right: 170px; }
+      .badge { position: relative; width: 360px; height: 360px; margin: 0 auto; }
+      .badge svg { position: absolute; inset: 0; overflow: visible; }
+      .badge .disc { position: absolute; inset: 34px; border-radius: 50%; overflow: hidden; display: grid; place-items: center;
+        background: #0d110f; box-shadow: 0 18px 40px rgba(0,0,0,0.45); }
+      .badge .mono { width: 84%; height: 84%; object-fit: contain; display: block; }
+
+      .name { margin-top: 26px; overflow: hidden; }
+      .name span { display: block; font-weight: 800; font-size: 96px; line-height: 1.12; letter-spacing: 0.015em; text-transform: uppercase; white-space: nowrap; }
+      .name.two span { white-space: nowrap; }
+      .sub { margin-top: 2px; overflow: hidden; }
+      .sub span { display: block; font-weight: 700; font-size: 62px; line-height: 1.18; letter-spacing: 0.08em; padding-left: 0.08em; color: rgba(242,244,241,0.86); text-transform: uppercase; white-space: nowrap; }
+      .sub.empty { display: none; }
+      .badge .genericWrap { width: 62%; height: 62%; }
+      .badge .generic { width: 100%; height: 100%; display: block; overflow: visible; }
+      #measure, #measure2 { position: absolute; left: -9999px; top: 0; font-family: "Barlow Condensed", sans-serif; text-transform: uppercase; white-space: nowrap; visibility: hidden; }
+      #measure { font-weight: 800; letter-spacing: 0.015em; }
+      #measure2 { font-weight: 700; letter-spacing: 0.08em; padding-left: 0.08em; }
+
+      /* VS + slashes */
+      #vsWrap { position: absolute; left: 960px; top: 470px; width: 0; height: 0; }
+      .slash { position: absolute; left: -2px; width: 4px; height: 150px; border-radius: 2px; transform-origin: 50% 50%; }
+      #slashes { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+      #slashT { top: -205px; height: 110px; transform-origin: 50% 100%; background: rgba(242,244,241,0.9); }
+      #slashB { top: 95px; height: 110px; transform-origin: 50% 0%; background: rgba(242,244,241,0.9); }
+      #vs { position: absolute; left: -110px; top: -80px; width: 220px; height: 160px; text-align: center; }
+      #vs span { display: block; font-weight: 800; font-size: 150px; line-height: 160px; letter-spacing: 0.02em; color: var(--paper); }
+
+      /* Match info */
+      #infoRule { position: absolute; left: 460px; top: 836px; width: 1000px; height: 3px; border-radius: 2px; background: rgba(242,244,241,0.2); }
+      #info { position: absolute; left: 0; right: 0; top: 858px; display: flex; justify-content: center; align-items: center; gap: 30px;
+        font-weight: 700; font-size: 46px; letter-spacing: 0.1em; white-space: nowrap; }
+      #info .dot { width: 9px; height: 9px; background: rgba(242,244,241,0.4); transform: rotate(45deg); }
+      #info .muted { color: rgba(242,244,241,0.82); }
+      #info .hl { color: var(--venom); }
+
+          /* workflow copy: laid out at 1920x1080, drawn at 4K (fast capture, no upscale) */
+      #scene { zoom: 2; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="4.9" data-width="3840" data-height="2160">
+      <div id="scene" class="clip" data-start="0" data-duration="4.9" data-track-index="0">
+        <div id="panelWrap"><div id="panel"><div class="edgeIn"></div><div class="edgeOut"></div></div></div>
+        <div id="stage">
+
+          <div id="kicker">
+            <div class="rule l"></div>
+            <div class="txt" id="kTxt">2026–27 SEASON</div>
+            <div class="rule r"></div>
+          </div>
+
+          <div id="teamL" class="team">
+            <div class="badge">
+              <svg viewBox="0 0 360 360">
+                <circle cx="180" cy="180" r="150" fill="none" stroke="#70d549" stroke-width="8" stroke-linecap="round" transform="rotate(-90 180 180)" class="ring" />
+              </svg>
+              <div class="disc"></div>
+            </div>
+            <div class="name"><span></span></div>
+            <div class="sub"><span></span></div>
+          </div>
+
+          <div id="teamR" class="team">
+            <div class="badge">
+              <svg viewBox="0 0 360 360">
+                <circle cx="180" cy="180" r="150" fill="none" stroke="#6bbdff" stroke-width="8" stroke-linecap="round" transform="rotate(-90 180 180)" class="ring" />
+              </svg>
+              <div class="disc"></div>
+            </div>
+            <div class="name"><span></span></div>
+            <div class="sub"><span></span></div>
+          </div>
+
+          <div id="vsWrap">
+            <div id="slashes"><div id="slashT" class="slash"></div><div id="slashB" class="slash"></div></div>
+            <div id="vs"><span>VS</span></div>
+          </div>
+
+          <div id="infoRule"></div>
+          <div id="info">
+            <span class="muted" id="iDate"></span>
+            <span class="dot"></span>
+            <span class="hl" id="iFormat"></span>
+            <span class="dot"></span>
+            <span class="muted" id="iDetail"></span>
+          </div>
+        </div>
+        <span id="measure"></span><span id="measure2"></span>
+      </div>
+    </div>
+
+    <script>
+      // ===== MATCH DATA (the workflow fills this in per match) =====
+      // Match data comes from match.js (written by the workflow for each match).
+      // ==============================================================
+
+      const GENERIC_BALL = (() => {
+        const seam = "M0 0 C 0 -45 35 -78 70 -71", par = "M-30 -17 C -34 -60 0 -97 30 -95";
+        const g = [0, 120, 240].map(a => `<g transform="rotate(${a})"><path d="${seam}"/><path d="${par}"/></g>`).join("");
+        return `<div class="mono genericWrap"><svg class="generic" viewBox="-115 -115 230 230" fill="none" stroke="#6bbdff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><circle r="100"/>${g}</svg></div>`;
+      })();
+
+      const { splitName, layoutTop, largestSize, SUB_MAX, SUB_MIN } = window.VNames;
+
+      function fillTeam(sel, t) {
+        const el = document.querySelector(sel);
+        const disc = el.querySelector(".disc");
+        if (t.logo) {
+          const img = document.createElement("img");
+          img.className = "mono"; img.src = t.logo; img.alt = "";
+          disc.insertBefore(img, disc.firstChild);
+        } else {
+          disc.insertAdjacentHTML("afterbegin", GENERIC_BALL);
+        }
+      }
+
+      function layoutTeams(M) {
+        const sides = [["#teamL", M.team1], ["#teamR", M.team2]].map(([sel, t]) => {
+          const parts = splitName(t.name, M);
+          return { sel, parts, top: layoutTop(parts.top) };
+        });
+        // Same second-line size on both sides
+        const subs = sides.filter(x => x.parts.bottom);
+        const subSize = subs.length ? Math.min(...subs.map(x => largestSize([x.parts.bottom], SUB_MAX, SUB_MIN, true) || SUB_MIN)) : SUB_MAX;
+        window.__INTRO_NAMES = sides.map(x => ({ top: x.top.lines.join(" / "), bottom: x.parts.bottom, how: x.parts.how }));
+        sides.forEach(x => {
+          const span = document.querySelector(x.sel + " .name span");
+          span.textContent = "";
+          x.top.lines.forEach((ln, i) => { if (i) span.appendChild(document.createElement("br")); span.appendChild(document.createTextNode(ln)); });
+          span.style.fontSize = x.top.size + "px";
+          if (x.top.lines.length > 1) span.style.lineHeight = "1.04";
+          const sub = document.querySelector(x.sel + " .sub");
+          sub.querySelector("span").textContent = x.parts.bottom;
+          sub.querySelector("span").style.fontSize = subSize + "px";
+          if (!x.parts.bottom) sub.classList.add("empty");
+        });
+      }
+
+      const M = window.MATCH;
+      fillTeam("#teamL", M.team1);
+      fillTeam("#teamR", M.team2);
+      [["iDate", M.date], ["iFormat", M.format], ["iDetail", M.detail]].forEach(([id, v]) => {
+        const el = document.getElementById(id); el.textContent = v || "";
+        if (!v) { el.style.display = "none"; const d = el.previousElementSibling; if (d && d.classList.contains("dot")) d.style.display = "none"; }
+      });
+      if (M.season) document.getElementById("kTxt").textContent = M.season + " SEASON";
+
+      window.__timelines = window.__timelines || {};
+      // The design is authored in "tl"; the registered "main" timeline plays it back at
+      // VMotion.TEMPO (1.7 = relaxed). The hold is set in real seconds (VMotion.INTRO_HOLD), so:
+      //   page data-duration = (1.4 + ENTER + 1.0) × TEMPO + INTRO_HOLD   (= 9.05 s at 1.7 / 4.2 s)
+      // The workflow writes data-duration from the same formula.
+      const BUILD_END = 1.4 + VMotion.ENTER;                       // authored time the match details land
+      const EXIT = BUILD_END + VMotion.INTRO_HOLD / VMotion.TEMPO;   // authored time the exit starts
+      const AUTH_END = EXIT + 1.0;
+      const tl = gsap.timeline({ paused: true });
+      const master = gsap.timeline({ paused: true });
+      window.__timelines["main"] = master;
+      const C = 2 * Math.PI * 150;
+
+      Promise.all([
+        document.fonts.load('800 96px "Barlow Condensed"'),
+        document.fonts.load('700 50px "Barlow Condensed"')
+      ]).catch(() => {}).then(build);
+
+      function build() {
+      layoutTeams(M);
+
+      // ================= MOTION =================
+      // Broadcast-style: one diagonal wipe language, hard edges, short snappy moves,
+      // things arrive in three beats (panel → teams → details) and then HOLD still.
+      // No glows, glints, pulses or slow zooms.
+      const SNAP = VMotion.OUT, WIPE = VMotion.IN_OUT;
+      const { hideL, hideR, hideC, show } = VMotion.CLIP;
+
+      gsap.set("#panel", { xPercent: -100 });
+      gsap.set("#kicker .rule", { scaleX: 0 });
+      gsap.set("#kicker .txt", { clipPath: hideC });
+      gsap.set(".ring", { attr: { "stroke-dasharray": C, "stroke-dashoffset": C } });
+      gsap.set("#teamL .badge", { x: -36, opacity: 0 });
+      gsap.set("#teamR .badge", { x: 36, opacity: 0 });
+      gsap.set("#teamL .name span, #teamL .sub span", { clipPath: hideL });
+      gsap.set("#teamR .name span, #teamR .sub span", { clipPath: hideR });
+      gsap.set(".slash", { scaleY: 0 });
+      gsap.set("#slashes", { rotation: 14 });
+      gsap.set("#vs span", { opacity: 0, scale: 1.14 });
+      gsap.set("#infoRule", { scaleX: 0 });
+      gsap.set("#info", { clipPath: hideC });
+
+      // Beat 1 — the panel wipes across on the diagonal (green leading edge)
+      tl.to("#panel", { xPercent: 0, duration: VMotion.PANEL, ease: VMotion.DRAWER }, 0)
+        .to("#kicker .rule", { scaleX: 1, duration: VMotion.ENTER, ease: SNAP }, 0.4)
+        .to("#kicker .txt", { clipPath: show, duration: VMotion.ENTER, ease: SNAP }, 0.42);
+
+      // Beat 2 — badges and VS
+      tl.to("#teamL .badge", { x: 0, opacity: 1, duration: VMotion.ENTER, ease: SNAP }, 0.5)
+        .to("#teamR .badge", { x: 0, opacity: 1, duration: VMotion.ENTER, ease: SNAP }, 0.56)
+        .to(".ring", { attr: { "stroke-dashoffset": 0 }, duration: VMotion.ENTER, ease: SNAP, stagger: VMotion.STAGGER }, 0.5)
+        .to(".slash", { scaleY: 1, duration: 0.3, ease: SNAP }, 0.9)
+        .to("#vs span", { opacity: 1, duration: 0.06, ease: "none" }, 0.92)
+        .to("#vs span", { scale: 1, duration: 0.3, ease: SNAP }, 0.92);
+
+      // Beat 3 — names wipe in from the outside edges, then the match details
+      tl.to("#teamL .name span", { clipPath: show, duration: VMotion.ENTER, ease: SNAP }, 1.1)
+        .to("#teamR .name span", { clipPath: show, duration: VMotion.ENTER, ease: SNAP }, 1.1)
+        .to("#teamL .sub span", { clipPath: show, duration: VMotion.ENTER, ease: SNAP }, 1.2)
+        .to("#teamR .sub span", { clipPath: show, duration: VMotion.ENTER, ease: SNAP }, 1.2)
+        .to("#infoRule", { scaleX: 1, duration: VMotion.ENTER, ease: SNAP }, 1.35)
+        .to("#info", { clipPath: show, duration: VMotion.ENTER, ease: SNAP }, 1.4);
+
+      // Hold still for VMotion.INTRO_HOLD real seconds.
+
+      // Exit — details wipe away, then the panel carries on off screen (blue trailing edge)
+      tl.to("#info", { clipPath: hideC, duration: 0.2, ease: SNAP }, EXIT)
+        .to("#infoRule, #kicker .rule", { scaleX: 0, duration: 0.2, ease: SNAP }, EXIT)
+        .to("#kicker .txt", { clipPath: hideC, duration: 0.2, ease: SNAP }, EXIT)
+        .to("#teamL .name span, #teamL .sub span", { clipPath: hideL, duration: 0.2, ease: SNAP }, EXIT + 0.05)
+        .to("#teamR .name span, #teamR .sub span", { clipPath: hideR, duration: 0.2, ease: SNAP }, EXIT + 0.05)
+        .to(".slash", { scaleY: 0, duration: 0.2, ease: SNAP }, EXIT + 0.17)
+        .to("#vs span", { scale: 0.96, opacity: 0, duration: 0.2, ease: SNAP }, EXIT + 0.2)
+        .to("#teamL .badge", { x: -36, opacity: 0, duration: 0.22, ease: SNAP }, EXIT + 0.2)
+        .to("#teamR .badge", { x: 36, opacity: 0, duration: 0.22, ease: SNAP }, EXIT + 0.24)
+        .to("#panel", { xPercent: 100, duration: 0.55, ease: WIPE }, EXIT + 0.3)
+        .set("#panel", { xPercent: 100 }, AUTH_END - 0.01);
+
+      master.add(tl.tweenFromTo(0, AUTH_END, { duration: AUTH_END * VMotion.TEMPO, ease: "none" }));
+      master.seek(0);
+      if (window.__hfForceTimelineRebind) window.__hfForceTimelineRebind();
+      }
+    </script>
+  </body>
+</html>
