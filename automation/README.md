@@ -20,6 +20,7 @@ with external scripting set to Local.
 | Plan the cuts | `make-bookends.py` | Trims warm-up, places intro + FINAL screens, cuts set breaks and time-outs (below) |
 | Audio | `fix-audio.py` | Joins the camera audio once, loudness-normalises to -14 LUFS (two-pass), ducks the sound under each wipe |
 | Intro / FINAL screens | `hf-bookends.py` + `hyperframes/` | HTML/GSAP animations rendered to ProRes 4444 with alpha (download GSAP + CustomEase yourself) |
+| Team logos | `logo_sizes.py` | Every logo is sized by its visible drawing (not its image canvas; near-black edges ignored) so all logos look the same size on the scoreboard and the intro/FINAL; optional per-logo factor in `team-logos/logo-sizes.txt` |
 | Wipes | `make-set-wipe.py` | Diagonal "SET n" / "TIME-OUT" panels that hide each cut |
 | Finish | `prepare-match.py` (phase `finish`), `place-bookends.py`, `set-scoreboard-fades.lua` | Puts it all on the timeline; builds the "YouTube cut" timeline |
 | Review | `make-review-sheet.py`, `make-picture-check.py` | One contact sheet of every key moment (scores, wipes, cuts) for a single approval; a 4-way brightness/zoom picture check |
@@ -28,7 +29,7 @@ with external scripting set to Local.
 | YouTube | `prep-upload.py`, `make-thumbnail.py`, `thumb-layouts.py`, `youtube-fill.js`, `youtube-finish.js`, `youtube-check.js` | Title/description/chapters, thumbnail, and browser helpers that fill Studio and save **Unlisted** (never Public) |
 | Orchestration | `run-match.py`, `run-tournament.py` | One command per match; tournament mode for several matches in a day |
 | Safety | `resolve-watch.py`, `archive-matches.py`, `offset_tools.py` | Freeze watchdog, verified copy to an external drive, offset helpers |
-| Tests | `zz-test.py`, `make-zz-fixture.py` | End-to-end test on a short fixture, never on real match folders (`--tournament`, `--timeout N`) |
+| Tests | `zz-test.py`, `make-zz-fixture.py` | End-to-end test on a short fixture, never on real match folders (`--tournament`, `--timeout N`, `--team2 "<name>"` to check a long name or a logo) |
 
 ## Highlights
 

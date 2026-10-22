@@ -290,6 +290,14 @@ def setup():
         return out
 
     # 3) scoreboard with THIS match file, passed in
+    # 2026-10-21: measure the team logos first so build-scoreboard sizes them by their
+    # visible drawing (team-logos\_logo-ink.txt); a failure only falls back to the old sizing
+    try:
+        lz = subprocess.run([PY, W + r"\logo_sizes.py"], capture_output=True, text=True, timeout=60,
+                            encoding="utf-8", errors="replace", env=UTF8)
+        say((lz.stdout.strip() or lz.stderr.strip() or "logo sizes: no output").splitlines()[-1], out)
+    except Exception as e:
+        say(f"logo sizes: skipped ({e})", out)
     def lq(s):
         return s.replace("\\", "\\\\").replace('"', '\\"')
     t = open(OC + r"\_runner_template.lua", encoding="utf-8").read()

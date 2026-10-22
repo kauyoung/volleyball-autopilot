@@ -995,7 +995,7 @@ local NAME_CHAR_W  = 0.01265  -- Barlow Condensed Bold CAPS at NAME_SIZE 0.0407 
 local NAMES_UPPERCASE = true
 local NAME_MARGIN  = 0.020    -- gap from the end of the bar to the text
 -- Keep BAR_WIDTH in step with build-scoreboard.lua (0.75 until 2026-09-25).
-local BAR_WIDTH    = 0.85
+local BAR_WIDTH    = 0.875   -- 2026-10-21 (Kenny): was 0.85; keep in step with build-scoreboard.lua
 local BAR_L, BAR_R = 0.5 - BAR_WIDTH / 2, 0.5 + BAR_WIDTH / 2
 -- Keep these in step with build-scoreboard.lua. Names are edge-anchored now
 -- (2026-09-25), so these only correct the font's side bearings: 40px from

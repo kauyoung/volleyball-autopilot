@@ -391,7 +391,20 @@ def badge(c, r, name, ring, logo_path=None):
         d.ellipse([c[0] - r - t, c[1] - r - t, c[0] + r + t, c[1] + r + t], fill=ring + (255,))
         d.ellipse([c[0] - r, c[1] - r, c[0] + r, c[1] + r], fill=(10, 10, 10, 255))
         if logo_path and os.path.exists(logo_path):
-            lg = Image.open(logo_path).convert("RGBA").resize((int(r * 1.9), int(r * 1.9)), Image.LANCZOS)
+            # 2026-10-21 (Kenny): sized by the visible drawing (+ optical factor from
+            # team-logos\logo-sizes.txt) so every logo looks the same size; centred on its ink.
+            # Old: whole canvas at 1.9 r.
+            lg = Image.open(logo_path).convert("RGBA")
+            try:
+                sys.path.insert(0, WORK)
+                import logo_sizes
+                W0, H0, x0, y0, x1, y1 = logo_sizes.ink_box(logo_path)
+                k = r * 1.50 * logo_sizes.factor(logo_path) / max(1, y1 - y0)
+                k = min(k, r * 1.62 / max(1, x1 - x0))            # never wider than the circle allows
+                lg = lg.crop((x0, y0, x1, y1))
+                lg = lg.resize((max(1, round(lg.width * k)), max(1, round(lg.height * k))), Image.LANCZOS)
+            except Exception:
+                lg = lg.resize((int(r * 1.9), int(r * 1.9)), Image.LANCZOS)
             im.alpha_composite(lg, (c[0] - lg.width // 2, c[1] - lg.height // 2))
         else:
             # centre the letters' actual ink in the circle (2026-09-28: anchor "mm" centres

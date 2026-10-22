@@ -8,6 +8,7 @@ Venom Rebels — one-command end-to-end test on the permanent fixture (2026-10-1
     python zz-test.py --keep-state         # don't put the real status/summary files back
     python zz-test.py --timeout 152        # 2026-10-19: add a time-out tap at 152 s to the zz copy's match file
                                            # (later points moved 30 s; min cut 8 s, fallback 15 s for the short fixture)
+    python zz-test.py --team2 "Venom Chaos" # 2026-10-21: opponent name in the zz copy only (name fit / logo checks)
 
 Safety (Kenny, 2026-10-14 — two earlier tests overwrote real files):
   * refuses to start while a real run is busy or Resolve is rendering;
@@ -155,6 +156,18 @@ def add_timeout(folder, t):
     return "no match file to add the time-out to"
 
 
+def set_team2(folder, name):
+    """2026-10-21: opponent name in the zz copy's match file only (never the master)"""
+    for js in glob.glob(os.path.join(folder, "*.json")):
+        j = json.load(open(js, encoding="utf-8"))
+        if "events" not in j:
+            continue
+        j["team2"] = name
+        json.dump(j, open(js, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        return f"opponent set to {name!r} in {os.path.basename(js)}"
+    return "no match file to set the opponent in"
+
+
 def tidy_after():
     """2026-10-19 (Kenny): the test cleans up after itself — its Resolve test project(s) are deleted
     (zz test / zz tournament only, never while rendering) and only the last 3 test logs and
@@ -288,6 +301,9 @@ def main():
         if to_t is not None:
             for f_ in folders:
                 st(add_timeout(f_, to_t))
+        if "--team2" in args:
+            for f_ in folders:
+                st(set_team2(f_, args[args.index("--team2") + 1]))
         st("running: " + " ".join(os.path.basename(c) if c.endswith(".py") else c for c in cmd[1:]))
         rc = subprocess.run(cmd, cwd=W, env=env, creationflags=NOWIN, timeout=7200).returncode
         tail = open(stat, encoding="utf-8", errors="replace").read().strip().splitlines()

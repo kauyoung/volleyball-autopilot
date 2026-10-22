@@ -43,6 +43,11 @@
 -- 2026-09-27: bolder version (strokes ~35% thicker) so the ball matches the
 -- weight of the bold text around it. The original thin icon is still there as
 -- volleyball-serve-icon.png if we ever want it back.
+-- 2026-10-20 (Kenny): now a photo of the OVA 14U ball (Mikasa VQ200W) with a
+-- thin white rim, 512px. The drawn icon above is the fallback: point this back
+-- at volleyball-serve-icon-bold.png and set SERVE_SIZE to 0.14.
+-- Repo copy: the drawn icon (assets/volleyball-serve-icon-bold.png). The author's own build
+-- uses a photo of the league ball at SERVE_SIZE 0.168 (photo not included).
 local SERVE_ICON_PATH = [[C:\Users\YOURNAME\Documents\Resolve Assets\volleyball-serve-icon-bold.png]]
 
 -- auto-overlay.lua fills these in from the match JSON automatically (via the
@@ -71,7 +76,9 @@ local NAME_FONT_STYLE = "Bold"
 -- Was 0.75; 0.85 gives each team-name cell 0.05 more (~135px at 4K after the
 -- 0.70 scale). The score/sets cells in the middle don't move — only the two
 -- outer name cells grow. Keep in step with BAR_WIDTH in apply-match.lua.
-local BAR_WIDTH = 0.85
+-- 2026-10-21 (Kenny): 0.85 -> 0.875 (+3%, ~36px further out each end at 4K) so
+-- "ANCASTER LIONS STEALTH" fits in full. Inner layout (scores, SETS, serve balls) unchanged.
+local BAR_WIDTH = 0.875
 
 local CLEAR_EXISTING = true    -- true = delete every node except MediaOut1 first
 
@@ -159,7 +166,9 @@ local OVERALL_SIZE = 0.75   -- 2026-10-14 (Kenny): 0.70 -> 0.75, easier to read 
 -- padding inside its 512px canvas, so the visible ball is meaningfully smaller
 -- than the canvas and the arithmetic (512 x size) overstates it. At 0.11 the
 -- ball measured ~80% of the team name's cap height; 0.14 brings it level.
-local SERVE_SIZE = 0.14
+-- 2026-10-20 (Kenny): 0.168 = the photo ball 20% bigger than the drawn icon
+-- (~64px across on the finished 4K frame; still clears names and the divider).
+local SERVE_SIZE = 0.14    -- repo: drawn icon (0.168 = the author's photo ball)
 
 -- Club colours (from the brief — locked, don't change)
 local GREEN = { 0.439, 0.835, 0.286 }   -- #70D549  Venom
@@ -619,9 +628,17 @@ place(name2)
 -- SETS caption sits at 0.139 with the count at 0.101. The walkthrough's
 -- 0.132 / 0.106 left only a hairline of air between the caption and the
 -- number below it, which read as cramped rather than as a pair.
-local l1 = text("Team1SetsLabel", "SETS", 0.016, WHITE, 0.45, 0.406, 0.139, COL + 9,  ROW + 2)
-setv(l1, "CharacterSpacing", 1.25)
-place(l1)
+-- 2026-10-21 (Kenny): "SETS" was too thin to read on a phone. Now Bold, full
+-- white, 20% larger (was SemiBold, alpha 0.45, size 0.016, spacing 1.25).
+-- Still clears the set-win box below it (checked on a real frame).
+local SETS_LABEL = { size = 0.0192, alpha = 1.0, style = "Bold", spacing = 1.18 }
+local function setsLabel(name, x, col)
+  local l = text(name, "SETS", SETS_LABEL.size, WHITE, SETS_LABEL.alpha, x, 0.139, col, ROW + 2)
+  setv(l, "Style", SETS_LABEL.style)
+  setv(l, "CharacterSpacing", SETS_LABEL.spacing)
+  place(l)
+end
+setsLabel("Team1SetsLabel", 0.406, COL + 9)
 
 -- 2026-10-14 (Kenny): rounded box in the team colour behind the SETS number,
 -- shown only for a moment when that team wins a set (apply-match.lua keys the
@@ -633,9 +650,7 @@ place(plate("Team1SetsChip", GREEN, SETS_CHIP.level,
       "Team1SetsChipMerge", 0)
 place(text("Team1Sets", "0", 0.043, WHITE, 1.0, 0.406, 0.101, COL + 10, ROW + 2), "Team1SetsMerge")
 
-local l2 = text("Team2SetsLabel", "SETS", 0.016, WHITE, 0.45, 0.594, 0.139, COL + 11, ROW + 2)
-setv(l2, "CharacterSpacing", 1.25)
-place(l2)
+setsLabel("Team2SetsLabel", 0.594, COL + 11)
 
 place(plate("Team2SetsChip", BLUE, SETS_CHIP.level,
       { w = SETS_CHIP.w, h = SETS_CHIP.h, x = 0.594, y = SETS_CHIP.y, r = SETS_CHIP.r }, COL + 11, ROW + 2),
@@ -671,9 +686,12 @@ end
 -- inside that small canvas; the Merge then drops the whole canvas at frame
 -- centre, which is why the ball appeared near the middle of the picture instead
 -- of on the bar. A Merge's Center IS in frame coordinates, so it goes here.
+-- 2026-10-21 (Kenny, option A): the ball sat ~4px (finished 4K) above the centre
+-- of the team-name capitals; -0.0025 (x 2160 x OVERALL_SIZE 0.75 = 4px) centres it.
+local SERVE_Y_NUDGE = -0.0025
 local function serveAt(mergeName, cx)
   local m = comp:FindTool(mergeName)
-  if m then setPoint(m, "Center", cx, SYp(0.115)) end
+  if m then setPoint(m, "Center", cx, SYp(0.115 + SERVE_Y_NUDGE)) end
 end
 
 -- Nudged 5px further from the name/sets dividers at 0.379 / 0.621 — so the left
@@ -694,6 +712,34 @@ serveAt("Team2ServeMerge", 1 - SERVE_X)
 -- Team 1 logo (only if a logo file exists for this team) -------------------
 -- Same Loader -> Transform -> Merge pattern as the serve balls: Size on the
 -- Transform is relative to the source PNG, position goes on the Merge.
+-- 2026-10-21 (Kenny): every logo must LOOK the same size. Size each logo by its
+-- visible drawing (team-logos\_logo-ink.txt, written by logo_sizes.py before the
+-- build) instead of its canvas, times an optional optical factor from
+-- team-logos\logo-sizes.txt. A logo too wide for its slot is capped at the slot
+-- width so names never move. No table entry -> the old canvas sizing.
+local LOGO_INK_H = 0.6334   -- visible height as a fraction of the bar (= 118 px on the 4K frame)
+local function logoFit(file, srcPx)
+  local stem = (file:match("([^/\\]+)%.[Pp][Nn][Gg]$") or ""):lower()
+  local fh = io.open(LOGO_DIR .. "_logo-ink.txt", "r")
+  if fh then
+    for line in fh:lines() do
+      local k, W, H, x0, y0, x1, y1, f = line:match("^(%S+)%s+(%d+)%s+(%d+)%s+(%d+)%s+(%d+)%s+(%d+)%s+(%d+)%s+([%d%.]+)")
+      if k == stem then
+        fh:close()
+        W, H, x0, y0, x1, y1, f = tonumber(W), tonumber(H), tonumber(x0), tonumber(y0), tonumber(x1), tonumber(y1), tonumber(f)
+        local s = LOGO_INK_H * 0.115 * FRAME_H * f / math.max(1, y1 - y0)
+        if (x1 - x0) * s > LOGO_PX then s = LOGO_PX / math.max(1, x1 - x0) end
+        local dx = -((x0 + x1) / 2 - W / 2) * s / FRAME_W
+        local dy = ((y0 + y1) / 2 - H / 2) * s / FRAME_H
+        print(string.format(" logo %s: drawn %.0f px tall on the 4K frame (factor %.2f)", stem, (y1 - y0) * s * OVERALL_SIZE * 2160 / FRAME_H, f))
+        return s, dx, dy
+      end
+    end
+    fh:close()
+  end
+  return LOGO_PX / srcPx, 0, 0
+end
+
 if HAS_LOGO then
   local ld = add("Loader", "Team1LogoFile", COL + 16, ROW + 3)
   if ld then
@@ -706,11 +752,12 @@ if HAS_LOGO then
     local tr = add("Transform", "Team1LogoXf", COL + 16, ROW + 2)
     if tr then
       tr.Input = ld.Output
-      setv(tr, "Size", LOGO_PX / srcPx)
+      local ls, ldx, ldy = logoFit(LOGO_FILE, srcPx)
+      setv(tr, "Size", ls)
       childOf[tr] = ld
       place(tr, "Team1Logo")
       local m = comp:FindTool("Team1Logo")
-      if m then setPoint(m, "Center", BAR_L + LOGO_START + LOGO_W / 2, SYp(0.115)) end
+      if m then setPoint(m, "Center", BAR_L + LOGO_START + LOGO_W / 2 + ldx, SYp(0.115 + ldy)) end
     end
   end
 end
@@ -726,11 +773,12 @@ if HAS_LOGO2 then
     local tr = add("Transform", "Team2LogoXf", COL + 17, ROW + 2)
     if tr then
       tr.Input = ld.Output
-      setv(tr, "Size", LOGO_PX / srcPx)
+      local ls, ldx, ldy = logoFit(LOGO2_FILE, srcPx)
+      setv(tr, "Size", ls)
       childOf[tr] = ld
       place(tr, "Team2Logo")
       local m = comp:FindTool("Team2Logo")
-      if m then setPoint(m, "Center", BAR_R - LOGO_START - LOGO_W / 2, SYp(0.115)) end
+      if m then setPoint(m, "Center", BAR_R - LOGO_START - LOGO_W / 2 + ldx, SYp(0.115 + ldy)) end
     end
   end
 end
@@ -880,7 +928,8 @@ elseif PILL_STYLE == "tab" then
   -- Joined to the bar above the grey score cell (0.134 wide), same grey, so
   -- the score box looks like one piece with a header. Small corner radius so
   -- the bottom corners meet the bar cleanly.
-  pillTxt, pillTrack, pillTxtA, pillBold = 0.025, 1.08, 0.95, true
+  -- 2026-10-21 (Kenny): "SET n" 10% larger (0.025 -> 0.0275), still well inside the tab.
+  pillTxt, pillTrack, pillTxtA, pillBold = 0.0275, 1.08, 0.95, true
   -- Width = score cell (0.134) minus one outline width, so the outline drawn
   -- just outside the tab lands exactly on the separators at 0.433 / 0.567.
   -- Width = score cell (0.134) PLUS one line width: the outline is drawn just

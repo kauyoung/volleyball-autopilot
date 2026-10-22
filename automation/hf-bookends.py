@@ -101,6 +101,45 @@ def _mmss(sec):
     return f"{t // 3600}:{t % 3600 // 60:02d}:{t % 60:02d}" if t >= 3600 else f"{t // 60}:{t % 60:02d}"
 
 
+# 2026-10-21 (Kenny): logos must LOOK the same size on the intro / FINAL too. The
+# templates show the whole image ("contain"), so padding in a PNG made a logo smaller.
+# Each logo is copied as a square whose VISIBLE drawing (logo_sizes.ink_box, near-black
+# left out) is LOGO_FILL of the height x its optical factor (team-logos\logo-sizes.txt),
+# centred. The file name carries a hash, so a changed logo/factor re-renders the cache.
+LOGO_FILL, LOGO_MAX_W = 0.78, 0.86
+
+
+def _norm_logo(src, logos_dir):
+    import sys
+    if WORK not in sys.path:
+        sys.path.insert(0, WORK)
+    import logo_sizes
+    from PIL import Image
+    W0, H0, x0, y0, x1, y1 = logo_sizes.ink_box(src)
+    f = logo_sizes.factor(src)
+    tag = hashlib.sha1(f"{os.path.getmtime(src)}|{os.path.getsize(src)}|{f}|{LOGO_FILL}|{LOGO_MAX_W}|v1".encode()).hexdigest()[:8]
+    stem = os.path.splitext(os.path.basename(src))[0].lower()
+    name = f"{stem}-{tag}.png"
+    dst = os.path.join(logos_dir, name)
+    if not os.path.exists(dst):
+        vw, vh = max(1, x1 - x0), max(1, y1 - y0)
+        side = max(vh / (LOGO_FILL * f), vw / LOGO_MAX_W)
+        im = Image.open(src).convert("RGBA")
+        k = min(1.0, 1024 / side)                       # keep the copy <= 1024 px
+        im = im.resize((max(1, round(im.width * k)), max(1, round(im.height * k))), Image.LANCZOS)
+        S = max(1, round(side * k))
+        can = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+        can.paste(im, (round(S / 2 - (x0 + x1) / 2 * k), round(S / 2 - (y0 + y1) / 2 * k)), im)
+        can.save(dst)
+        for old in os.listdir(logos_dir):               # tidy older copies of the same logo
+            if old != name and re.fullmatch(re.escape(stem) + r"-[0-9a-f]{8}\.png", old):
+                try:
+                    os.remove(os.path.join(logos_dir, old))
+                except OSError:
+                    pass
+    return name
+
+
 def build_data(kind, p, logo_for, tdir):
     info = json.load(open(os.path.join(WORK, "youtube-info.json"), encoding="utf-8"))
     fmt, detail = _format(info)
@@ -110,6 +149,10 @@ def build_data(kind, p, logo_for, tdir):
     def team(name):
         lg = logo_for(name)
         if lg and os.path.exists(lg):
+            try:
+                return {"name": name, "logo": "logos/" + _norm_logo(lg, os.path.join(tdir, "logos"))}
+            except Exception as e:
+                print(f"logo sizing skipped for {name}: {e}")
             dst = os.path.join(tdir, "logos", os.path.basename(lg))
             if not os.path.exists(dst) or os.path.getmtime(dst) != os.path.getmtime(lg):
                 shutil.copy2(lg, dst)
