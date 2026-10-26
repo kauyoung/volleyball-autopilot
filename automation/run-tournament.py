@@ -56,7 +56,7 @@ PENDING = W + r"\event-pending.txt"
 PIC_PENDING = W + r"\picture-pending.txt"
 PIC_ASKED = W + r"\picture-asked.txt"
 ROOT = r"E:\Venom Matches"
-YT_GB_H, TAVO_GB_H = 14.4, 5.5          # same as prepare-match.py
+YT_GB_H, TAVO_GB_H = 29.0, 13.5         # same as prepare-match.py (2026-10-26: 60M preset, 4K H.265 TAVO)
 COPY_S_PER_GB = 12.5
 NOWIN = 0x08000000
 UTF8 = dict(os.environ, PYTHONIOENCODING="utf-8")
@@ -111,7 +111,7 @@ def iso(t):
 
 def write_summary(extra=()):
     L = list(extra)
-    L.append(f"tournament: {R.get('date')} — {len(MS)} matches — event: {R.get('event') or 'none'} — "
+    L.append(f"tournament: {R.get('date')} — {len(MS)} matches — event: {R.get('event') or ('per match' if any(m.get('event_full') for m in MS) else 'none')} — "
              f"TAVO: {R.get('tavo_list') or 'off'}")
     for m in MS:
         L.append(f"match {m['n']}: {m.get('hhmm', '')} vs {m.get('team2')} | project '{m.get('project')}' | "
@@ -406,10 +406,50 @@ def collect_kit(m, rm=None):
         m["sheet_small"] = md + r"\review-sheet-small.jpg"
 
 
+
+def per_match(spec, n):
+    """2026-10-26: "1-4:Pool Play,5:Play Off" / "2:Name" / "all:Name" -> {match n: value}"""
+    out = {}
+    for part in (spec or "").split(","):
+        if ":" not in part:
+            continue
+        k, v = part.split(":", 1)
+        k, v = k.strip().lower(), v.strip()
+        if k == "all":
+            keys = range(1, n + 1)
+        elif "-" in k:
+            a_, b_ = k.split("-", 1); keys = range(int(a_), int(b_) + 1)
+        else:
+            keys = [int(k)]
+        for i in keys:
+            if 1 <= i <= n:
+                out[i] = v
+    return out
+
+
+def apply_overrides(a):
+    """2026-10-26 (after the MYVB tournament): per-match opponent name (into the match FOLDER's .json copy
+    only, never the Drive original) and per-match stage label (event.txt = "<event> \u00b7 <stage>")."""
+    t2s, stages = per_match(a.team2, len(MS)), per_match(a.stage, len(MS))
+    for m in MS:
+        if m["n"] in t2s:
+            js = [x for x in glob.glob(os.path.join(m["folder"], "*.json"))]
+            if len(js) != 1:
+                tstop(f"--team2: match {m['n']} folder has {len(js)} .json files")
+            d = json.load(open(js[0], encoding="utf-8"))
+            d["team2"] = t2s[m["n"]]
+            json.dump(d, open(js[0], "w", encoding="utf-8"), ensure_ascii=False)
+            m["team2"] = t2s[m["n"]]
+            st(f"match {m['n']}: opponent name set to {m['team2']} (folder copy only)")
+        if m["n"] in stages:
+            m["event_full"] = (R["event"] + " \u00b7 " + stages[m["n"]]) if R.get("event") else stages[m["n"]]
+            st(f"match {m['n']}: event {m['event_full']}")
+    save()
+
 def prepare_one(a, m):
     args = [PY, W + r"\run-match.py", "--folder", m["folder"], "--hold-export", "--no-picture-check"]
-    if R.get("event"):
-        args += ["--event", R["event"]]
+    if m.get("event_full") or R.get("event"):
+        args += ["--event", m.get("event_full") or R["event"]]
     if m.get("offset") is not None:
         args += ["--offset", ot.fmt(m["offset"])]
     if a.test:
@@ -471,6 +511,18 @@ def approval_kit():
     comb = appr + r"\tournament review sheet.jpg"
     img.save(comb, quality=85)
     kit = [comb]
+    # 2026-10-26: the combined sheet is ~6,700 px per match and chat images max out at 8000 px,
+    # so each match's part is also saved on its own ("review sheet - match <n>.jpg")
+    y = 0
+    for m, sh, th in rows:
+        h_ = HB + max(sh.height, th.height) + PAD
+        part = appr + rf"\review sheet - match {m['n']}.jpg"
+        piece = img.crop((0, y, W2, y + h_))
+        if piece.height > 7900:
+            piece = piece.resize((round(piece.width * 7900 / piece.height), 7900), Image.LANCZOS)
+        piece.save(part, quality=85)
+        kit.append(part)
+        y += h_
     for m in MS:
         for k in ("thumbnail", "text"):
             if m.get(k) and os.path.exists(m[k]):
@@ -497,6 +549,62 @@ def project_etas(t, spf):
         m.update({"eta": hm(eta), "eta_iso": iso(eta), "eta_how": "estimate", "eta_end": end})
         t = end
 
+
+
+# ---------------------------------------------------------------- uploads after Kenny's OK (2026-10-26)
+# Claude writes upload-approved.txt ("all" or "1,3") when Kenny OKs the approval kit; each match is then
+# uploaded (Unlisted, Venom Rebels channel + season playlist) as soon as its export is OK, one at a time,
+# while the next match exports. Status lines: "match <n> UPLOAD OK <url>" / "match <n> UPLOAD FAILED".
+UP_APPROVED = W + r"\upload-approved.txt"
+UP_STATUS = W + r"\yt-upload-status.txt"
+PLAYLIST = "Venom Rebels 14U \u2013 2026-2027 Season"
+UPQ, UPCUR = [], {}
+
+
+def approved_set():
+    if not fresh(UP_APPROVED):
+        return None
+    txt = open(UP_APPROVED, encoding="utf-8").read().strip().lower()
+    if txt in ("all", "ok", "yes"):
+        return {m["n"] for m in MS}
+    return {int(x) for x in re.findall(r"\d+", txt)}
+
+
+def pump_uploads(a):
+    """start / finish queued uploads; returns True while something is still waiting or uploading"""
+    if UPCUR.get("proc") is not None:
+        if UPCUR["proc"].poll() is None:
+            return True
+        m = UPCUR["m"]
+        tail = open(UP_STATUS, encoding="utf-8").read().strip().splitlines() if os.path.exists(UP_STATUS) else []
+        okl = [l for l in tail if "UPLOAD OK" in l]
+        if okl and os.path.basename(m["export_file"]) in open(UP_STATUS, encoding="utf-8").read():
+            url = okl[-1].split("UPLOAD OK ", 1)[1].split()[0]
+            m["upload"] = url
+            st(f"match {m['n']} UPLOAD OK {url}")
+            extra = [l for l in tail if "NOT set" in l or "NOT found" in l]
+            for l in extra:
+                st(f"match {m['n']} upload note: {l[9:]}")
+        else:
+            m["upload"] = "FAILED"
+            st(f"match {m['n']} UPLOAD FAILED: " + (tail[-1][9:] if tail else "no status"))
+        UPCUR.clear(); save(); write_summary()
+    ok = approved_set()
+    if ok is None:
+        return bool(UPQ)
+    for m in list(UPQ):
+        if m["n"] not in ok:
+            continue
+        UPQ.remove(m)
+        if a.test:
+            st(f"match {m['n']} upload skipped (test run)"); m["upload"] = "test - not uploaded"
+            continue
+        args = [PY, W + r"\yt-upload.py", "upload", "--channel", "venom", "--video", m["export_file"],
+                "--text", m["text"], "--thumb", m["thumbnail"], "--playlist", PLAYLIST]
+        UPCUR.update({"m": m, "proc": subprocess.Popen(args, cwd=W, env=UTF8, creationflags=NOWIN)})
+        st(f"match {m['n']} uploading \u2026")
+        return True
+    return bool(UPQ)
 
 def export_all(a, picks):
     rm = mod("run_match", "run-match.py")
@@ -583,6 +691,7 @@ def export_all(a, picks):
                         ready_said = True
                         st(f"TOURNAMENT READY FOR APPROVAL — exporting match {m['n']} of {len(MS)}, "
                            f"done ~{m['eta']} ({m['eta_iso']}); all exports done ~{MS[-1].get('eta')}")
+                pump_uploads(a)
                 time.sleep(60 if not s.get("joining") else 30)
             ok = bool(s.get("ok"))
             m["export_state"] = "EXPORT OK" if ok else "FAILED"
@@ -595,6 +704,8 @@ def export_all(a, picks):
             save()
             write_summary()
             st(f"match {m['n']} " + (f"EXPORT OK: {m['export_file']}" if ok else "*** EXPORT CHECK FAILED: " + rm.last(s)))
+            if ok:
+                UPQ.append(m); pump_uploads(a)
             if not ok:
                 raise Stop(f"match {m['n']} export check failed — " + rm.last(s)[:200])
         except Stop as e:
@@ -648,6 +759,8 @@ def main():
     ap.add_argument("--dry-run", action="store_true"); ap.add_argument("--no-picture-check", action="store_true")
     ap.add_argument("--live-scoreboard", action="store_true")   # 2026-10-19: skip the scoreboard pictures
     ap.add_argument("--offset")                  # camera started N s before START: "5" or "1:5,3:2"
+    ap.add_argument("--team2")                   # 2026-10-26: per-match opponent names "2:Ancaster Lions Stealth 15U,3:Unity Apex 15U"
+    ap.add_argument("--stage")                   # 2026-10-26: per-match stage "1-4:Pool Play,5:Play Off" -> event.txt "<event> \u00b7 <stage>"
     a = ap.parse_args()
     st("TOURNAMENT STARTED " + " ".join(sys.argv[1:]), first=True)
     open(TLOG, "w", encoding="utf-8").write("run-tournament " + time.strftime("%Y-%m-%d %H:%M") + "\n")
@@ -722,6 +835,9 @@ def main():
     # 3b. camera-start offsets (2026-10-14): --offset or Kenny's answer; written by run-match into each folder's .json
     resolve_offsets(a)
 
+    # 3c. per-match opponent names / stage labels (2026-10-26)
+    apply_overrides(a)
+
     # 4. setup + finish, match by match
     for m in MS:
         if a.test:
@@ -754,6 +870,14 @@ def main():
 
     # 7. exports, one after another; 8. TAVO afterwards
     export_all(a, picks)
+    # uploads still queued: wait for them (and up to 3 h for Kenny's OK if it hasn't come yet)
+    t_up = time.time()
+    while pump_uploads(a) and time.time() - t_up < 3 * 3600:
+        if approved_set() is None and UPQ and time.time() - t_up < 5:
+            st("exports done \u2014 uploads wait for Kenny's OK (upload-approved.txt)")
+        time.sleep(30)
+    if UPQ:
+        st("uploads NOT done (no OK in 3 h): " + ", ".join(str(m["n"]) for m in UPQ))
     tavo_all()
     okc = sum(1 for m in MS if m.get("export_state") in ("EXPORT OK", "already there"))
     save()

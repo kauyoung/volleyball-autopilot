@@ -64,7 +64,7 @@ PHASE = globals().get("PM_PHASE", "setup")
 DETACHED = 0x00000008 | 0x08000000   # DETACHED_PROCESS | CREATE_NO_WINDOW
 T0 = time.time()
 BUDGET = 42                          # seconds per call (tool limit is 60)
-YT_GB_H, TAVO_GB_H = 14.4, 5.5       # ~32 Mbps YouTube export, ~12 Mbps TAVO file
+YT_GB_H, TAVO_GB_H = 29.0, 13.5      # 2026-10-26: ~65 Mbps YouTube export (60M preset), 4K H.265 TAVO ~30 Mbps
 UTF8 = dict(os.environ, PYTHONIOENCODING="utf-8")
 
 
@@ -152,13 +152,15 @@ def match_json(folder):
     return max(js, key=os.path.getmtime) if js else None
 
 
+YT_PRESET_60 = "Venom YouTube 4K60 H265 10-bit 60M"   # 2026-10-26 (Kenny): 60 Mbps target (YouTube's 4K60 guide 53-68); was ~32
 YT_PRESET_10 = "Venom YouTube 4K60 H265 10-bit"   # 2026-10-19 (Kenny): 10-bit like the camera (Main10), same encoder settings
 YT_PRESET_8 = "Venom YouTube 4K60 H265"          # fallback (8-bit) if the 10-bit preset is missing
 
 
 def load_youtube_preset(p):
     p.LoadRenderPreset("H.264 Master"); time.sleep(2)
-    name = YT_PRESET_10 if YT_PRESET_10 in (p.GetRenderPresetList() or []) else YT_PRESET_8
+    have = p.GetRenderPresetList() or []
+    name = next((n for n in (YT_PRESET_60, YT_PRESET_10) if n in have), YT_PRESET_8)
     p.LoadRenderPreset(name); time.sleep(3)
     return p.GetCurrentRenderFormatAndCodec()
 
@@ -372,13 +374,14 @@ def cut_words(bj):
     """'set breaks removed: 4, time-outs removed: 2' (2026-10-19)"""
     cs = bj.get("cuts", [])
     nt = sum(1 for c in cs if c.get("kind") == "timeout")
-    w = f"set breaks removed: {len(cs) - nt}"
+    nc = sum(1 for c in cs if c.get("kind") == "camera")
+    w = f"set breaks removed: {len(cs) - nt - nc}" + (f", camera-gap wipes: {nc}" if nc else "")
     return w + (f", time-outs removed: {nt}" if nt else "")
 
 
 def wipe_ids(cuts):
     """2026-10-19: set numbers for set-break wipes, 'timeout' for the TIME-OUT wipe"""
-    return {"timeout" if c.get("kind") == "timeout" else c["next_set"] for c in cuts}
+    return {"timeout" if c.get("kind") == "timeout" else (c.get("wipe") or "camera") if c.get("kind") == "camera" else c["next_set"] for c in cuts}
 
 
 def wipes_ready():

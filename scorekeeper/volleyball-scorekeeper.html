@@ -822,7 +822,7 @@ el('restoreNo').addEventListener('click', () => {
 // ===========================================================================
 function logEvent() {
   if (!running) return;
-  events.push({ t: currentElapsed(), team1: t1Score, team2: t2Score, set: currentSet });
+  events.push({ t: currentElapsed(), w: Date.now(), team1: t1Score, team2: t2Score, set: currentSet });   // w = real clock (2026-10-26)
   refreshLog();
   saveCheckpoint();
   render();
@@ -833,7 +833,7 @@ el('startBtn').addEventListener('click', () => {
   running = true;
   paused = false; pausedTotal = 0; pauseStartedAt = null;
   recordings = [{ start: startTime, end: null }];
-  events = [{ t: 0, team1: 0, team2: 0, set: currentSet }];
+  events = [{ t: 0, w: startTime, team1: 0, team2: 0, set: currentSet }];
   timeouts = []; timeoutOpen = false;
   startTimerAndLock();
   refreshLog();
@@ -922,7 +922,7 @@ function cancelTimeout() {
 el('timeoutBtn').addEventListener('click', () => {
   if (!running || paused) return;
   if (timeoutOpen) { cancelTimeout(); showSnack('Time-out cancelled'); return; }
-  timeouts.push({ t: currentElapsed(), set: currentSet });
+  timeouts.push({ t: currentElapsed(), w: Date.now(), set: currentSet });
   timeoutOpen = true;
   buzz(30);
   saveCheckpoint(); render();
@@ -1054,7 +1054,7 @@ function endMatch() {
   const last = recordings[recordings.length - 1];
   if (last && !last.end) last.end = Date.now();
   clearInterval(timerInterval);
-  events.push({ t: currentElapsed(), team1: t1Score, team2: t2Score, set: currentSet, isEnd: true });
+  events.push({ t: currentElapsed(), w: Date.now(), team1: t1Score, team2: t2Score, set: currentSet, isEnd: true });
   refreshLog();
   releaseWakeLock();
   saveCheckpoint();
@@ -1240,7 +1240,9 @@ function buildMatchData() {
     else if (e.team2 > prev.team2) serve = 2;
     else serve = out.length ? out[out.length - 1].serve : 0;
     out.push({ t: Math.round(Math.max(0, e.t + offset) * 1000) / 1000, set: e.set,
-               score1: e.team1, score2: e.team2, sets1: s1, sets2: s2, serve });
+               score1: e.team1, score2: e.team2, sets1: s1, sets2: s2, serve,
+               // 2026-10-26: real clock time of the tap - lines points up with the camera files even after a camera stop
+               ...(e.w ? { at: localIso(e.w), wms: e.w } : {}) });
   }
   // 2026-09-28: real clock times (phone's local time with its UTC offset), so
   // Claude can pick the right camera clips off the card even when several
@@ -1266,7 +1268,8 @@ function buildMatchData() {
            endedAt: lastEnd ? localIso(lastEnd) : null,
            recordings: recs, events: out,
            // 2026-10-19: time-out taps (video pipeline cuts from tap + 5 s to just before the next serve)
-           timeouts: timeouts.map(x => ({ t: Math.round(Math.max(0, x.t + offset) * 1000) / 1000, set: x.set })) };
+           timeouts: timeouts.map(x => ({ t: Math.round(Math.max(0, x.t + offset) * 1000) / 1000, set: x.set,
+                                          ...(x.w ? { at: localIso(x.w), wms: x.w } : {}) })) };
 }
 
 // The phone's LOCAL date (toISOString() is UTC, which rolls over at 8 pm in Toronto).

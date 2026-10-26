@@ -41,6 +41,18 @@ FPS_NUM, FPS_DEN = 60000, 1001
 BEFORE = float(os.environ.get("TAVO_BEFORE", 60))    # 1 min before each set's first point (Kenny, 2026-09-28; was 2 min)
 AFTER = float(os.environ.get("TAVO_AFTER", 5))
 MAX_GB = 19.5
+# 2026-10-26 (Kenny, MYVB tournament): TAVO_4K=1 keeps 3840x2160 (H.264 ~40 Mbps, ~18 GB/hour - a
+# 40-min match ~12 GB, under TAVO's 20 GB per upload); TAVO_BRIGHT=1 = the YouTube "brighter" look
+# (slope 1.06 / power 0.85) on the luma, full frame; TAVO_CUT_TIMEOUTS=1 cuts the time-outs exactly
+# like the YouTube video (the match's _workflow\bookends.json "timeout" cuts).
+K4 = os.environ.get("TAVO_4K") == "1"
+BRIGHT = os.environ.get("TAVO_BRIGHT") == "1"
+CUT_TO = os.environ.get("TAVO_CUT_TIMEOUTS") == "1"
+OUT_W, OUT_H = (3840, 2160) if K4 else (1920, 1080)
+# 2026-10-26 (Kenny: TAVO accepts H.265): H.265 by default - ~40 % faster at 4K (the H.264 encoder was
+# the bottleneck) and ~25 % smaller; TAVO_CODEC=h264 for the old H.264 files
+HEVC = os.environ.get("TAVO_CODEC", "hevc").lower() != "h264"
+LUT = "lutyuv=y='clip(((pow(clip((val-16)/219\\,0\\,1)*1.06\\,0.85))*219+16)\\,16\\,235)'"
 
 
 def log(msg, mode="a"):
@@ -97,19 +109,30 @@ def pieces(segs, clips):
 
 
 def encode(src, a, b, dst, gpu):
-    common = ["-map", "0:v:0", "-map", "0:a:0", "-c:v", "h264_nvenc", "-preset", "p5", "-rc", "vbr",
-              "-b:v", "12M", "-maxrate", "16M", "-bufsize", "24M", "-g", "120", "-profile:v", "high",
+    if HEVC:
+        rate = ["-b:v", "30M", "-maxrate", "45M", "-bufsize", "60M"] if K4 else ["-b:v", "8M", "-maxrate", "12M", "-bufsize", "16M"]
+        codec = ["-c:v", "hevc_nvenc", "-preset", "p5", "-rc", "vbr"] + rate + ["-g", "120", "-profile:v", "main", "-tag:v", "hvc1"]
+    else:
+        rate = ["-b:v", "40M", "-maxrate", "55M", "-bufsize", "80M", "-level", "5.2"] if K4 else \
+               ["-b:v", "12M", "-maxrate", "16M", "-bufsize", "24M"]
+        codec = ["-c:v", "h264_nvenc", "-preset", "p5", "-rc", "vbr"] + rate + ["-g", "120", "-profile:v", "high"]
+    common = ["-map", "0:v:0", "-map", "0:a:0"] + codec + [
               "-c:a", "aac", "-b:a", "160k", "-ar", "48000", "-movflags", "+faststart", dst]
     vf = os.environ.get("TAVO_VF")  # optional picture tweak (zoom/brightness), CPU filters after GPU decode (2026-10-06)
     if vf:
         cmd = ["ffmpeg", "-y", "-v", "error"] + (["-hwaccel", "cuda"] if gpu else []) + [
                "-ss", f"{a:.3f}", "-to", f"{b:.3f}", "-i", src, "-vf", vf + ",format=yuv420p"] + common
     elif gpu:
+        sc = "scale_cuda=format=nv12" if K4 else "scale_cuda=1920:1080:format=nv12"
+        if BRIGHT:
+            sc += ",hwdownload,format=nv12," + LUT
         cmd = ["ffmpeg", "-y", "-v", "error", "-hwaccel", "cuda", "-hwaccel_output_format", "cuda",
-               "-ss", f"{a:.3f}", "-to", f"{b:.3f}", "-i", src, "-vf", "scale_cuda=1920:1080:format=nv12"] + common
+               "-ss", f"{a:.3f}", "-to", f"{b:.3f}", "-i", src, "-vf", sc] + common
     else:
-        cmd = ["ffmpeg", "-y", "-v", "error", "-ss", f"{a:.3f}", "-to", f"{b:.3f}", "-i", src,
-               "-vf", "scale=1920:1080:flags=bicubic,format=yuv420p"] + common
+        sc = "format=yuv420p" if K4 else "scale=1920:1080:flags=bicubic,format=yuv420p"
+        if BRIGHT:
+            sc += "," + LUT
+        cmd = ["ffmpeg", "-y", "-v", "error", "-ss", f"{a:.3f}", "-to", f"{b:.3f}", "-i", src, "-vf", sc] + common
     return subprocess.run(cmd, capture_output=True, text=True)
 
 
@@ -125,6 +148,28 @@ def main():
     clips = camera_clips(folder)
     E = sum(d for _, d in clips)
     segs = segments(info["events"], E)
+    if CUT_TO:                                       # 2026-10-26: same time-out cuts as the YouTube video
+        bk = None
+        for cand in (os.path.join(folder, "_workflow", "bookends.json"), os.path.join(WORK, "bookends.json")):
+            try:
+                j = json.load(open(cand, encoding="utf-8"))
+                if os.path.normcase(j.get("folder", "")) == os.path.normcase(folder):
+                    bk = j; break
+            except Exception:
+                pass
+        tcuts = [(c["out_s"], c["in_s"]) for c in (bk or {}).get("cuts", []) if c.get("kind") == "timeout"]
+        if bk is None:
+            log("*** no bookends.json for this match - time-outs NOT cut")
+        for ca, cb in tcuts:
+            nxt = []
+            for a, b in segs:
+                if cb <= a or ca >= b:
+                    nxt.append([a, b])
+                else:
+                    if ca > a: nxt.append([a, ca])
+                    if cb < b: nxt.append([cb, b])
+            segs = nxt
+        log(f"time-outs cut: {len(tcuts)}")
     keep = sum(b - a for a, b in segs)
     log("keeping " + ", ".join(f"{ts(a)}–{ts(b)}" for a, b in segs)
         + f" = {ts(keep)} of {ts(E)} recorded (cut {ts(E - keep)})")
@@ -149,8 +194,8 @@ def main():
     with open(lst, "w", encoding="utf-8") as fh:
         for p in parts:
             fh.write("file '" + p.replace("'", "'\\''") + "'\n")
-    r = subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy",
-                        "-movflags", "+faststart", out], capture_output=True, text=True)
+    r = subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy"]
+                       + (["-tag:v", "hvc1"] if HEVC else []) + ["-movflags", "+faststart", out], capture_output=True, text=True)
     if r.returncode != 0:
         log("*** TAVO FAILED joining: " + r.stderr.strip()[-400:])
         return 1
@@ -159,7 +204,7 @@ def main():
                                    "-of", "json", out], capture_output=True, text=True).stdout)
     dur, gb = float(p["format"]["duration"]), int(p["format"]["size"]) / 1e9
     v = [s for s in p["streams"] if s.get("width")][0]
-    ok = abs(dur - keep) < 1.5 and v["width"] == 1920 and v["height"] == 1080 and gb < MAX_GB
+    ok = abs(dur - keep) < 1.5 + 0.1 * len(segs) and v["width"] == OUT_W and v["height"] == OUT_H and gb < MAX_GB
     log(f"{os.path.basename(out)}: {ts(dur)} ({dur:.1f} s, expected {keep:.1f}), {gb:.2f} GB, "
         f"{v['codec_name']} {v['width']}x{v['height']}, {'GPU' if gpu else 'CPU'}, {time.time() - t0:.0f} s")
     log(("TAVO READY — " if ok else "*** TAVO CHECK FAILED — ") + out)

@@ -62,3 +62,16 @@ happens only after approval.
 - Stills appended with `MediaPool.AppendToTimeline` are always 300 frames; an append in front of an existing clip is trimmed to the gap (place right to left).
 - Image sequences: `startFrame` is the source frame number, `endFrame` is exclusive.
 - Changing a Fusion Loader's clip by script can pop a modal dialog that blocks the API.
+- NVENC render bit rate can't be set from a script (`SetRenderSettings({"VideoQuality": ...})` is refused for the NVIDIA encoders) - save it in a render preset in the Deliver page instead.
+
+## Tournament-day additions (October 2026)
+
+Lessons from the first full tournament (five matches in one day) went straight back into the pipeline:
+
+- **Camera stops are handled automatically** (`camera-time.py`). The scorekeeper now saves the real clock time of every tap; the pipeline places each point on the camera timeline from those clock times and the camera's file times. A stop inside a set gets a "CAMERA TECHNICAL DIFFICULTY - M:SS OF SET n NOT RECORDED" wipe (`make-camera-wipe.py`); a stop between sets puts the SET n wipe on the restart.
+- **Tournament options**: per-match opponent names and stage labels (`run-tournament.py --team2 "2:Name" --stage "1-4:Pool Play,5:Play Off"`), one review sheet per match, and uploads that start by themselves after approval while the next match exports.
+- **Re-runs**: `run-match.py --rebuild` (next free project version), `--picture N`, `--export-only`.
+- **YouTube titles** read `vs <Opponent> | <event · stage> | <date>`.
+- **TAVO files**: 4K H.265, optional brightening, the same time-out cuts as the YouTube video.
+- **Scoreboard fixes**: several events on one frame no longer ramp the serve ball in; tied stats show "EACH".
+- **Higher-bit-rate YouTube export** (60 Mbps preset) so YouTube's own re-encode starts from a cleaner file.

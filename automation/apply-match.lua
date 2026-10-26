@@ -308,6 +308,12 @@ print(string.format("Frame rate: %g fps (from %s)", fps, fpsSource))
 
 local alignNotes = {}
 local function alignSetsToClipJoins()
+  -- 2026-10-26: camera-time.py already put every point on the camera timeline from the
+  -- scorekeeper's clock times (handles camera stops in and between sets) - nothing to align
+  if match.timeBase == "camera" then
+    alignNotes[#alignNotes + 1] = "skipped — points already placed on the camera timeline from clock times (camera-time.py)"
+    return
+  end
   -- Clip joins on V1, in seconds from the first clip.
   local r = rawget(_G, "resolve")
   if not r and Resolve then pcall(function() r = Resolve() end) end
@@ -469,7 +475,7 @@ end
 -- Deliberately more than two samples: the serve Blend only ever holds 0 or 1, so
 -- checking just the start and midpoint reported "STILL STATIC" whenever those
 -- two moments happened to share a value — a false alarm on a working setup.
-local function verify(nodeName, inputName, fFirst, fLast)
+local function verify(nodeName, inputName, fFirst, fLast, staticOK)
   local n = comp:FindTool(nodeName)
   if not n then return "node missing" end
 
@@ -485,7 +491,7 @@ local function verify(nodeName, inputName, fFirst, fLast)
 
   return string.format("%d distinct across %d samples [%s] %s",
     #order, SAMPLES, table.concat(order, " "),
-    (#order > 1) and "OK" or "*** STILL STATIC ***")
+    (#order > 1) and "OK" or (staticOK and "OK (no sets won, stays 0)" or "*** STILL STATIC ***"))
 end
 
 --------------------------------------------------------------------------------
@@ -494,15 +500,23 @@ end
 
 local sc1, sc2, st1, st2, setNo, srv1, srv2 = {}, {}, {}, {}, {}, {}, {}
 
+-- 2026-10-25 (Kenny: both serve balls showing at the end of Play Off set 1): several
+-- events on the SAME frame (scorekeeper double taps, set start + first points, a camera
+-- gap) made animate() write its "hold" key at f-1 more than once - the second write
+-- overwrote the first with the wrong value and the Blend spline then RAMPED the other
+-- team's ball in across the whole set break. Only the last event on a frame counts now.
+local seriesPrevF = nil
 for _, e in ipairs(match.events) do
   local f = frameOf(e.t)
-  sc1[#sc1 + 1]     = { f, tostring(e.score1) }
-  sc2[#sc2 + 1]     = { f, tostring(e.score2) }
-  st1[#st1 + 1]     = { f, tostring(e.sets1) }
-  st2[#st2 + 1]     = { f, tostring(e.sets2) }
-  setNo[#setNo + 1] = { f, "SET " .. tostring(e.set) }
-  srv1[#srv1 + 1]   = { f, (e.serve == 1) and 1 or 0 }
-  srv2[#srv2 + 1]   = { f, (e.serve == 2) and 1 or 0 }
+  local i = (f == seriesPrevF) and #sc1 or (#sc1 + 1)
+  sc1[i]   = { f, tostring(e.score1) }
+  sc2[i]   = { f, tostring(e.score2) }
+  st1[i]   = { f, tostring(e.sets1) }
+  st2[i]   = { f, tostring(e.sets2) }
+  setNo[i] = { f, "SET " .. tostring(e.set) }
+  srv1[i]  = { f, (e.serve == 1) and 1 or 0 }
+  srv2[i]  = { f, (e.serve == 2) and 1 or 0 }
+  seriesPrevF = f
 end
 
 --------------------------------------------------------------------------------
@@ -1131,8 +1145,8 @@ say("")
 say(" Verification — values should differ between the two frames:")
 say("   Team1Score      " .. verify("Team1Score", "StyledText", firstF, lastF))
 say("   Team2Score      " .. verify("Team2Score", "StyledText", firstF, lastF))
-say("   Team1Sets       " .. verify("Team1Sets",  "StyledText", firstF, lastF))
-say("   Team2Sets       " .. verify("Team2Sets",  "StyledText", firstF, lastF))
+say("   Team1Sets       " .. verify("Team1Sets",  "StyledText", firstF, lastF, tonumber(match.events[#match.events].sets1 or 0) == 0))
+say("   Team2Sets       " .. verify("Team2Sets",  "StyledText", firstF, lastF, tonumber(match.events[#match.events].sets2 or 0) == 0))
 say("   SetNumber       " .. verify("SetNumber",  "StyledText", firstF, lastF))
 say("   Team1ServeMerge " .. verify("Team1ServeMerge", "Blend", firstF, lastF))
 say("   Team2ServeMerge " .. verify("Team2ServeMerge", "Blend", firstF, lastF))

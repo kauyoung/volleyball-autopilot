@@ -85,11 +85,16 @@ SET_CUTS = os.environ.get("BK_SET_CUTS", "1") != "0"
 # (set break: BREAK_LEAD s before the first point; time-out: TO_FALLBACK s before the next point).
 # Time-outs: one tap in the scorekeeper ("timeouts" in the match file); the cut starts TO_AFTER s
 # after the tap; less than TO_MIN s to remove -> left in (no wipe).
-WHISTLE_LEAD, WHISTLE_MIN_BEFORE = 5.0, 8.0
+# 2026-10-22: MIN_BEFORE 8 -> 9 s: on the Oct 18 video the picks 8-9 s before the tap were mostly
+# rally-ending / mid-rally whistles; quick-point serves lost this way just fall back safely.
+WHISTLE_LEAD, WHISTLE_MIN_BEFORE = 5.0, 9.0
 TO_AFTER = 5.0
 TO_FALLBACK = float(os.environ.get("BK_TO_FALLBACK", 40.0))
 TO_MIN = float(os.environ.get("BK_TO_MIN", 20.0))
 WHISTLES = os.environ.get("BK_WHISTLES", "1") != "0"
+
+
+_PITCH, _PITCH_MSG = {}, []   # messages are logged after the plan header (that log() starts the file)
 
 
 def serve_whistle(clips, lo, hi):
@@ -99,7 +104,21 @@ def serve_whistle(clips, lo, hi):
     try:
         sys.path.insert(0, WORK)
         import whistle
-        return whistle.serve_whistle([(f, n) for f, n in clips], FPS, lo, hi)
+        cl = [(f, n) for f, n in clips]
+        # 2026-10-22: learn the referee's whistle pitch once per match (pitch filter, whistle.py v2);
+        # None (or an old whistle.py without match_pitch) -> the plain 2026-10-19 rule
+        key = tuple(cl)
+        if key not in _PITCH:
+            try:
+                _PITCH[key] = whistle.match_pitch(cl, FPS) if hasattr(whistle, "match_pitch") else None
+                _PITCH_MSG.append(f"whistle pitch: {_PITCH[key]:.0f} Hz (only whistles near it count)" if _PITCH[key]
+                                  else "whistle pitch: not found - plain whistle rule")
+            except Exception as ex:
+                _PITCH[key] = None
+                _PITCH_MSG.append(f"(whistle pitch failed: {ex!r} - plain whistle rule)")
+        if _PITCH[key]:
+            return whistle.serve_whistle(cl, FPS, lo, hi, pitch=_PITCH[key])
+        return whistle.serve_whistle(cl, FPS, lo, hi)
     except Exception as ex:
         log(f"(whistle search failed: {ex!r} — using the fixed rule)")
         return None
@@ -210,6 +229,7 @@ def plan():
 
     # stats
     finals, cur, best, lead = {}, (0, 0), (0, 0), (0, 0)
+    runs, leads = {1: 0, 2: 0}, {1: 0, 2: 0}         # 2026-10-26: per team, so a tie shows as "each"
     prev = None
     for e in ev:
         sec, st, a, b, w1, w2 = e
@@ -218,11 +238,17 @@ def plan():
             t = 1 if a > prev[2] else (2 if b > prev[3] else 0)
             if t:
                 cur = (t, cur[1] + 1) if cur[0] == t else (t, 1)
-                if cur[1] > best[1]: best = cur
+                runs[t] = max(runs[t], cur[1])
         else:
             cur = (0, 0)
-        if abs(a - b) > lead[1]: lead = (1 if a > b else 2, abs(a - b))
+        if a != b:
+            k = 1 if a > b else 2
+            leads[k] = max(leads[k], abs(a - b))
         prev = e
+    def _top(d):                                      # (team, n); team 0 = both teams tied
+        n = max(d.values())
+        return (0 if d[1] == d[2] else (1 if d[1] > d[2] else 2), n)
+    best, lead = _top(runs), _top(leads)
     sets = [finals[k] for k in sorted(finals) if finals[k] != (0, 0)]
     # Sets WON come from the scorekeeper's own tally on the last event (2026-09-28):
     # it knows the format (best of 3 / all sets played), sets ended at a point cap
@@ -295,6 +321,29 @@ def plan():
                      "next_set": st_ or None, "tap_s": round(T, 3), "next_point_s": round(P, 3),
                      "out_frame": a, "in_frame": b,
                      "out_s": round(a / FPS, 3), "in_s": round(b / FPS, 3), "cut_s": round((b - a) / FPS, 3)})
+    # camera gaps (2026-10-25, Kenny - SD card stop in the Play Off): the match .json's
+    # "cameraGaps" puts a wipe-only cut exactly on a camera-clip join: {"clip": i, "wipe": "camera"}
+    # = the CAMERA TECHNICAL DIFFICULTY wipe; {"clip": i, "set": n} = move set n's set-break wipe onto that join
+    try:
+        gaps = json.load(open(info["matchFile"], encoding="utf-8")).get("cameraGaps") or []
+    except Exception:
+        gaps = []
+    for g in gaps:
+        try:
+            ci = int(g["clip"]); jf = int(sum(int(n) for _, n in clips[:ci]))
+        except Exception as ex:
+            flags.append(f"camera gap entry not understood: {g!r} ({ex})"); continue
+        if g.get("set"):
+            sn = int(g["set"])
+            cuts = [c for c in cuts if not (c.get("kind") == "set" and c.get("next_set") == sn)]
+            cuts.append({"kind": "set", "wipe": f"set{sn}", "how": "camera join", "after_set": sn - 1, "next_set": sn,
+                         "out_frame": jf, "in_frame": jf, "out_s": round(jf / FPS, 3), "in_s": round(jf / FPS, 3), "cut_s": 0.0})
+            log(f"set break: set {sn - 1} -> {sn}: wipe moved onto the camera join at {jf / FPS:.1f} s")
+        else:
+            cuts.append({"kind": "camera", "wipe": g.get("wipe", "camera"), "how": "camera join", "after_set": None,
+                         "next_set": None, "note": g.get("note", ""),
+                         "out_frame": jf, "in_frame": jf, "out_s": round(jf / FPS, 3), "in_s": round(jf / FPS, 3), "cut_s": 0.0})
+            log(f"camera gap: CAMERA TECHNICAL DIFFICULTY wipe at {jf / FPS:.1f} s (clip join {ci})")
     cuts.sort(key=lambda c: c["out_frame"])
     cut_total = sum(c["cut_s"] for c in cuts)
 
@@ -315,7 +364,11 @@ def plan():
     log("bookends plan: intro " + (f"{intro['start_s']} s, holds {intro['hold_s']} s" if intro["enabled"] else "OFF")
         + f"; summary at {S:.1f} s (final point {F:.1f} s); video ends {end:.1f} s (recording {E:.1f} s)"
         + (f"; video starts at {TRIM:.1f} s ({flags_info})" if TRIM > 0 else "; no front trim"), "w")
+    for m in _PITCH_MSG:
+        log(m)
     for c in cuts:
+        if c.get("kind") == "camera":
+            continue
         if c.get("kind") == "timeout":
             log(f"time-out {c['n']}: cut {c['out_s']:.1f}-{c['in_s']:.1f} s ({int(c['cut_s']) // 60}:{int(c['cut_s']) % 60:02d} removed, "
                 + ("restart 5 s before the serve whistle" if c["how"] == "whistle" else f"no clear whistle - kept the last {TO_FALLBACK:.0f} s before the point")
@@ -621,6 +674,8 @@ def render_summary(p):
     # (2026-10-01, Kenny: "PARENTS" was too long) — same letters as the badge circles.
     # 2026-10-01 (Kenny): our team always "REBELS"; others = 3-letter code
     def code(team_no):
+        if team_no == 0:                                  # 2026-10-26: tie
+            return ("EACH", WHITE)
         name = p["team1"] if team_no == 1 else p["team2"]
         # 2026-10-02 (Kenny): opponent always "OPP" (standard stat-sheet short form)
         if name.strip().lower() == "venom rebels":

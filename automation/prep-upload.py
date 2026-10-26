@@ -99,7 +99,25 @@ def cmd_text():
     kind = " | Scrimmage" if scrim else ""
     # 2026-10-18 (Kenny): titles leave out the result - no Won/Lost, no match or set scores.
     # The result stays in the description.
-    title = f'{t1} vs {t2}{kind} | {short}'
+    # 2026-10-25 (Kenny): our own channel - the title starts with the opponent ("vs X"); the
+    # description still says "Venom Rebels 14U vs X"
+    # 2026-10-26 (Kenny, after the MYVB tournament): the match folder's event.txt (event + stage,
+    # e.g. "MYVB 15U Tier 1 \u00b7 Pool Play") goes into the title and on top of the description;
+    # an optional description-note.txt (e.g. a camera-gap note) goes on the line after it.
+    def _opt(name):
+        try:
+            return open(os.path.join(info["folder"], name), encoding="utf-8").read().strip()
+        except Exception:
+            return ""
+    event = _opt("event.txt")
+    if event.upper() == "SCRIMMAGE":
+        event = ""
+    note = _opt("description-note.txt")
+    title = f'vs {t2}{kind}' + (f' | {event}' if event else '') + f' | {short}'
+    if len(title) > 100:                       # YouTube's limit: drop the stage first, then the event
+        title = f'vs {t2}{kind} | {event.split(" \u00b7 ")[0]} | {short}' if event else title
+    if len(title) > 100:
+        title = f'vs {t2}{kind} | {short}'
     team1_full = "Venom Rebels 14U" if t1 == "Venom Rebels" else t1
     if on_points:
         wname = t1 if win == 1 else t2
@@ -148,7 +166,7 @@ def cmd_text():
     # breaks and show only the first ~100 characters, so line 1 is a complete
     # one-line summary that reads well on its own; the details follow below it.
     summary = f"{final} ({scores}) · {team1_full} vs {t2} · {long_}"
-    lines = [summary, ""]
+    lines = ([event] if event else []) + ([note] if note else []) + [summary, ""]
     lines += [f'Set {s["set"]}: {s["score1"]}{DASH}{s["score2"]}'
               + (" (time ran out)" if scrim and int(s["set"]) in forced else "") for s in sets]
     lines += ["", f"Full {'scrimmage' if scrim else 'match'} with live scoreboard, filmed in 4K 60fps.", ""]

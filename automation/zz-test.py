@@ -265,12 +265,35 @@ def check_pictures(project):
             f"whole-frame check {s.get('comp_result')}, timeline back to normal")
 
 
+
+def real_jobs_running():
+    """command lines of real pipeline jobs (not this test, not zz runs)"""
+    try:
+        out = subprocess.run(["powershell", "-NoProfile", "-Command",
+                              "Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | ForEach-Object { $_.CommandLine }"],
+                             capture_output=True, text=True, timeout=20, creationflags=0x08000000).stdout
+    except Exception:
+        return []
+    keys = ("run-match.py", "run-tournament.py", "yt-upload.py", "make-tavo.py", "_tavo-all.py", "archive-matches.py",
+            "export-monitor.py", "camera-time.py")
+    busy = []
+    for l in out.splitlines():
+        if any(k in l for k in keys) and "zz" not in l.lower():
+            busy.append(next(k for k in keys if k in l))
+    return sorted(set(busy))
+
 def main():
     args = sys.argv[1:]
     passthru = args[args.index("--") + 1:] if "--" in args else []
     args = args[:args.index("--")] if "--" in args else args
     tourn, keep_state, no_export = "--tournament" in args, "--keep-state" in args, "--no-export" in args
     st("ZZ TEST STARTED " + " ".join(sys.argv[1:]), first=True)
+    # 2026-10-26: never run beside real work - the test puts the workflow's state files back at the
+    # end, which would overwrite a real export / upload / TAVO job's status (Oct 26 morning)
+    busy = real_jobs_running()
+    if busy:
+        st("ZZ TEST FAILED: real work is running (" + "; ".join(busy) + ") - try again when it's done")
+        return 1
     if not glob.glob(MASTER + r"\DJI_*.MP4"):
         st("ZZ TEST FAILED: fixture missing — run make-zz-fixture.py first"); return 1
     why = busy()

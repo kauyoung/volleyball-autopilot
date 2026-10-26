@@ -151,6 +151,12 @@ def plan():
             full[c["in_s"] + 0.9] = "Dark diagonal panel with \u201cTIME-OUT\u201d"
             moments.append((c["in_s"] + 4.5, f"Time-out {c.get('n', '')}: play restarts ({how})"))
             continue
+        if c.get("kind") == "camera":           # 2026-10-25: camera stopped mid-set (SD card)
+            moments.append((max(0.0, c["out_s"] - 1.3), "Camera gap: last frame before the camera stopped"))
+            moments.append((c["in_s"] + 0.9, "Camera-gap wipe"))
+            full[c["in_s"] + 0.9] = "Dark diagonal panel with \u201cCAMERA TECHNICAL DIFFICULTY\u201d" + (f" / \u201c{c['note']}\u201d" if c.get("note") else "")
+            moments.append((c["in_s"] + 4.5, "Camera gap: footage resumes, score jumped"))
+            continue
         moments.append((c["in_s"] + 0.9, f"Set-break wipe (set {c['after_set']} \u2192 {c['next_set']})"))
         full[c["in_s"] + 0.9] = f"Dark diagonal panel with \u201cSET {c['next_set']}\u201d and a green line under it"
 

@@ -191,7 +191,7 @@
       const res = document.querySelector("#result span");
       res.textContent = resTxt; res.style.color = M.winner ? teamCol[M.winner - 1] : "var(--paper)";
 
-      const label = k => k === 1 ? [V.teamWord(parts[0]), teamCol[0]] : ["OPP", teamCol[1]];
+      const label = k => k === 0 ? ["EACH", "#f2f4f1"] : (k === 1 ? [V.teamWord(parts[0]), teamCol[0]] : ["OPP", teamCol[1]]);  // 2026-10-26: 0 = tie
       const tiles = [
         ["TOTAL POINTS", `<b class="cnt" data-to="${M.total[0]}">0</b><b>${DASH}</b><b class="cnt" data-to="${M.total[1]}">0</b>`],
         ["LONGEST RUN", `<b class="cnt" data-to="${M.run[1]}">0</b>` + (M.run[1] ? `<em style="color:${label(M.run[0])[1]}">${label(M.run[0])[0]}</em>` : "")],

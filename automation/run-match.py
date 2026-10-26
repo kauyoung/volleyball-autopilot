@@ -46,6 +46,7 @@ Status: run-match-status.txt (one line per step). The last line is one of
   RUN STOPPED: <reason>        (nothing after the failed step was done)
 Full phase results: run-match-result.json. Phase logs still go to prepare-log.txt.
 """
+import re
 import argparse, json, os, subprocess, sys, time, traceback
 
 W = r"C:\Users\YOURNAME\scoreboard-pipeline"
@@ -300,6 +301,66 @@ def resolve_offset(a, folder):
     save()
 
 
+def apply_picture_now(r, txt):
+    """2026-10-26: --picture: apply a picture choice straight away (same parser as picture-pending.txt)"""
+    try:
+        results["picture"] = apply_picture(r, parse_choice(txt))
+    except Exception as e:
+        results["picture"] = "FAILED " + repr(e)
+        stop("picture tweak didn't apply — " + repr(e)[:150])
+    try:
+        r.GetProjectManager().SaveProject()
+    except Exception:
+        pass
+    st("picture: " + results["picture"])
+    save()
+
+
+def next_free_project(r, name):
+    """2026-10-26 --rebuild: '<name>' taken -> '<name> v2', ' v3', ..."""
+    pm = r.GetProjectManager()
+    have = set(pm.GetProjectListInCurrentFolder() or [])
+    base = re.sub(r" v\d+$", "", name)
+    n = 2
+    while f"{base} v{n}" in have:
+        n += 1
+    return f"{base} v{n}", n
+
+
+def export_tail(r, a, folder):
+    # 6. export
+    res = export_waiting(r, a, folder, st)
+    st("export: " + last(res))
+    if not res.get("ok"):
+        stop("export didn't start — see run-match-result.json")
+    eta, eta_iso, how = res.get("eta"), res.get("eta_iso"), "estimate"
+    st(f"export started, done ~{eta} (estimate) — measuring the real speed …")
+    # 7. measure the real render speed (2026-10-08): ~6 min in (less for short tests)
+    try:
+        mins = res.get("frames", 0) / 59.94 / 60
+        # 2026-10-19: with the scoreboard pictures the speed is steady, so 2 min is enough
+        # (approval goes out ~4 min sooner); live scoreboard: as before
+        cap = 120 if res.get("scoreboard") == "pictures" else 360
+        time.sleep(max(60, min(cap, mins * 60 * 0.15)))
+        ms = phase(r, "export_status", a, folder)
+        if ms.get("eta_iso"):
+            eta, eta_iso, how = ms["eta"], ms["eta_iso"], f"measured at {ms.get('percent')}%"
+        elif ms.get("done"):
+            eta, eta_iso, how = time.strftime("%H:%M"), None, "already finished: " + last(ms)
+    except Exception as e:
+        results["measure_error"] = repr(e)
+    results["eta_iso"] = eta_iso
+    save()
+    summary([f"folder: {folder}",
+             f"export: {res.get('file')}  done ~{eta} ({how}; eta_iso {eta_iso})",
+             "thumbnail: " + str(results.get("thumbnail")),
+             "approval kit: " + " | ".join(results.get("approval_kit", [])),
+             "event: " + (a.event or "none") + "   TAVO: " + ("on" if a.tavo else "off"),
+             "picture: " + str(results.get("picture", "check skipped"))])
+    st(f"EXPORT RUNNING — done ~{eta} ({eta_iso}, {how}); file {res.get('file')}")
+
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--recent", action="store_true")
@@ -310,7 +371,13 @@ def main():
     ap.add_argument("--project"); ap.add_argument("--export-name")
     ap.add_argument("--live-scoreboard", action="store_true")   # 2026-10-19: skip the scoreboard pictures
     ap.add_argument("--offset", type=float)      # seconds the camera started before START (positive = early)
+    # 2026-10-26 (after the MYVB tournament):
+    ap.add_argument("--rebuild", action="store_true")      # project exists -> use the next free "<name> vN" (+ "... - YouTube vN")
+    ap.add_argument("--picture")                           # picture choice up front ("2", "1", "3 bottom", "z= s= p= a=") - no question
+    ap.add_argument("--export-only", action="store_true")  # with --folder + --project: no setup/finish, just (picture +) export
     a = ap.parse_args()
+    if a.export_only and not (a.folder and a.project):
+        stop("--export-only needs --folder and --project")
     st("RUN STARTED " + " ".join(sys.argv[1:]), first=True)
     # tests ("zz" project) never write the YouTube text / thumbnail into the match folder
     # (2026-10-08: a test overwrote the Thundercats folder's own thumbnail.jpg)
@@ -336,7 +403,7 @@ def main():
         cp = subprocess.Popen([PY, W + r"\copy-card.py", "--recent" if a.recent else "--latest"],
                               cwd=W, env=UTF8, creationflags=NOWIN)
         src_list = W + r"\copy-sources.txt"
-        pic_done = a.no_picture_check
+        pic_done = a.no_picture_check or bool(a.picture)
         off_done = False
         while cp.poll() is None:                     # early picture check from the card (2026-10-08)
             if not off_done and a.offset is None and os.path.exists(src_list) and os.path.getmtime(src_list) >= T_START - 5:
@@ -359,7 +426,7 @@ def main():
             stop("card copy: " + tail[9:])
         folder = tail.split(" — ")[-1].strip()
         st("copy ok: " + folder)
-    elif not a.no_picture_check:
+    elif not a.no_picture_check and not a.export_only and not a.picture:   # 2026-10-26: no check when the choice is given
         import glob
         clips = sorted(glob.glob(os.path.join(folder, "DJI_*.MP4")))
         if clips:
@@ -369,6 +436,20 @@ def main():
     if a.offset is None and not results.get("offset_suggestion"):
         announce_offset(folder)                      # --folder runs / copies too fast for the loop above
     resolve_offset(a, folder)
+
+    # 1c. 2026-10-26: camera stops (in or between sets) -> points placed on the camera timeline from
+    # clock times, gaps + CAMERA TECHNICAL DIFFICULTY wipes written into the folder's .json copy
+    if not a.export_only:
+        try:
+            ct = subprocess.run([PY, "-W", "ignore", W + r"\camera-time.py", folder], cwd=W, env=UTF8,
+                                capture_output=True, text=True, timeout=900, creationflags=NOWIN)
+            ct_lines = [l for l in (ct.stdout + ct.stderr).splitlines() if l.strip()]
+            results["camera_time"] = ct_lines[-12:]
+            for l in ct_lines:
+                if l.startswith("CAMERA TIME"):
+                    st(l)
+        except Exception as e:
+            results["camera_time_error"] = repr(e)
 
     # 2. Resolve (wait up to 10 min for Kenny to open it)
     sys.path.append(r"C:\ProgramData\Blackmagic Design\DaVinci Resolve\Support\Developer\Scripting\Modules")
@@ -400,9 +481,37 @@ def main():
             results["event_pending"] = "no answer in 10 min — went on without an event"
         st("event: " + (a.event or "none"))
 
+    # 2c. 2026-10-26: --export-only - the project is already set up (e.g. a --hold-export run)
+    if a.export_only:
+        pm = r.GetProjectManager()
+        cur = pm.GetCurrentProject()
+        if not cur or cur.GetName() != a.project:
+            pm.SaveProject()
+            if not pm.LoadProject(a.project):
+                stop(f"--export-only: couldn't open project {a.project!r}")
+        st(f"export only: {a.project}")
+        if a.picture:
+            apply_picture_now(r, a.picture)
+        export_tail(r, a, folder)
+        return
+
     # 3. setup
     res = phase(r, "setup", a, folder)
     st("setup: " + last(res))
+    if not res.get("ok") and a.rebuild:          # 2026-10-26: project already there -> next free vN
+        txt_ = " ".join(map(str, res.get("log") or [])) + " " + str(res)
+        m_ = re.search(r"a project called '([^']+)' already exists", txt_)
+        if m_:
+            a.project, vn_ = next_free_project(r, a.project or m_.group(1))
+            st(f"rebuild: project exists — using {a.project}")
+            res = phase(r, "setup", a, folder)
+            st("setup: " + last(res))
+            if res.get("ok") and not a.export_name:
+                try:
+                    ps_ = json.load(open(W + r"\prepare-state.json", encoding="utf-8"))
+                    a.export_name = f'{ps_["date"]} {ps_["team1"]} vs {ps_["team2"]} - YouTube v{vn_}'
+                except Exception as e:
+                    results["rebuild_name_error"] = repr(e)
     if not res.get("ok"):
         stop("setup had problems — see run-match-result.json")
 
@@ -508,7 +617,9 @@ def main():
     # run started) — an older run sheet that never sends it exports as filmed with no 10-min wait
     asked = W + r"\picture-asked.txt"
     fresh = lambda f: os.path.exists(f) and os.path.getmtime(f) >= T_START - 5
-    if not a.no_picture_check and (fresh(asked) or fresh(PIC_PENDING)):
+    if a.picture:                                    # 2026-10-26: chosen up front, no question
+        apply_picture_now(r, a.picture)
+    elif not a.no_picture_check and (fresh(asked) or fresh(PIC_PENDING)):
         txt = None
         # 2026-10-19 (Kenny "go"): the scoreboard pictures are drawn during this wait (the picture
         # choice only changes the camera clips); the picture is applied once Resolve is free again
@@ -544,36 +655,7 @@ def main():
         st("picture: " + results["picture"])
         save()
 
-    # 6. export
-    res = export_waiting(r, a, folder, st)
-    st("export: " + last(res))
-    if not res.get("ok"):
-        stop("export didn't start — see run-match-result.json")
-    eta, eta_iso, how = res.get("eta"), res.get("eta_iso"), "estimate"
-    st(f"export started, done ~{eta} (estimate) — measuring the real speed …")
-    # 7. measure the real render speed (2026-10-08): ~6 min in (less for short tests)
-    try:
-        mins = res.get("frames", 0) / 59.94 / 60
-        # 2026-10-19: with the scoreboard pictures the speed is steady, so 2 min is enough
-        # (approval goes out ~4 min sooner); live scoreboard: as before
-        cap = 120 if res.get("scoreboard") == "pictures" else 360
-        time.sleep(max(60, min(cap, mins * 60 * 0.15)))
-        ms = phase(r, "export_status", a, folder)
-        if ms.get("eta_iso"):
-            eta, eta_iso, how = ms["eta"], ms["eta_iso"], f"measured at {ms.get('percent')}%"
-        elif ms.get("done"):
-            eta, eta_iso, how = time.strftime("%H:%M"), None, "already finished: " + last(ms)
-    except Exception as e:
-        results["measure_error"] = repr(e)
-    results["eta_iso"] = eta_iso
-    save()
-    summary([f"folder: {folder}",
-             f"export: {res.get('file')}  done ~{eta} ({how}; eta_iso {eta_iso})",
-             "thumbnail: " + str(results.get("thumbnail")),
-             "approval kit: " + " | ".join(results.get("approval_kit", [])),
-             "event: " + (a.event or "none") + "   TAVO: " + ("on" if a.tavo else "off"),
-             "picture: " + str(results.get("picture", "check skipped"))])
-    st(f"EXPORT RUNNING — done ~{eta} ({eta_iso}, {how}); file {res.get('file')}")
+    export_tail(r, a, folder)
 
 
 if __name__ == "__main__":
