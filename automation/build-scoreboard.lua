@@ -159,7 +159,7 @@ local TAG_PREVIEW = rawget(_G, "SCOREBOARD_TAG_PREVIEW")
 -- Overall scale of the whole scorebar. 1.0 = the original full-width version.
 -- This drives the MasterSize Transform, which scales about the bar's own centre
 -- so the bar stays put at the bottom of frame as you change it.
-local OVERALL_SIZE = 0.75   -- 2026-10-14 (Kenny): 0.70 -> 0.75, easier to read on a phone
+local OVERALL_SIZE = 0.7125 -- 2026-10-26: 5% smaller (0.75 since 2026-10-14, 0.70 before)
 
 -- Serve ball size, relative to the SOURCE PNG (512px), not the frame.
 -- Set by measuring the render, not by calculation: the icon has transparent

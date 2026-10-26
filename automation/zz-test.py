@@ -290,9 +290,9 @@ def main():
     st("ZZ TEST STARTED " + " ".join(sys.argv[1:]), first=True)
     # 2026-10-26: never run beside real work - the test puts the workflow's state files back at the
     # end, which would overwrite a real export / upload / TAVO job's status (Oct 26 morning)
-    busy = real_jobs_running()
-    if busy:
-        st("ZZ TEST FAILED: real work is running (" + "; ".join(busy) + ") - try again when it's done")
+    real_busy = real_jobs_running()
+    if real_busy:
+        st("ZZ TEST FAILED: real work is running (" + "; ".join(real_busy) + ") - try again when it's done")
         return 1
     if not glob.glob(MASTER + r"\DJI_*.MP4"):
         st("ZZ TEST FAILED: fixture missing — run make-zz-fixture.py first"); return 1

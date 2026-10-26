@@ -378,6 +378,12 @@ def main():
     a = ap.parse_args()
     if a.export_only and not (a.folder and a.project):
         stop("--export-only needs --folder and --project")
+    if a.picture:                                    # 2026-10-26: TAVO (made during setup) gets the same brightening, never the zoom
+        try:
+            if float(parse_choice(a.picture)[2]) > 1.0:
+                os.environ["TAVO_BRIGHT"] = "1"
+        except Exception:
+            pass
     st("RUN STARTED " + " ".join(sys.argv[1:]), first=True)
     # tests ("zz" project) never write the YouTube text / thumbnail into the match folder
     # (2026-10-08: a test overwrote the Thundercats folder's own thumbnail.jpg)

@@ -45,9 +45,11 @@ MAX_GB = 19.5
 # 40-min match ~12 GB, under TAVO's 20 GB per upload); TAVO_BRIGHT=1 = the YouTube "brighter" look
 # (slope 1.06 / power 0.85) on the luma, full frame; TAVO_CUT_TIMEOUTS=1 cuts the time-outs exactly
 # like the YouTube video (the match's _workflow\bookends.json "timeout" cuts).
-K4 = os.environ.get("TAVO_4K") == "1"
+# defaults since 2026-10-26 afternoon (Kenny): 4K + time-outs cut ON (set "0" to turn off); brightening
+# only when asked (run-tournament / run-match set TAVO_BRIGHT=1 when the YouTube picture choice is "brighter")
+K4 = os.environ.get("TAVO_4K", "1") != "0"
 BRIGHT = os.environ.get("TAVO_BRIGHT") == "1"
-CUT_TO = os.environ.get("TAVO_CUT_TIMEOUTS") == "1"
+CUT_TO = os.environ.get("TAVO_CUT_TIMEOUTS", "1") != "0"
 OUT_W, OUT_H = (3840, 2160) if K4 else (1920, 1080)
 # 2026-10-26 (Kenny: TAVO accepts H.265): H.265 by default - ~40 % faster at 4K (the H.264 encoder was
 # the bottleneck) and ~25 % smaller; TAVO_CODEC=h264 for the old H.264 files

@@ -722,6 +722,8 @@ def tavo_all():
             continue
         st(f"match {m['n']} TAVO file …")
         env = dict(UTF8, TAVO_INFO=os.path.join(m["folder"], "_workflow", "youtube-info.json"))
+        if "brighter" in str(m.get("picture", "")).lower():      # 2026-10-26: same look as YouTube, never the zoom
+            env["TAVO_BRIGHT"] = "1"
         subprocess.run([PY, W + r"\make-tavo.py"], cwd=W, env=env, creationflags=NOWIN)
         tv = open(W + r"\tavo-log.txt", encoding="utf-8").read().strip().splitlines()
         m["tavo_state"] = tv[-1][9:] if tv else "no log"
