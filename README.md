@@ -30,7 +30,11 @@ Fusion composition until final render.
 - A 4K60-capable camera (this was built around a DJI Osmo Action-series
   camera; any camera producing MP4/MOV/MXF files works with the assembly
   script).
-- **DaVinci Resolve** (free edition works). One thing to know up front: a
+- **DaVinci Resolve** — the manual workflow in `resolve-scripts/` is Lua run from
+  Resolve's own Console and is meant to work on the free edition. The hands-off
+  pipeline in `automation/` needs **DaVinci Resolve Studio**: it drives Resolve
+  from outside with Python (Studio-only since Resolve 21.1) and exports 10-bit
+  H.265 with NVIDIA hardware encoding (also Studio-only). One thing to know up front: a
   new project's **Playback frame rate** setting (Project Settings → Master
   Settings) defaults to 24 and is separate from **Timeline frame rate** — if
   your live preview plays back in obvious slow motion despite everything

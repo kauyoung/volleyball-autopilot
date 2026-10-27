@@ -210,6 +210,35 @@ def phase(r, name, a, folder):
     return res
 
 
+def _rd(path):
+    try:
+        return open(path, encoding="utf-8", errors="replace").read()
+    except Exception:
+        return ""
+
+
+def background_ready():
+    """2026-10-27 (review row 3): the finish phase's own readiness checks (prepare-match.py finish()
+    step 1), from files only: audio ready, intro drawn (or skipped), summary drawn, set-break wipes made.
+    A FAILED/ERROR line also counts as 'ready' so finish() runs at once and reports it."""
+    fa, bl = _rd(W + r"\fix-audio-log.txt"), _rd(W + r"\bookends-log.txt")
+    if "FAILED" in bl or "ERROR" in fa or "MISMATCH" in fa:
+        return True
+    if not ("AUDIO READY" in fa and ("INTRO READY" in bl or "INTRO SKIPPED" in bl) and "SUMMARY READY" in bl):
+        return False
+    try:                                              # same rule as prepare-match wipes_ready()
+        cuts = json.load(open(W + r"\bookends.json", encoding="utf-8")).get("cuts", [])
+        need = {"timeout" if c.get("kind") == "timeout" else (c.get("wipe") or "camera") if c.get("kind") == "camera"
+                else c["next_set"] for c in cuts}
+        if not need:
+            return True
+        sw = json.load(open(W + r"\set-wipe\set-wipe.json", encoding="utf-8"))
+        have = set(sw.get("sets", [])) | set(sw.get("labels", []))
+        return need <= have and "WIPE READY" in _rd(W + r"\set-wipe\set-wipe-log.txt")
+    except Exception:
+        return False
+
+
 def export_waiting(r, a, folder, say_fn):
     """2026-10-19: the export phase answers "waiting" while the TAVO file encodes (retry in 60 s)
     and while the scoreboard pictures are drawn (retry in a few s); progress -> status every ~2 min."""
@@ -521,13 +550,17 @@ def main():
     if not res.get("ok"):
         stop("setup had problems — see run-match-result.json")
 
-    # 4. finish (waits for the background clips by itself)
-    time.sleep(200)
-    for i in range(30):
+    # 4. finish - 2026-10-27 (review row 3): starts as soon as the background work is ready
+    # (checked every 3 s) instead of after a fixed 200 s + 45 s re-checks; finish() still checks itself
+    t_bg = time.time()
+    while not background_ready() and time.time() - t_bg < 20 * 60:
+        time.sleep(3)
+    results["background_wait_s"] = round(time.time() - t_bg)
+    for i in range(60):
         res = phase(r, "finish", a, folder)
         if not res.get("waiting"):
             break
-        time.sleep(45)
+        time.sleep(5 if i < 12 else 30)
     st("finish: " + last(res))
     if not res.get("ok"):
         stop("finish had problems — see run-match-result.json")

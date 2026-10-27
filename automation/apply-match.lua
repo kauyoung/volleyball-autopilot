@@ -93,12 +93,24 @@ end
 
 local problems = {}
 local function fail(msg) problems[#problems + 1] = msg end
+local writeFails = 0          -- 2026-10-27 (review row 7): keyframe writes that failed inside pcall
 
 --------------------------------------------------------------------------------
 -- MINIMAL JSON READER
 -- Resolve's Lua has no JSON library, so this parses the subset we emit:
 -- objects, arrays, strings, numbers, true/false/null. No unicode escapes.
 --------------------------------------------------------------------------------
+
+-- 2026-10-27 (review row 6): \uXXXX escapes -> UTF-8 (incl. surrogate pairs)
+local function utf8char(cp)
+  if cp < 0x80 then return string.char(cp) end
+  if cp < 0x800 then return string.char(0xC0 + math.floor(cp / 0x40), 0x80 + cp % 0x40) end
+  if cp < 0x10000 then
+    return string.char(0xE0 + math.floor(cp / 0x1000), 0x80 + math.floor(cp / 0x40) % 0x40, 0x80 + cp % 0x40)
+  end
+  return string.char(0xF0 + math.floor(cp / 0x40000), 0x80 + math.floor(cp / 0x1000) % 0x40,
+                     0x80 + math.floor(cp / 0x40) % 0x40, 0x80 + cp % 0x40)
+end
 
 local function parseJSON(str)
   local pos = 1
@@ -117,9 +129,22 @@ local function parseJSON(str)
       if c == '"' then pos = pos + 1 return table.concat(out) end
       if c == "\\" then
         local n = str:sub(pos + 1, pos + 1)
-        local map = { n = "\n", t = "\t", r = "\r", b = "\b", f = "\f" }
-        out[#out + 1] = map[n] or n
-        pos = pos + 2
+        if n == "u" then
+          local cp = tonumber(str:sub(pos + 2, pos + 5), 16)
+          pos = pos + 6
+          if cp and cp >= 0xD800 and cp <= 0xDBFF and str:sub(pos, pos + 1) == "\\u" then
+            local lo = tonumber(str:sub(pos + 2, pos + 5), 16)
+            if lo and lo >= 0xDC00 and lo <= 0xDFFF then
+              cp = 0x10000 + (cp - 0xD800) * 0x400 + (lo - 0xDC00)
+              pos = pos + 6
+            end
+          end
+          out[#out + 1] = utf8char(cp or 63)            -- 63 = "?" for a broken escape
+        else
+          local map = { n = "\n", t = "\t", r = "\r", b = "\b", f = "\f" }
+          out[#out + 1] = map[n] or n
+          pos = pos + 2
+        end
       else
         out[#out + 1] = c
         pos = pos + 1
@@ -408,6 +433,29 @@ if AUTO_ALIGN_SETS then
 end
 
 --------------------------------------------------------------------------------
+-- SAME-FRAME EVENTS (2026-10-27, review row 4)
+-- Several events on ONE frame (scorekeeper double taps, a set start on the frame
+-- of its first point, a camera gap) -> only the LAST counts, for EVERY animation
+-- below. Until now only the score/sets/serve series merged them (2026-10-25 fix
+-- for the both-serve-balls bug); tags, pops, set-win colour and dips saw them all.
+-- A file without same-frame events is unchanged.
+--------------------------------------------------------------------------------
+local mergedSameFrame = 0
+do
+  local kept, lastF = {}, nil
+  for _, e in ipairs(match.events) do
+    local f = math.floor((e.t + baseOffset) * fps + 0.5)
+    if f == lastF then kept[#kept] = e else kept[#kept + 1] = e end
+    lastF = f
+  end
+  mergedSameFrame = #match.events - #kept
+  if mergedSameFrame > 0 then
+    print(string.format("Same-frame events merged: %d -> %d", #match.events, #kept))
+  end
+  match.events = kept
+end
+
+--------------------------------------------------------------------------------
 -- KEYFRAME HELPERS
 --------------------------------------------------------------------------------
 
@@ -457,7 +505,7 @@ local function animate(node, inputName, series, label, stepHold)
       -- Hold the previous value until one frame before the change, so the value
       -- snaps rather than ramping. Scores must never read 14.5.
       if stepHold and last ~= nil and f > 0 then
-        pcall(function() node[inputName][f - 1] = last end)
+        if not pcall(function() node[inputName][f - 1] = last end) then writeFails = writeFails + 1 end
       end
       local okSet = pcall(function() node[inputName][f] = v end)
       if not okSet then
@@ -505,10 +553,9 @@ local sc1, sc2, st1, st2, setNo, srv1, srv2 = {}, {}, {}, {}, {}, {}, {}
 -- gap) made animate() write its "hold" key at f-1 more than once - the second write
 -- overwrote the first with the wrong value and the Blend spline then RAMPED the other
 -- team's ball in across the whole set break. Only the last event on a frame counts now.
-local seriesPrevF = nil
-for _, e in ipairs(match.events) do
+for _, e in ipairs(match.events) do       -- same-frame events were merged above (2026-10-27)
   local f = frameOf(e.t)
-  local i = (f == seriesPrevF) and #sc1 or (#sc1 + 1)
+  local i = #sc1 + 1
   sc1[i]   = { f, tostring(e.score1) }
   sc2[i]   = { f, tostring(e.score2) }
   st1[i]   = { f, tostring(e.sets1) }
@@ -516,7 +563,6 @@ for _, e in ipairs(match.events) do
   setNo[i] = { f, "SET " .. tostring(e.set) }
   srv1[i]  = { f, (e.serve == 1) and 1 or 0 }
   srv2[i]  = { f, (e.serve == 2) and 1 or 0 }
-  seriesPrevF = f
 end
 
 --------------------------------------------------------------------------------
@@ -669,7 +715,7 @@ local function writeKeys(node, inputName, list, label)
   local n, lastF = 0, nil
   for _, kv in ipairs(list) do
     if kv[1] ~= lastF and kv[1] >= 0 then
-      pcall(function() node[inputName][kv[1]] = kv[2] end)
+      if not pcall(function() node[inputName][kv[1]] = kv[2] end) then writeFails = writeFails + 1 end
       n, lastF = n + 1, kv[1]
     end
   end
@@ -772,13 +818,14 @@ local function pulse(node, inputName, frames, base, peak, holdFrames)
     local nextF = frames[i + 1] or math.huge
     local rel = math.min(f + holdFrames, nextF - 4)
     if f - 2 > lastKey and rel > f then
-      pcall(function()
+      local okPulse = pcall(function()
         node[inputName][f - 2]   = base
         node[inputName][f - 1]   = base
         node[inputName][f]       = peak
         node[inputName][rel]     = base
         node[inputName][rel + 1] = base
       end)
+      if not okPulse then writeFails = writeFails + 1 end
       lastKey = rel + 1
       n = n + 1
     end
@@ -1112,6 +1159,10 @@ setName("Team2Name", match.team2, "right")
 comp:EndUndo(true)
 comp:Unlock()
 
+if writeFails > 0 then
+  fail(string.format("*** %d keyframe write(s) failed - check the scoreboard (scores, pops, fades) before exporting", writeFails))
+end
+
 --------------------------------------------------------------------------------
 -- REPORT
 --------------------------------------------------------------------------------
@@ -1127,6 +1178,7 @@ say(" Match applied " .. os.date("%Y-%m-%d %H:%M:%S"))
 say(" From: " .. MATCH_FILE)
 say(string.format(" Teams: %s vs %s", tostring(match.team1), tostring(match.team2)))
 say(string.format(" Frame rate used: %g fps (from %s)", fps, fpsSource))
+if mergedSameFrame > 0 then say(string.format(" Same-frame events merged: %d (only the last on a frame counts)", mergedSameFrame)) end
 if AUTO_ALIGN_SETS then
   for _, n in ipairs(alignNotes) do say(" Set alignment: " .. n) end
 end

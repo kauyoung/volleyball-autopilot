@@ -316,7 +316,7 @@ def setup():
     closed = close_popups()
     seen = set()
     for l in r.splitlines():
-        if re.search(r"Comp:|ERROR|Frame rate:|Set alignment|STILL STATIC|OK$|pop:|Polish:|Point tags|\.\.\.|\*\*\*", l) and l.strip() not in seen:
+        if re.search(r"Comp:|ERROR|Frame rate:|Set alignment|STILL STATIC|OK$|pop:|Polish:|Point tags|Same-frame|keyframe write|\.\.\.|\*\*\*", l) and l.strip() not in seen:
             seen.add(l.strip())
             say("overlay: " + l.strip(), out)
     b = rd(W + r"\bake-static-log.txt") or "no bake log"
