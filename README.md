@@ -106,6 +106,26 @@ scoreboard as pictures), and prepares the YouTube upload. Details:
 [automation/README.md](automation/README.md). The manual workflow below still works
 on its own.
 
+```mermaid
+flowchart LR
+    A["📱 Scorekeeper app<br/>one tap per rally"] -->|FINISH MATCH| B[("Google Drive<br/>match file")]
+    C["🎥 Camera card<br/>4K60 clips"] --> D["copy-card.py<br/>picks the clips by clock time"]
+    B --> D
+    D --> K[("Backup drive<br/>verified copy")]
+    D --> E["Resolve: setup<br/>timeline + Fusion scoreboard"]
+    E --> F["Resolve: finish<br/>cuts, audio, intro / FINAL, wipes"]
+    F --> G{"Review sheet<br/>one approval"}
+    G -->|approved| H["Export<br/>scoreboard pictures, H.265"]
+    H --> I["YouTube<br/>Unlisted"]
+    H --> J["TAVO file<br/>4K H.265"]
+```
+
+<p align="center">
+  <img src="docs/intro-screen.jpg" width="49%" alt="Intro screen: season label, both teams with ball badges, VS, date, best of 3, sets to 25">
+  <img src="docs/final-screen.jpg" width="49%" alt="FINAL screen: set scores, sets won, winner line, total points, longest run, biggest lead, match time">
+</p>
+<p align="center"><sub>The intro and FINAL screens (<code>automation/hyperframes/</code>), filled in automatically from the match file. Made-up teams; teams without a logo get the ball badge.</sub></p>
+
 ## Setup
 
 Copy the contents of `resolve-scripts/` to wherever you want to run them
@@ -164,6 +184,12 @@ to find every line that needs a personal value.
    match is won, tap **FINISH MATCH** — the file is sent to Google Drive
    automatically if you set that up, and **Export match file** is always
    there as a backup.
+
+   <p>
+   <img src="docs/scorekeeper-setup.png" width="260" alt="Scorekeeper setup screen: our team, opponent, and the match format (sets to 25 or 15, best of 3, 2 sets, scrimmage)">
+   &nbsp;
+   <img src="docs/scorekeeper-live.png" width="260" alt="Scorekeeper during a set: one big button per team showing the score, recording timer, Time-out and More options">
+   </p>
 6. **Build and apply the scoreboard**: with the Fusion Composition clip
    selected and the Fusion page open, run `run-overlay.lua` from the
    Console.
@@ -208,6 +234,9 @@ later, redeploy it as a new version or the old one keeps running.
   number does the same when a set is won, tags fade in/out, the set number
   and scores dip out and back in at a set change, and the whole scoreboard
   fades in and out at the start and end of the video.
+
+<p align="center"><img src="docs/scoreboard-animation.gif" width="800" alt="Scoreboard animation: SET POINT tag fades in, the winning point pops, the sets number pops, the set number and scores dip into set 2, then MATCH POINT appears"></p>
+<p align="center"><sub>Set point, set won, the change to set 2, and match point (a made-up match, sped up between rallies).</sub></p>
 
 ## Automatic set alignment
 

@@ -3,6 +3,9 @@
 Frosted bar · club colours · sets columns · serve ball · set pill.
 Built for a **4K (3840×2160) timeline**. All positions and sizes below are proportional (0–1), so Fusion scales them automatically — the only pixel-based values are noted where they appear.
 
+![The finished scoreboard node graph in Resolve's Fusion page, as build-scoreboard.lua builds it: the background and text nodes along the bottom feed a left-to-right chain of Merge nodes ending at MediaOut1](fusion-node-graph.png)
+<sub>The finished graph as `build-scoreboard.lua` builds it (click to enlarge). Each element is its own node feeding one long left-to-right chain of Merges; the seven nodes the script keys from the match file are listed [near the end](#the-seven-nodes-the-script-drives).</sub>
+
 ---
 
 ## Club colours
