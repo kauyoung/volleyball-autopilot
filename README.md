@@ -5,6 +5,11 @@ volleyball match footage — built for parents/coaches recording their own
 team's games with a 4K60 action camera and DaVinci Resolve, without paying
 for a subscription filming/scoring service.
 
+![The scoreboard overlay on a 4K match frame, at match point in set 2](docs/scoreboard-preview.jpg)
+
+*A frame rendered by this pipeline: match point in set 2. Team names are made up, and the gym footage
+is blurred because the players are minors.*
+
 End to end: record on a 4K60 camera → convert footage to an editing-friendly
 codec → assemble the clips into one gapless timeline in DaVinci Resolve →
 score the match on a phone or laptop (live at the game, or later during
@@ -16,6 +21,8 @@ is serving, SET POINT / MATCH POINT tags and an optional team logo, with
 broadcast-style motion (score pops, fades, set-change transitions) — built
 once as a reusable Fusion composition, then driven entirely by a JSON file of
 timestamped scoring events.
+
+![Close-up of the scoreboard bar: team names, sets won, current set, score and the serve indicator](docs/scoreboard-closeup.png)
 
 ## Why this exists
 
