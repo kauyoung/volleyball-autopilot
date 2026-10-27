@@ -35,7 +35,7 @@ TS = time.strftime("%Y%m%d-%H%M%S")
 OUT = OC + r"\zz-test-out" + "\\" + TS
 BACKUP = OC + r"\zz-state-backup" + "\\" + TS
 NOWIN = 0x08000000
-STATE_EXT = (".txt", ".json", ".pid")
+STATE_EXT = (".txt", ".json")    # 2026-10-26 perf: not ".pid" - restoring resolve-watch.pid let a 2nd/3rd watchdog start (each polls Resolve every 20 s for 8 h)
 STATE_DIRS = (r"_overlay_check\approval", r"_overlay_check\approval-small", r"_overlay_check\tournament",
               r"_overlay_check\thumb-candidates")
 STATE_FILES = (r"_overlay_check\picture-check.jpg",)

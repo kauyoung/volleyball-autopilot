@@ -242,6 +242,16 @@ def sheet():
         d.text((PAD, 116), "PLEASE LOOK AT:", fill=(255, 200, 60), font=font(30, True))
         for k, fl in enumerate(flags):
             d.text((PAD, 156 + 36 * k), fl, fill=(255, 200, 60), font=font(26))
+    # 2026-10-26 perf: the 4K frames are decoded in parallel (4 at a time) and as 8-bit RGB
+    # (a 10-bit source made ffmpeg write 33 MB 16-bit PNGs, ~1 s each, one after another)
+    from concurrent.futures import ThreadPoolExecutor
+    def to_png(r):
+        png = os.path.join(RDIR, f'r-{r["frame"]}.png')
+        mp4 = os.path.join(RDIR, f'r-{r["frame"]}.mp4')
+        if not os.path.exists(png) and os.path.exists(mp4):
+            subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", mp4, "-frames:v", "1", "-pix_fmt", "rgb24", png])
+    with ThreadPoolExecutor(4) as ex:
+        list(ex.map(to_png, rows))
     missing = 0
     y = HEAD
     for r in rows:

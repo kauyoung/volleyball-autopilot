@@ -54,6 +54,9 @@ OUT_W, OUT_H = (3840, 2160) if K4 else (1920, 1080)
 # 2026-10-26 (Kenny: TAVO accepts H.265): H.265 by default - ~40 % faster at 4K (the H.264 encoder was
 # the bottleneck) and ~25 % smaller; TAVO_CODEC=h264 for the old H.264 files
 HEVC = os.environ.get("TAVO_CODEC", "hevc").lower() != "h264"
+# 2026-10-26 perf test (20 s of the Oct 25 Maverick clip, 4K60, brightened): p5 15.8 s, p4 12.1 s
+# (-23 %), same size, SSIM 0.98255 vs 0.98259 against a near-lossless reference -> p4 by default
+PRESET = os.environ.get("TAVO_PRESET", "p4")
 LUT = "lutyuv=y='clip(((pow(clip((val-16)/219\\,0\\,1)*1.06\\,0.85))*219+16)\\,16\\,235)'"
 
 
@@ -113,11 +116,11 @@ def pieces(segs, clips):
 def encode(src, a, b, dst, gpu):
     if HEVC:
         rate = ["-b:v", "30M", "-maxrate", "45M", "-bufsize", "60M"] if K4 else ["-b:v", "8M", "-maxrate", "12M", "-bufsize", "16M"]
-        codec = ["-c:v", "hevc_nvenc", "-preset", "p5", "-rc", "vbr"] + rate + ["-g", "120", "-profile:v", "main", "-tag:v", "hvc1"]
+        codec = ["-c:v", "hevc_nvenc", "-preset", PRESET, "-rc", "vbr"] + rate + ["-g", "120", "-profile:v", "main", "-tag:v", "hvc1"]
     else:
         rate = ["-b:v", "40M", "-maxrate", "55M", "-bufsize", "80M", "-level", "5.2"] if K4 else \
                ["-b:v", "12M", "-maxrate", "16M", "-bufsize", "24M"]
-        codec = ["-c:v", "h264_nvenc", "-preset", "p5", "-rc", "vbr"] + rate + ["-g", "120", "-profile:v", "high"]
+        codec = ["-c:v", "h264_nvenc", "-preset", PRESET, "-rc", "vbr"] + rate + ["-g", "120", "-profile:v", "high"]
     common = ["-map", "0:v:0", "-map", "0:a:0"] + codec + [
               "-c:a", "aac", "-b:a", "160k", "-ar", "48000", "-movflags", "+faststart", dst]
     vf = os.environ.get("TAVO_VF")  # optional picture tweak (zoom/brightness), CPU filters after GPU decode (2026-10-06)

@@ -241,6 +241,97 @@ def _ffmpeg(args, n_expected, out):
         raise RuntimeError(f"{os.path.basename(out)} is in use (already placed in Resolve?) - remove it from the timeline and media pool, then render again")
 
 
+# ------------------------------------------------------------------ FAST ASSEMBLY (2026-10-26 perf)
+# The ProRes 4444 encode runs at ~11 fps at 4K, and up to 90 % of a bookend is ONE
+# still frame repeated (intro hold, FINAL pad, last camera frame under the FINAL).
+# ProRes is intra-only and prores_ks is deterministic, so a still frame is encoded
+# ONCE and its packet is repeated by stream copy (concat demuxer). Decoded frames are
+# bit-identical to the one-pass encode (checked with ffmpeg -f md5 on the PC).
+# Any problem -> the old one-pass encode runs instead (same file as before).
+def _piece(args, n, path):
+    r = subprocess.run(["ffmpeg", "-y", "-v", "error"] + args + ["-frames:v", str(n), "-r", f"{FPS_NUM}/{FPS_DEN}"]
+                       + ENC + [path], capture_output=True, text=True, creationflags=NOWIN)
+    got = _frames(path) if os.path.exists(path) else 0
+    if r.returncode != 0 or got != n:
+        raise RuntimeError(f"piece {os.path.basename(path)}: {got} of {n} frames ({(r.stderr or '')[-150:]})")
+
+
+def _assemble(pieces, n_expected, out):
+    """pieces: [(ffmpeg input+filter args, frames, repeat)] -> out (ProRes, stream-copied together)"""
+    work = out[:-4] + ".pieces"
+    shutil.rmtree(work, ignore_errors=True)
+    os.makedirs(work)
+    try:
+        lines = []
+        for i, (args, n, rep) in enumerate(pieces):
+            if n <= 0 or rep <= 0:
+                continue
+            pth = os.path.join(work, f"p{i}.mov")
+            _piece(args, n, pth)
+            lines += ["file '" + pth.replace("'", "'\\''") + "'"] * rep
+        lst = os.path.join(work, "list.txt")
+        open(lst, "w", encoding="utf-8").write("\n".join(lines) + "\n")
+        tmp = out[:-4] + ".part.mov"
+        r = subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", lst, "-map", "0:v",
+                            "-c", "copy", "-vendor", "apl0", tmp], capture_output=True, text=True, creationflags=NOWIN)
+        got = _frames(tmp) if os.path.exists(tmp) else 0
+        if r.returncode != 0 or got != n_expected:
+            if os.path.exists(tmp):
+                os.remove(tmp)
+            raise RuntimeError(f"joining: {got} of {n_expected} frames ({(r.stderr or '')[-150:]})")
+        try:
+            os.replace(tmp, out)
+        except OSError:
+            os.remove(tmp)
+            raise RuntimeError(f"{os.path.basename(out)} is in use (already placed in Resolve?) - remove it from the timeline and media pool, then render again")
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def _trim(a, b=None):
+    return f"trim=start_frame={a}" + (f":end_frame={b}" if b is not None else "") + ",setpts=PTS-STARTPTS,"
+
+
+def intro_pieces(raw, m, n, k):
+    extra = n - m
+    return [(["-i", raw, "-vf", _trim(0, k + 1) + TO_OUT], k + 1, 1),
+            (["-i", raw, "-vf", _trim(k, k + 1) + TO_OUT], 1, extra),        # the hold: one frame, repeated
+            (["-i", raw, "-vf", _trim(k + 1) + TO_OUT], m - k - 1, 1)]
+
+
+def summary_pieces(raw, m, n, hold, png):
+    mb, pad = min(n, m), max(0, n - m)
+    if hold <= 0:
+        return [(["-i", raw, "-vf", "setpts=N/FRAME_RATE/TB," + TO_OUT], mb, 1),
+                (["-i", raw, "-vf", _trim(m - 1, m) + TO_OUT], 1, pad)]
+    a = n - hold
+    base = f"tpad=stop_mode=clone:stop={pad},setpts=N/FRAME_RATE/TB"
+    fc = (f"[0:v]{base},format=rgba,split[x][y];[x]trim=end_frame={a},setpts=PTS-STARTPTS[a];"
+          f"[y]trim=start_frame={a},setpts=PTS-STARTPTS[b];"
+          f"[1:v]scale=3840:2160,format=rgba,trim=end_frame={hold},setpts=N/FRAME_RATE/TB[bg];"
+          f"[bg][b]overlay=format=auto,format=rgba[c];[a][c]concat=n=2:v=1,setpts=N/FRAME_RATE/TB," + TO_OUT)
+    loop_png = ["-loop", "1", "-framerate", f"{FPS_NUM}/{FPS_DEN}", "-i", png]
+    c_plain = max(0, min(a, n) - m)                  # past the animation, before the camera frame starts
+    c_bg = n - max(m, a) if n > m else 0             # past the animation, over the last camera frame
+    last = f"[0:v]{_trim(m - 1, m)}format=rgba"
+    return [(["-i", raw] + loop_png + ["-filter_complex", fc], mb, 1),
+            (["-i", raw, "-vf", _trim(m - 1, m) + "format=rgba," + TO_OUT], 1, c_plain),
+            (["-i", raw] + loop_png + ["-filter_complex",
+              f"{last}[t];[1:v]scale=3840:2160,format=rgba,trim=end_frame=1,setpts=PTS-STARTPTS[bg];"
+              f"[bg][t]overlay=format=auto,format=rgba," + TO_OUT], 1, c_bg)]
+
+
+def _fast_or_old(pieces, old_args, n, out, log):
+    t = time.time()
+    try:
+        _assemble(pieces, n, out)
+        log(f"  assembled {sum(p[1] for p in pieces if p[2] > 0)} encoded + repeated stills = {n} frames in {time.time() - t:.0f} s")
+    except Exception as e:
+        log(f"  fast assembly failed ({str(e)[:120]}) - one-pass encode instead")
+        _ffmpeg(old_args, n, out)
+
+
+
 def render(kind, p, log, logo_for):
     t0 = time.time()
     tdir = os.path.join(HF, "venom-intro" if kind == "intro" else "venom-final")
@@ -260,7 +351,8 @@ def render(kind, p, log, logo_for):
         extra = n - m
         if extra < 0:
             raise RuntimeError(f"planned intro ({n} frames) is shorter than its animation ({m})")
-        _ffmpeg(["-i", raw, "-vf", f"loop=loop={extra}:size=1:start={k},setpts=N/FRAME_RATE/TB," + TO_OUT], n, out)
+        _fast_or_old(intro_pieces(raw, m, n, k),
+                     ["-i", raw, "-vf", f"loop=loop={extra}:size=1:start={k},setpts=N/FRAME_RATE/TB," + TO_OUT], n, out, log)
         log(f"INTRO READY (HyperFrames, {n} frames, hold {it.get('hold_s', 0):.1f} s, {time.time() - t0:.0f} s) \u2014 {out}")
         return True
 
@@ -271,7 +363,7 @@ def render(kind, p, log, logo_for):
     pad = max(0, n - m)
     base = f"tpad=stop_mode=clone:stop={pad},setpts=N/FRAME_RATE/TB"
     if hold <= 0:
-        _ffmpeg(["-i", raw, "-vf", base + "," + TO_OUT], n, out)
+        _fast_or_old(summary_pieces(raw, m, n, 0, None), ["-i", raw, "-vf", base + "," + TO_OUT], n, out, log)
     else:
         # camera stopped before the summary ended: the last camera frame sits under
         # the screen for the frames past the footage (the classic summary did the same)
@@ -284,6 +376,7 @@ def render(kind, p, log, logo_for):
               f"[y]trim=start_frame={a},setpts=PTS-STARTPTS[b];"
               f"[1:v]scale=3840:2160,format=rgba,trim=end_frame={hold},setpts=N/FRAME_RATE/TB[bg];"
               f"[bg][b]overlay=format=auto,format=rgba[c];[a][c]concat=n=2:v=1,setpts=N/FRAME_RATE/TB," + TO_OUT)
-        _ffmpeg(["-i", raw, "-loop", "1", "-framerate", f"{FPS_NUM}/{FPS_DEN}", "-i", png, "-filter_complex", fc], n, out)
+        _fast_or_old(summary_pieces(raw, m, n, hold, png),
+                     ["-i", raw, "-loop", "1", "-framerate", f"{FPS_NUM}/{FPS_DEN}", "-i", png, "-filter_complex", fc], n, out, log)
     log(f"SUMMARY READY (HyperFrames, {n} frames, {hold} held, {time.time() - t0:.0f} s) \u2014 {out}")
     return True
