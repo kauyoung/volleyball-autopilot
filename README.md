@@ -1,4 +1,6 @@
-# DIY Volleyball Scoreboard Overlay Pipeline
+# Volleyball Autopilot
+
+**Tap the score on your phone. Get a finished match video.**
 
 A from-scratch pipeline for putting a live, animated scoreboard overlay on
 volleyball match footage — built for parents/coaches recording their own
