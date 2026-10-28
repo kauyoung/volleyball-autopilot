@@ -2,6 +2,18 @@
 
 **Tap the score on your phone. Get a finished match video.**
 
+<p align="center">
+  <img alt="DaVinci Resolve" src="https://img.shields.io/badge/DaVinci_Resolve-Fusion-233A51?logo=davinciresolve&logoColor=white">
+  <img alt="4K60 H.265" src="https://img.shields.io/badge/output-4K60_H.265-6E40C9">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white">
+  <img alt="Lua" src="https://img.shields.io/badge/Lua-Resolve_scripts-2C2D72?logo=lua&logoColor=white">
+  <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/badge/licence-MIT-70D549"></a>
+  <a href="https://kauyoung.github.io/volleyball-autopilot/scorekeeper/volleyball-scorekeeper.html"><img alt="Try the scorekeeper" src="https://img.shields.io/badge/try_it-scorekeeper_app-0A84FF?logo=googlechrome&logoColor=white"></a>
+</p>
+
+<p align="center"><img src="docs/scoreboard-animation.gif" width="900" alt="Scoreboard animation: SET POINT tag fades in, the winning point pops, the sets number pops, the set number and scores dip into set 2, then MATCH POINT appears"></p>
+<p align="center"><sub>The scoreboard in motion: set point, set won, the change to set 2, match point. Made-up teams.</sub></p>
+
 A from-scratch pipeline for putting a live, animated scoreboard overlay on
 volleyball match footage — built for parents/coaches recording their own
 team's games with a 4K60 action camera and DaVinci Resolve, without paying
@@ -12,11 +24,55 @@ for a subscription filming/scoring service.
 *A frame rendered by this pipeline: match point in set 2. Team names are made up, and the gym footage
 is blurred because the players are minors.*
 
-End to end: record on a 4K60 camera → convert footage to an editing-friendly
-codec → assemble the clips into one gapless timeline in DaVinci Resolve →
-score the match on a phone or laptop (live at the game, or later during
-editing) → apply that scoring data onto a scripted Fusion scoreboard graph →
-render.
+## What you get
+
+- **A live, animated scoreboard** on 4K60 footage: score, sets, serve, SET POINT / MATCH POINT tags, score pops and set-change transitions.
+- **A phone scorekeeper** with two big buttons and a 5-second undo. It works offline and can send the match file to Google Drive. **[Try it on your phone](https://kauyoung.github.io/volleyball-autopilot/scorekeeper/volleyball-scorekeeper.html)** (demo copy, nothing is uploaded).
+- **Automatic editing**: warm-up trimmed, set breaks and time-outs cut out (restarting at the referee's serve whistle), sound levelled.
+- **Intro and FINAL screens** filled in from the match file: teams, date, set scores, longest run, biggest lead, match time.
+- **One approval per match**: a review sheet of every key moment. Nothing is exported for upload until you say OK.
+- **YouTube-ready output**: one 4K60 10-bit H.265 file, exported about 2.4x faster than with a live Fusion scoreboard, with the title, chapters and thumbnail prepared and the video saved as Unlisted.
+- **A manual path for the free edition of Resolve**: Lua scripts you run from Resolve's Console.
+
+## Why this exists
+
+Paid scoreboard-overlay apps for phone recording exist, but they cap out at
+1080p30 and bake the overlay into the video permanently. This pipeline
+keeps the camera and the scoreboard as two independent layers — shoot in
+4K60, keep raw footage untouched, and the overlay lives in an editable
+Fusion composition until final render.
+
+## Fully automated workflow
+
+The `automation/` folder holds the current, end-to-end version of this pipeline: one
+command per match copies the card, builds the project and scoreboard, trims the
+warm-up, cuts set breaks and time-outs (restarting just before the referee's serve
+whistle, found in the audio), normalises the sound, adds intro/FINAL screens,
+renders a review sheet for a single approval, exports one 4K60 10-bit H.265 file
+about 2.4x faster than with a live Fusion scoreboard (by pre-rendering the
+scoreboard as pictures), and prepares the YouTube upload. Details:
+[automation/README.md](automation/README.md). The manual workflow below still works
+on its own.
+
+```mermaid
+flowchart TB
+    A["📱 Phone app<br/>one tap per rally<br/>→ Google Drive"] --> D
+    C["🎥 Camera card<br/>4K60 clips"] --> D
+    D["copy-card.py<br/>picks the clips<br/>by clock time"] --> K[("Backup drive<br/>verified copy")]
+    D --> E["Resolve, auto<br/>scoreboard, cuts<br/>audio, wipes<br/>intro + FINAL"]
+    E --> G(["Review sheet<br/>one approval"])
+    G -->|approved| H["Export<br/>4K60 H.265"]
+    H --> I["YouTube<br/>Unlisted"]
+    H --> J["TAVO file<br/>4K H.265"]
+```
+
+<p align="center">
+  <img src="docs/intro-screen.jpg" width="49%" alt="Intro screen: season label, both teams with ball badges, VS, date, best of 3, sets to 25">
+  <img src="docs/final-screen.jpg" width="49%" alt="FINAL screen: set scores, sets won, winner line, total points, longest run, biggest lead, match time">
+</p>
+<p align="center"><sub>The intro and FINAL screens (<code>automation/hyperframes/</code>), filled in automatically from the match file. Made-up teams; teams without a logo get the ball badge.</sub></p>
+
+## Scoreboard design
 
 The scoreboard shows: live score, sets won, current set number, which team
 is serving, SET POINT / MATCH POINT tags and an optional team logo, with
@@ -26,13 +82,18 @@ timestamped scoring events.
 
 ![Close-up of the scoreboard bar: team names, sets won, current set, score and the serve indicator](docs/scoreboard-closeup.png)
 
-## Why this exists
-
-Paid scoreboard-overlay apps for phone recording exist, but they cap out at
-1080p30 and bake the overlay into the video permanently. This pipeline
-keeps the camera and the scoreboard as two independent layers — shoot in
-4K60, keep raw footage untouched, and the overlay lives in an editable
-Fusion composition until final render.
+- Bar raised about 10% up the frame (`BAR_RAISE`) so YouTube's player
+  controls, which cover the bottom ~8% when the video is paused, never hide it.
+- "SET n" sits in a tab joined to the top of the score box (`PILL_STYLE =
+  "tab"`), the same shade as the score box, with a faint outline around bar
+  and tab that lines up with the cell separators. `"float"` and `"clean"` are
+  alternative floating-pill styles.
+- SET POINT / MATCH POINT tags (floating pills in the team's colour) are
+  worked out from the score after every rally — deuce handled, set 3 to 15.
+- Motion: the scoring team's number pops and flashes its colour, the sets
+  number does the same when a set is won, tags fade in/out, the set number
+  and scores dip out and back in at a set change, and the whole scoreboard
+  fades in and out at the start and end of the video.
 
 ## Requirements
 
@@ -69,64 +130,16 @@ Fusion composition until final render.
   scripts and the scorekeeper web app are platform-independent (Resolve's
   scripting console and any browser).
 
-## What's in this repo
+## Manual workflow (free Resolve)
 
-```
-├── automation/          The full hands-off workflow (Resolve Studio + an AI assistant) — see automation/README.md
-├── resolve-scripts/     Lua scripts run from DaVinci Resolve's Console (manual workflow)
-├── footage-conversion/  Windows HEVC→H.264 converter (.bat + .ps1)
-├── scorekeeper/         The scorekeeping web app + optional Google Drive receiver
-├── assets/              Serve-ball icons used by the overlay
-├── tools/               YouTube thumbnail generator
-└── docs/                Manual walkthrough + a sample match file
-```
+End to end: record on a 4K60 camera → convert footage to an editing-friendly
+codec → assemble the clips into one gapless timeline in DaVinci Resolve →
+score the match on a phone or laptop (live at the game, or later during
+editing) → apply that scoring data onto a scripted Fusion scoreboard graph →
+render.
 
-| File | What it does |
-|---|---|
-| `footage-conversion/convert-footage.bat` | Double-click-to-run converter. Finds the newest dated match folder, converts every `DJI_*.mov`/`.mp4` from HEVC to H.264 (hardware-accelerated), preserves exact filenames, keeps the originals in a `raw_originals` backup folder. Safe to re-run — skips anything already converted. |
-| `footage-conversion/convert-one.ps1` | Helper script `convert-footage.bat` calls per clip — shows a live percent/ETA progress bar during conversion. Not meant to be run by hand. |
-| `resolve-scripts/assemble-match.lua` | Run once per match from Resolve's Console. Imports every clip from the newest match folder and builds a gap-free timeline at the right resolution/frame rate. Prints a verification report — total length vs. sum of source clips, and a chapter-order sanity check — so a bad import shows up as text instead of a silent, drifting overlay. |
-| `resolve-scripts/build-scoreboard.lua` | Builds the entire scoreboard's Fusion node graph from scratch: bar, score cells, team names, sets, serve indicator, "SET n" tab, SET POINT / MATCH POINT tags, optional team logo, outline, sheen, drop shadow and an overall fade. Team names are anchored on their outer edge, so both sit the same distance from the ends of the bar whatever their length. Look is configurable at the top (`BAR_WIDTH`, `BAR_RAISE`, `PILL_STYLE`, fonts, colours). Run once per match. |
-| `resolve-scripts/apply-match.lua` | Reads a match JSON file (see below) and writes keyframes onto the nodes `build-scoreboard.lua` created — score, sets, set number and serve indicator as instant "step" changes, plus the motion (score/sets pops, SET POINT / MATCH POINT tags worked out from the score, set-change dips, fade in/out). Also sets the team names from the file and **automatically re-aligns each set to its clip join** (see below). |
-| `resolve-scripts/run-overlay.lua` | Convenience wrapper — runs `build-scoreboard.lua` then `apply-match.lua` back to back. |
-| `scorekeeper/volleyball-scorekeeper.html` | Self-contained scorekeeping web app with a guided, one-screen-at-a-time flow simple enough for anyone at the gym: who's playing → press record + START → two giant team buttons with a 5-second UNDO → automatic set-over screen → FINISH MATCH. Timestamps every event, survives the page being closed mid-match, and exports the JSON file the Lua scripts consume — or sends it to Google Drive automatically (below). A one-tap **Time-out** button (cleared by the next point) records time-outs so the automated workflow can cut them out. |
-| `scorekeeper/scorekeeper-drive-upload.gs` | Optional Google Apps Script "web app" that receives the match file from the scorekeeper and saves it into a Drive folder, so nobody has to export or email anything. |
-| `tools/make-thumbnail.py` | Builds a 1280×720 YouTube thumbnail from the match file and a frame of the finished video: date, team names, team logo, and one score tile per set. |
-| `assets/volleyball-serve-icon-bold.png` | The serve-indicator icon `build-scoreboard.lua` places on whichever team is serving (bold version, used by default). `volleyball-serve-icon.png` is the original thin-line version. |
-| `docs/fusion-scoreboard-walkthrough.md` | Manual, click-by-click guide to building the same scoreboard graph by hand in Fusion — useful for understanding what the script automates, or for customizing the look yourself. |
-| `docs/match-sample.json` | A synthetic example match file (not a real game) showing the data format `apply-match.lua` expects. |
-
-## Fully automated workflow
-
-The `automation/` folder holds the current, end-to-end version of this pipeline: one
-command per match copies the card, builds the project and scoreboard, trims the
-warm-up, cuts set breaks and time-outs (restarting just before the referee's serve
-whistle, found in the audio), normalises the sound, adds intro/FINAL screens,
-renders a review sheet for a single approval, exports one 4K60 10-bit H.265 file
-about 2.4x faster than with a live Fusion scoreboard (by pre-rendering the
-scoreboard as pictures), and prepares the YouTube upload. Details:
-[automation/README.md](automation/README.md). The manual workflow below still works
-on its own.
-
-```mermaid
-flowchart TB
-    A["📱 Phone app<br/>one tap per rally<br/>→ Google Drive"] --> D
-    C["🎥 Camera card<br/>4K60 clips"] --> D
-    D["copy-card.py<br/>picks the clips<br/>by clock time"] --> K[("Backup drive<br/>verified copy")]
-    D --> E["Resolve, auto<br/>scoreboard, cuts<br/>audio, wipes<br/>intro + FINAL"]
-    E --> G(["Review sheet<br/>one approval"])
-    G -->|approved| H["Export<br/>4K60 H.265"]
-    H --> I["YouTube<br/>Unlisted"]
-    H --> J["TAVO file<br/>4K H.265"]
-```
-
-<p align="center">
-  <img src="docs/intro-screen.jpg" width="49%" alt="Intro screen: season label, both teams with ball badges, VS, date, best of 3, sets to 25">
-  <img src="docs/final-screen.jpg" width="49%" alt="FINAL screen: set scores, sets won, winner line, total points, longest run, biggest lead, match time">
-</p>
-<p align="center"><sub>The intro and FINAL screens (<code>automation/hyperframes/</code>), filled in automatically from the match file. Made-up teams; teams without a logo get the ball badge.</sub></p>
-
-## Setup
+<details>
+<summary><b>Setup</b>: paths to edit in each script, team logos and colours</summary>
 
 Copy the contents of `resolve-scripts/` to wherever you want to run them
 from (they don't need to stay inside a cloned repo). Each script has a
@@ -155,7 +168,7 @@ Every placeholder path in the scripts is written as an obvious
 `C:/Users/YOURNAME/...`-style string — search for `YOURNAME` if you want
 to find every line that needs a personal value.
 
-## Workflow
+</details>
 
 1. **Record** at 4K60 (or whatever resolution/frame rate you configure the
    timeline to match).
@@ -207,6 +220,9 @@ to find every line that needs a personal value.
 
 ## Google Drive auto-upload (optional)
 
+<details>
+<summary>Send the match file from the phone to Google Drive automatically</summary>
+
 1. Create a new project at script.google.com, paste in
    `scorekeeper/scorekeeper-drive-upload.gs`, and change `SECRET_KEY` to a
    long random string (and `FOLDER_NAME` if you like).
@@ -220,25 +236,12 @@ it and retries automatically (on reopen, when back online, when the page
 returns to the foreground) until Drive confirms. If you change the script
 later, redeploy it as a new version or the old one keeps running.
 
-## Scoreboard design
-
-- Bar raised about 10% up the frame (`BAR_RAISE`) so YouTube's player
-  controls, which cover the bottom ~8% when the video is paused, never hide it.
-- "SET n" sits in a tab joined to the top of the score box (`PILL_STYLE =
-  "tab"`), the same shade as the score box, with a faint outline around bar
-  and tab that lines up with the cell separators. `"float"` and `"clean"` are
-  alternative floating-pill styles.
-- SET POINT / MATCH POINT tags (floating pills in the team's colour) are
-  worked out from the score after every rally — deuce handled, set 3 to 15.
-- Motion: the scoring team's number pops and flashes its colour, the sets
-  number does the same when a set is won, tags fade in/out, the set number
-  and scores dip out and back in at a set change, and the whole scoreboard
-  fades in and out at the start and end of the video.
-
-<p align="center"><img src="docs/scoreboard-animation.gif" width="800" alt="Scoreboard animation: SET POINT tag fades in, the winning point pops, the sets number pops, the set number and scores dip into set 2, then MATCH POINT appears"></p>
-<p align="center"><sub>Set point, set won, the change to set 2, and match point (a made-up match, sped up between rallies).</sub></p>
+</details>
 
 ## Automatic set alignment
+
+<details>
+<summary>How each set's scores are lined up with the camera stops</summary>
 
 Every set break is a camera stop, so every set after the first begins at a
 clip join on the timeline. If Stop/Resume Recording was tapped a few seconds
@@ -257,7 +260,44 @@ previous one ended) and ignored, so recording straight through a match works
 too.
 Turn it off with `AUTO_ALIGN_SETS = false`.
 
+</details>
+
+## What's in this repo
+
+```
+├── automation/          The full hands-off workflow (Resolve Studio + an AI assistant) — see automation/README.md
+├── resolve-scripts/     Lua scripts run from DaVinci Resolve's Console (manual workflow)
+├── footage-conversion/  Windows HEVC→H.264 converter (.bat + .ps1)
+├── scorekeeper/         The scorekeeping web app + optional Google Drive receiver
+├── assets/              Serve-ball icons used by the overlay
+├── tools/               YouTube thumbnail generator
+└── docs/                Manual walkthrough + a sample match file
+```
+
+<details>
+<summary>Every file, one line each</summary>
+
+| File | What it does |
+|---|---|
+| `footage-conversion/convert-footage.bat` | Double-click-to-run converter. Finds the newest dated match folder, converts every `DJI_*.mov`/`.mp4` from HEVC to H.264 (hardware-accelerated), preserves exact filenames, keeps the originals in a `raw_originals` backup folder. Safe to re-run — skips anything already converted. |
+| `footage-conversion/convert-one.ps1` | Helper script `convert-footage.bat` calls per clip — shows a live percent/ETA progress bar during conversion. Not meant to be run by hand. |
+| `resolve-scripts/assemble-match.lua` | Run once per match from Resolve's Console. Imports every clip from the newest match folder and builds a gap-free timeline at the right resolution/frame rate. Prints a verification report — total length vs. sum of source clips, and a chapter-order sanity check — so a bad import shows up as text instead of a silent, drifting overlay. |
+| `resolve-scripts/build-scoreboard.lua` | Builds the entire scoreboard's Fusion node graph from scratch: bar, score cells, team names, sets, serve indicator, "SET n" tab, SET POINT / MATCH POINT tags, optional team logo, outline, sheen, drop shadow and an overall fade. Team names are anchored on their outer edge, so both sit the same distance from the ends of the bar whatever their length. Look is configurable at the top (`BAR_WIDTH`, `BAR_RAISE`, `PILL_STYLE`, fonts, colours). Run once per match. |
+| `resolve-scripts/apply-match.lua` | Reads a match JSON file (see below) and writes keyframes onto the nodes `build-scoreboard.lua` created — score, sets, set number and serve indicator as instant "step" changes, plus the motion (score/sets pops, SET POINT / MATCH POINT tags worked out from the score, set-change dips, fade in/out). Also sets the team names from the file and **automatically re-aligns each set to its clip join** (see below). |
+| `resolve-scripts/run-overlay.lua` | Convenience wrapper — runs `build-scoreboard.lua` then `apply-match.lua` back to back. |
+| `scorekeeper/volleyball-scorekeeper.html` | Self-contained scorekeeping web app with a guided, one-screen-at-a-time flow simple enough for anyone at the gym: who's playing → press record + START → two giant team buttons with a 5-second UNDO → automatic set-over screen → FINISH MATCH. Timestamps every event, survives the page being closed mid-match, and exports the JSON file the Lua scripts consume — or sends it to Google Drive automatically (below). A one-tap **Time-out** button (cleared by the next point) records time-outs so the automated workflow can cut them out. |
+| `scorekeeper/scorekeeper-drive-upload.gs` | Optional Google Apps Script "web app" that receives the match file from the scorekeeper and saves it into a Drive folder, so nobody has to export or email anything. |
+| `tools/make-thumbnail.py` | Builds a 1280×720 YouTube thumbnail from the match file and a frame of the finished video: date, team names, team logo, and one score tile per set. |
+| `assets/volleyball-serve-icon-bold.png` | The serve-indicator icon `build-scoreboard.lua` places on whichever team is serving (bold version, used by default). `volleyball-serve-icon.png` is the original thin-line version. |
+| `docs/fusion-scoreboard-walkthrough.md` | Manual, click-by-click guide to building the same scoreboard graph by hand in Fusion — useful for understanding what the script automates, or for customizing the look yourself. |
+| `docs/match-sample.json` | A synthetic example match file (not a real game) showing the data format `apply-match.lua` expects. |
+
+</details>
+
 ## Known limitations
+
+<details>
+<summary>Things to know before you rely on it</summary>
 
 - **A converter can silently scramble clip order.** Some converters rename
   files with an altered embedded timestamp, which can throw off Resolve's
@@ -268,8 +308,7 @@ Turn it off with `AUTO_ALIGN_SETS = false`.
 - **Fusion Composition placement can't be scripted.** Resolve's API can
   insert a Fusion composition onto a timeline, but always at a fixed
   position on track V1 with no resize/reposition API available — placing
-  it on V2 and stretching it to fit has to be done by hand (see step 4
-  above).
+  it on V2 and stretching it to fit has to be done by hand (see step 4 of the manual workflow).
 - **An accidental mid-set "camera stopped" in the scorekeeper app can't be
   undone** — the excluded time is baked into every timestamp logged after
   it. It's tucked under More options behind a two-tap confirm, and
@@ -284,6 +323,8 @@ Turn it off with `AUTO_ALIGN_SETS = false`.
   serve-ball icon. The scorekeeper warns about long names when you type them.
 - The serve ball fades in/out over a few frames rather than cutting
   instantly. Cosmetic only.
+
+</details>
 
 ## License
 
