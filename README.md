@@ -11,7 +11,7 @@
   <a href="https://kauyoung.github.io/volleyball-autopilot/scorekeeper/volleyball-scorekeeper.html"><img alt="Try the scorekeeper" src="https://img.shields.io/badge/try_it-scorekeeper_app-0A84FF?logo=googlechrome&logoColor=white"></a>
 </p>
 
-https://github.com/user-attachments/assets/ee5bb6bb-23b8-4f6f-8bc4-d868c2fc0437
+https://github.com/user-attachments/assets/10376284-8d1b-4834-8e2c-f304ad9874b2
 
 <p align="center"><sub>43 seconds, start to finish: tap the score on the phone, get the finished video. Real match footage, blurred because the players are minors; team names are made up.</sub></p>
 
