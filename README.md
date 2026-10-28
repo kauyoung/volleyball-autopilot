@@ -11,18 +11,14 @@
   <a href="https://kauyoung.github.io/volleyball-autopilot/scorekeeper/volleyball-scorekeeper.html"><img alt="Try the scorekeeper" src="https://img.shields.io/badge/try_it-scorekeeper_app-0A84FF?logo=googlechrome&logoColor=white"></a>
 </p>
 
-<p align="center"><img src="docs/scoreboard-animation.gif" width="900" alt="Scoreboard animation: SET POINT tag fades in, the winning point pops, the sets number pops, the set number and scores dip into set 2, then MATCH POINT appears"></p>
-<p align="center"><sub>The scoreboard in motion: set point, set won, the change to set 2, match point. Made-up teams.</sub></p>
+https://github.com/user-attachments/assets/ee5bb6bb-23b8-4f6f-8bc4-d868c2fc0437
+
+<p align="center"><sub>43 seconds, start to finish: tap the score on the phone, get the finished video. Real match footage, blurred because the players are minors; team names are made up.</sub></p>
 
 A from-scratch pipeline for putting a live, animated scoreboard overlay on
 volleyball match footage — built for parents/coaches recording their own
 team's games with a 4K60 action camera and DaVinci Resolve, without paying
 for a subscription filming/scoring service.
-
-![The scoreboard overlay on a 4K match frame, at match point in set 2](docs/scoreboard-preview.jpg)
-
-*A frame rendered by this pipeline: match point in set 2. Team names are made up, and the gym footage
-is blurred because the players are minors.*
 
 ## What you get
 
@@ -66,12 +62,6 @@ flowchart TB
     H --> I["YouTube<br/>Unlisted"]
     G -->|approved| I
 ```
-
-<p align="center">
-  <img src="docs/intro-screen.jpg" width="49%" alt="Intro screen: season label, both teams with ball badges, VS, date, best of 3, sets to 25">
-  <img src="docs/final-screen.jpg" width="49%" alt="FINAL screen: set scores, sets won, winner line, total points, longest run, biggest lead, match time">
-</p>
-<p align="center"><sub>The intro and FINAL screens (<code>automation/hyperframes/</code>), filled in automatically from the match file. Made-up teams; teams without a logo get the ball badge.</sub></p>
 
 ## Scoreboard design
 
