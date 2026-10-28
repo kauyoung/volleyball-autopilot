@@ -1,10 +1,10 @@
 """
-Venom Rebels — copy every match folder to Kenny's external hard drive (2026-10-03).
+Volleyball Autopilot — copy every match folder to Kenny's external hard drive (2026-10-03).
 
     python archive-matches.py            # find the external drive by itself
     python archive-matches.py X:         # or name it
 
-Copies E:\\Venom Matches\\<every folder> to <drive>:\\Venom Matches\\<same folder>,
+Copies E:\\Volleyball Matches\\<every folder> to <drive>:\\Volleyball Matches\\<same folder>,
 then reads every copied file back and checks its SHA-1 against the original.
 COPY ONLY — nothing is ever deleted or overwritten, on either drive:
   * a file already on the external drive with the same size + SHA-1 is skipped;
@@ -28,7 +28,7 @@ if os.name == "nt" and not getattr(subprocess.Popen, "_no_window", False):
     subprocess.Popen = _NoWindowPopen
 
 WORK = os.path.dirname(os.path.abspath(__file__))
-SRC = r"E:\Venom Matches"
+SRC = r"E:\Volleyball Matches"
 LOG = os.path.join(WORK, "archive-log.txt")
 SKIP_DIRS = {"_tavo_tmp"}
 MIN_GB = 200
@@ -87,7 +87,7 @@ def main():
             return 2
         dest_root = ok[0][0] + ":\\"
         log(f"external drive: {dest_root} ({ok[0][1]:.0f} GB, {ok[0][3]})")
-    dest = os.path.join(dest_root, "Venom Matches")
+    dest = os.path.join(dest_root, "Volleyball Matches")
     os.makedirs(dest, exist_ok=True)
     # an interrupted earlier run leaves "<file>.partial" (this script's own temp
     # file, never a real copy) — clear those so the file is copied again

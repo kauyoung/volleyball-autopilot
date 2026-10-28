@@ -1,6 +1,6 @@
 --[[
 ================================================================================
- Venom Rebels scoreboard — place the scoreboard clip (no mouse needed)
+ Volleyball Autopilot scoreboard — place the scoreboard clip (no mouse needed)
 ================================================================================
 
  Replaces the old on-screen step (drag "Abstract Mesh" onto V2, Ctrl+D to set

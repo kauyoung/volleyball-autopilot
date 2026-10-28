@@ -1,6 +1,6 @@
 --[[
 ================================================================================
- Venom Rebels scoreboard — assemble match footage
+ Volleyball Autopilot scoreboard — assemble match footage
 ================================================================================
 
  Imports every clip from a folder and lays them end to end on a new timeline,
@@ -36,7 +36,7 @@
 --
 -- Keep one folder per match inside CLIP_ROOT, named by date:
 --
---   E:\Venom Matches\
+--   E:\Volleyball Matches\
 --       2026-08-09 vs Durham Attack\
 --           DJI_0001.MP4
 --           DJI_0002.MP4
@@ -50,7 +50,7 @@
 -- dump would splice last week's game onto the end of this one.
 --
 -- Set CLIP_FOLDER to a full path to override.
-local CLIP_ROOT   = [[E:\Venom Matches]]
+local CLIP_ROOT   = [[E:\Volleyball Matches]]
 -- prepare-match.py passes the exact folder (2026-09-28): the "newest folder"
 -- fallback below can't see folder dates in Resolve's Lua and picks by NAME, so
 -- "Thundercats 14U" would beat "2026-10-03 1415 vs Durham".

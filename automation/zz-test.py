@@ -1,5 +1,5 @@
 """
-Venom Rebels — one-command end-to-end test on the permanent fixture (2026-10-14).
+Volleyball Autopilot — one-command end-to-end test on the permanent fixture (2026-10-14).
 
     python zz-test.py                      # one zz match through run-match.py, export included
     python zz-test.py --tournament         # two zz matches through run-tournament.py --test
@@ -8,14 +8,14 @@ Venom Rebels — one-command end-to-end test on the permanent fixture (2026-10-1
     python zz-test.py --keep-state         # don't put the real status/summary files back
     python zz-test.py --timeout 152        # 2026-10-19: add a time-out tap at 152 s to the zz copy's match file
                                            # (later points moved 30 s; min cut 8 s, fallback 15 s for the short fixture)
-    python zz-test.py --team2 "Venom Chaos" # 2026-10-21: opponent name in the zz copy only (name fit / logo checks)
+    python zz-test.py --team2 "Lakeview Thunder 14U" # 2026-10-21: opponent name in the zz copy only (name fit / logo checks)
 
 Safety (Kenny, 2026-10-14 — two earlier tests overwrote real files):
   * refuses to start while a real run is busy or Resolve is rendering;
   * snapshots every state file in the scripts folder (status/summary/result/log .txt/.json,
     approval kits) and PUTS THEM BACK afterwards; the test's own copies go to
     _overlay_check\\zz-test-out\\<time>\\state\\;
-  * works only in fresh "E:\\Venom Matches\\zz test <time>" folders made from
+  * works only in fresh "E:\\Volleyball Matches\\zz test <time>" folders made from
     _zz-fixture-master (clip hard-linked, no extra space); older zz test folders are removed;
   * lists every real match folder + the Drive scorekeeper folder before and after and
     FAILS the test if anything there changed.
@@ -27,9 +27,9 @@ import glob, json, os, shutil, subprocess, sys, time, traceback
 W = r"C:\Users\YOURNAME\scoreboard-pipeline"
 PY = r"C:\Python314\python.exe"
 OC = W + r"\_overlay_check"
-ROOT = r"E:\Venom Matches"
+ROOT = r"E:\Volleyball Matches"
 MASTER = os.path.join(ROOT, "_zz-fixture-master")
-DRIVE_DIR = "F:\\My Drive\\Venom Matches \u2013 Scorekeeper"
+DRIVE_DIR = "F:\\My Drive\\Volleyball Matches \u2013 Scorekeeper"
 STATUS = W + r"\zz-test-status.txt"
 TS = time.strftime("%Y%m%d-%H%M%S")
 OUT = OC + r"\zz-test-out" + "\\" + TS
@@ -306,7 +306,7 @@ def main():
     fails = []
     try:
         old_test_folders()
-        env = dict(os.environ, PYTHONIOENCODING="utf-8", VENOM_TEST="1", PREP_OUT=OUT)
+        env = dict(os.environ, PYTHONIOENCODING="utf-8", AUTOPILOT_TEST="1", PREP_OUT=OUT)
         to_t = float(args[args.index("--timeout") + 1]) if "--timeout" in args else None
         if to_t is not None:
             env["BK_TO_MIN"], env["BK_TO_FALLBACK"] = "8", "15"

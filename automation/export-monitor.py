@@ -1,5 +1,5 @@
 """
-Venom Rebels — export monitor (2026-10-14). Watches a Resolve export and logs, once a minute,
+Volleyball Autopilot — export monitor (2026-10-14). Watches a Resolve export and logs, once a minute,
 how fast it is going and what the PC is doing, so a slow export can be explained.
 
     python export-monitor.py <folder the render writes into> [<final .mp4>]

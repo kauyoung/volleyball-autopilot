@@ -1,12 +1,12 @@
 """
-Venom Rebels — build the permanent test fixture (2026-10-14).
+Volleyball Autopilot — build the permanent test fixture (2026-10-14).
 
     python make-zz-fixture.py [source clip]
 
-Makes  E:\\Venom Matches\\_zz-fixture-master\\  (never touched by tests themselves):
+Makes  E:\\Volleyball Matches\\_zz-fixture-master\\  (never touched by tests themselves):
   * DJI_20261013181819_0018_D.MP4 — the first 300 s of the Oct 13 camera file,
     stream-copied (no re-encode, ~3 GB), same name so the pipeline treats it like a card clip
-  * 2026-10-13-1818-venom-rebels-vs-zz-test-team.json — a made-up 2-set mini match vs "Unity Shinobi 14u" (long name + logo)
+  * 2026-10-13-1818-home-team-vs-zz-test-team.json — a made-up 2-set mini match vs "Unity Shinobi 14u" (long name + logo)
     (5-point sets, ~4.5 min, a 2.5-min set break so the set-break cut + wipe runs too)
   * copy-info.txt — camera started 6 s before START (so the offset question fires)
 
@@ -15,18 +15,18 @@ the clip, so no extra space). Source: the archive drive copy, unless given.
 """
 import glob, json, os, subprocess, sys
 
-ROOT = r"E:\Venom Matches"
+ROOT = r"E:\Volleyball Matches"
 MASTER = os.path.join(ROOT, "_zz-fixture-master")
 FF = r"C:\ffmpeg\bin\ffmpeg.exe"
 NAME = "DJI_20261013181819_0018_D.MP4"
-JSON_NAME = "2026-10-13-1818-venom-rebels-vs-unity-shinobi-14u.json"
+JSON_NAME = "2026-10-13-1818-home-team-vs-unity-shinobi-14u.json"
 
 
 def find_source():
     if len(sys.argv) > 1:
         return sys.argv[1]
     for d in "JKLGHI":
-        p = glob.glob(d + r":\Venom Matches\2026-10-13 1818 vs Venom Fury 13u\\" + NAME)
+        p = glob.glob(d + r":\Volleyball Matches\2026-10-13 1818 vs Lakeview Thunder 14U\\" + NAME)
         if p:
             return p[0]
     raise SystemExit("source clip not found — plug in the archive drive or pass the path")
@@ -35,7 +35,7 @@ def find_source():
 def events():
     ev = [dict(t=0, set=1, score1=0, score2=0, sets1=0, sets2=0, serve=0)]
     s1 = s2 = 0
-    # set 1: Venom wins 5-2
+    # set 1: Home Team wins 5-2
     for k, who in enumerate([1, 1, 2, 1, 2, 1, 1]):
         if who == 1: s1 += 1
         else: s2 += 1
@@ -50,7 +50,7 @@ def events():
         else: s2 += 1
         ev.append(dict(t=215 + 6 * k, set=2, score1=s1, score2=s2,
                        sets1=1, sets2=1 if s2 == 5 else 0, serve=who))
-    return ev   # totals: Venom 8, ZZ 7; sets 1-1
+    return ev   # totals: Home Team 8, ZZ 7; sets 1-1
 
 
 def main():
@@ -66,7 +66,7 @@ def main():
         st = os.stat(src)
         os.utime(out, (st.st_atime, st.st_mtime))
     ev = events()
-    m = {"version": 1, "team1": "Venom Rebels", "team2": "Unity Shinobi 14u", "date": "2026-10-13",
+    m = {"version": 1, "team1": "Home Team", "team2": "Unity Shinobi 14u", "date": "2026-10-13",
          "format": {"code": "scrim", "sets": 0, "mode": "open", "pts": 5, "decider": 5},
          "result": {"sets1": 1, "sets2": 1, "points1": 8, "points2": 7, "winner": 1, "decidedBy": "points"},
          "forcedSets": [], "startedAt": "2026-10-13T18:18:25-04:00", "endedAt": "2026-10-13T18:22:55-04:00",

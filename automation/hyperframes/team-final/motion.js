@@ -1,16 +1,16 @@
-// motion.js — shared motion tokens for the Venom intro and FINAL screens.
+// motion.js — shared motion tokens for the intro and FINAL screens.
 // Load AFTER gsap.min.js and CustomEase.min.js, BEFORE the page's own script.
 (function () {
   gsap.registerPlugin(CustomEase);
-  CustomEase.create("venomOut",    "0.23, 1, 0.32, 1");    // strong ease-out — entrances and exits
-  CustomEase.create("venomInOut",  "0.77, 0, 0.175, 1");   // strong ease-in-out — things moving across the screen
-  CustomEase.create("venomDrawer", "0.32, 0.72, 0, 1");    // drawer curve — the opening panel wipe (plan 003)
-  CustomEase.create("venomEase",   "0.25, 0.1, 0.25, 1");  // CSS "ease" — colour and tint changes (plan 004)
+  CustomEase.create("teamOut",    "0.23, 1, 0.32, 1");    // strong ease-out — entrances and exits
+  CustomEase.create("teamInOut",  "0.77, 0, 0.175, 1");   // strong ease-in-out — things moving across the screen
+  CustomEase.create("teamDrawer", "0.32, 0.72, 0, 1");    // drawer curve — the opening panel wipe (plan 003)
+  CustomEase.create("teamEase",   "0.25, 0.1, 0.25, 1");  // CSS "ease" — colour and tint changes (plan 004)
   window.VMotion = {
-    OUT: "venomOut",
-    IN_OUT: "venomInOut",
-    DRAWER: "venomDrawer",
-    EASE: "venomEase",
+    OUT: "teamOut",
+    IN_OUT: "teamInOut",
+    DRAWER: "teamDrawer",
+    EASE: "teamEase",
     STAGGER: 0.06,
     ENTER: 0.45,         // how long main elements take to arrive (text, rows, badges, tiles) — Kenny prefers this unhurried pace
     PANEL: 0.55,         // the opening diagonal panel wipe

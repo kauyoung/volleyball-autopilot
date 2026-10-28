@@ -1,7 +1,7 @@
 """
-Venom Rebels - set-break wipe (2026-10-06, Kenny).
+Volleyball Autopilot - set-break wipe (2026-10-06, Kenny).
 
-The intro's 14-degree panel wipe (hyperframes\venom-intro: green leading edge, blue
+The intro's 14-degree panel wipe (hyperframes\team-intro: green leading edge, blue
 trailing edge, same easing), made fully opaque so the cut between two sets is hidden.
 "SET n" is printed ON the panel (Kenny: no separate text animation, no green line):
 the leading edge uncovers it as the panel sweeps in and the trailing edge wipes it
@@ -54,8 +54,8 @@ def bezier(x1, y1, x2, y2):
     return f
 
 
-DRAWER = bezier(0.32, 0.72, 0.0, 1.0)       # motion.js venomDrawer (intro panel in)
-IN_OUT = bezier(0.77, 0.0, 0.175, 1.0)      # motion.js venomInOut (intro panel out)
+DRAWER = bezier(0.32, 0.72, 0.0, 1.0)       # motion.js teamDrawer (intro panel in)
+IN_OUT = bezier(0.77, 0.0, 0.175, 1.0)      # motion.js teamInOut (intro panel out)
 U_MIN, U_MAX = -TAN * H / 2, W + TAN * H / 2   # u = x + tan14 * (y - H/2) over the screen
 L_IN_START = U_MIN - EDGE - 2 - PANEL_W     # panel fully off to the left
 L_IN_END = U_MAX + EDGE + 2 - PANEL_W       # panel position when it first covers everything

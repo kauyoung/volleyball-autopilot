@@ -1,5 +1,5 @@
 """
-Venom Rebels - HyperFrames intro + FINAL screens (Kenny approved 2026-10-04).
+Volleyball Autopilot - HyperFrames intro + FINAL screens (Kenny approved 2026-10-04).
 
 Not run on its own: make-bookends.py "render intro|summary" exec()s this file and
 calls render(kind, p, log, logo_for). It writes the SAME files the classic
@@ -9,7 +9,7 @@ place-bookends.py and the rest of the workflow are unchanged. Returns True when
 the file is written; any problem raises, and make-bookends.py then draws the
 classic intro/summary instead (automatic fallback).
 
-Templates: hyperframes\\venom-intro\\ and hyperframes\\venom-final\\ (HTML + GSAP).
+Templates: hyperframes\\team-intro\\ and hyperframes\\team-final\\ (HTML + GSAP).
 Each render writes that folder's match.js (the match data) and copies the
 team logos into its logos\\ folder.
 
@@ -192,7 +192,7 @@ def _frames(path):
 
 def _raw(kind, data, log):
     """render (or reuse) the template's moving part -> path, frame count"""
-    tdir = os.path.join(HF, "venom-intro" if kind == "intro" else "venom-final")
+    tdir = os.path.join(HF, "team-intro" if kind == "intro" else "team-final")
     os.makedirs(RAW, exist_ok=True)
     out = os.path.join(RAW, f"{kind}-raw.mov")
     key = hashlib.sha1((json.dumps(data, sort_keys=True) + _tree_hash(tdir)).encode()).hexdigest()
@@ -334,7 +334,7 @@ def _fast_or_old(pieces, old_args, n, out, log):
 
 def render(kind, p, log, logo_for):
     t0 = time.time()
-    tdir = os.path.join(HF, "venom-intro" if kind == "intro" else "venom-final")
+    tdir = os.path.join(HF, "team-intro" if kind == "intro" else "team-final")
     if not os.path.isdir(tdir):
         raise RuntimeError(f"template folder missing: {tdir}")
     if kind == "intro":

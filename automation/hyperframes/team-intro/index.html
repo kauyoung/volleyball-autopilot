@@ -14,7 +14,7 @@
       @font-face { font-family: "Barlow Condensed"; font-weight: 800; src: url("fonts/barlow-condensed-latin-800-normal.woff2") format("woff2"); }
 
       :root {
-        --venom: #70d549;
+        --team1: #70d549;
         --opp: #6bbdff;
         --ink: #040605;
         --paper: #f2f4f1;
@@ -31,7 +31,7 @@
       /* Diagonal panel wipe (14°, the same angle as the VS slashes) */
       #panelWrap { position: absolute; inset: 0; overflow: hidden; }
       #panel { position: absolute; top: -10%; left: -30%; width: 160%; height: 120%; background: rgba(6,9,7,0.84); transform: skewX(-14deg); }
-      #panel .edgeIn  { position: absolute; top: 0; bottom: 0; right: -14px; width: 14px; background: var(--venom); }
+      #panel .edgeIn  { position: absolute; top: 0; bottom: 0; right: -14px; width: 14px; background: var(--team1); }
       #panel .edgeOut { position: absolute; top: 0; bottom: 0; left: -14px; width: 14px; background: var(--opp); }
 
       /* Header */
@@ -78,7 +78,7 @@
         font-weight: 700; font-size: 46px; letter-spacing: 0.1em; white-space: nowrap; }
       #info .dot { width: 9px; height: 9px; background: rgba(242,244,241,0.4); transform: rotate(45deg); }
       #info .muted { color: rgba(242,244,241,0.82); }
-      #info .hl { color: var(--venom); }
+      #info .hl { color: var(--team1); }
 
           /* workflow copy: laid out at 1920x1080, drawn at 4K (fast capture, no upscale) */
       #scene { zoom: 2; }

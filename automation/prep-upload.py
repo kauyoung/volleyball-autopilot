@@ -1,5 +1,5 @@
 """
-Venom Rebels — prepare the YouTube upload while the export is still rendering.
+Volleyball Autopilot — prepare the YouTube upload while the export is still rendering.
 (2026-09-27, Kenny approved "#5: make the thumbnail while the video exports")
 
 Everything here reads the RAW camera files and the scorekeeper data, never the
@@ -100,7 +100,7 @@ def cmd_text():
     # 2026-10-18 (Kenny): titles leave out the result - no Won/Lost, no match or set scores.
     # The result stays in the description.
     # 2026-10-25 (Kenny): our own channel - the title starts with the opponent ("vs X"); the
-    # description still says "Venom Rebels 14U vs X"
+    # description still says "Home Team 14U vs X"
     # 2026-10-26 (Kenny, after the MYVB tournament): the match folder's event.txt (event + stage,
     # e.g. "MYVB 15U Tier 1 \u00b7 Pool Play") goes into the title and on top of the description;
     # an optional description-note.txt (e.g. a camera-gap note) goes on the line after it.
@@ -118,7 +118,7 @@ def cmd_text():
         title = f'vs {t2}{kind} | {event.split(" \u00b7 ")[0]} | {short}' if event else title
     if len(title) > 100:
         title = f'vs {t2}{kind} | {short}'
-    team1_full = "Venom Rebels 14U" if t1 == "Venom Rebels" else t1
+    team1_full = "Home Team 14U" if t1 == "Home Team" else t1
     if on_points:
         wname = t1 if win == 1 else t2
         final = (f"{'Scrimmage final' if scrim else 'Final'}: {wname} win on total points {max(p1, p2)}{DASH}{min(p1, p2)} "

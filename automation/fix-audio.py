@@ -1,5 +1,5 @@
 """
-Venom Rebels — fix the match audio BEFORE the export (2026-09-27, Kenny approved).
+Volleyball Autopilot — fix the match audio BEFORE the export (2026-09-27, Kenny approved).
 
 Replaces the old after-export step (export a 22 GB "-master" file, then re-read
 and re-write all 22 GB just to raise the volume). Now the camera audio alone is
@@ -98,7 +98,7 @@ def make(folder, fade_end=None, fade_start=0.0):
     tmpdir = tempfile.gettempdir()
     if shutil.disk_usage(tmpdir).free < need + 5e9:
         tmpdir = OUT_DIR or folder
-    jw = os.path.join(tmpdir, f"_venom-joined-audio-{os.getpid()}.wav")
+    jw = os.path.join(tmpdir, f"_autopilot-joined-audio-{os.getpid()}.wav")
     t0 = _t.time()
     r0 = subprocess.run(["ffmpeg", "-y", "-v", "error", "-nostats"] + ins +
                         ["-filter_complex", joined + "[j]", "-map", "[j]", "-c:a", "pcm_f32le", "-rf64", "auto", jw],

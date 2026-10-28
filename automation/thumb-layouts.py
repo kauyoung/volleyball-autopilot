@@ -1,5 +1,5 @@
 """
-Venom Rebels - thumbnail layout PROPOSALS (2026-10-06, Kenny: "the placement of the texts
+Volleyball Autopilot - thumbnail layout PROPOSALS (2026-10-06, Kenny: "the placement of the texts
 and the logo doesn't look right ... keep all the texts, just move them around").
 Not used by the workflow yet - make-thumbnail.py stays the live one until Kenny picks.
   python thumb-layouts.py <A|B> <match.json> <frame.jpg> <out.jpg> <fonts dir>
@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageFilter
 W, H = 1280, 720
 GREEN=(112,213,73); WHITE=(255,255,255); INK=(2,3,3); GREY=(150,150,150)
 FILES=r"C:\Users\YOURNAME\scoreboard-pipeline"
-LOGO1=FILES+r"\venomrebels-logo-square.png"
+LOGO1=FILES+r"\team-logo-square.png"
 MX, TOP, BOTTOM = 120, 84, H-88
 
 
@@ -64,7 +64,7 @@ def background(frame, mode):
 
 def main(layout, match, frame, out, fdir):
     m = json.load(open(match, encoding="utf-8"))
-    t1 = (m.get("team1") or "Venom Rebels").upper(); t2 = (m.get("team2") or "Opponent").upper()
+    t1 = (m.get("team1") or "Home Team").upper(); t2 = (m.get("team2") or "Opponent").upper()
     try: date = datetime.date.fromisoformat(m["date"]).strftime("%b %d, %Y").upper()
     except Exception: date = ""
     try: event = open(os.path.join(os.path.dirname(os.path.abspath(match)), "event.txt"), encoding="utf-8").read().strip().upper()

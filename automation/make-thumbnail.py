@@ -1,4 +1,4 @@
-# Venom Rebels YouTube thumbnail (layout approved by Kenny 2026-10-05/06).
+# Volleyball Autopilot YouTube thumbnail (layout approved by Kenny 2026-10-05/06).
 #   PY make-thumbnail.py <match.json> <frame.jpg> <out.jpg> [fonts-dir]
 # One left edge; "VS" centred between the names with a rule each side; our badge only;
 # one tile (event name, else SCRIMMAGE, else none). Safe margins: 120 px left/right, >= 84 px
@@ -13,7 +13,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageEnhance, ImageChops
 W, H = 1280, 720
 GREEN=(112,213,73); SKY=(107,189,255); WHITE=(255,255,255); INK=(2,3,3)
 FILES=r"C:\Users\YOURNAME\scoreboard-pipeline"
-LOGO1=FILES+r"\venomrebels-logo-square.png"
+LOGO1=FILES+r"\team-logo-square.png"
 MX, TOP, BOTTOM = 120, 84, H-88          # safe area
 BADGE_R = 74          # 2026-10-06: badge in the top-right corner (Kenny: it sat on the VS line)
 BADGE_TOP = 54        # top of the green ring; 30 px above the text safe line so it clears the VS rule (Kenny 2026-10-06)
@@ -49,7 +49,7 @@ def fit_name(d, text, font, maxw, big, small, mn):
 
 def main(match, frame, out, fdir=None):
     m=json.load(open(match,encoding="utf-8"))
-    t1=(m.get("team1") or "Venom Rebels").upper(); t2=(m.get("team2") or "Opponent").upper()
+    t1=(m.get("team1") or "Home Team").upper(); t2=(m.get("team2") or "Opponent").upper()
     try: date=datetime.date.fromisoformat(m["date"]).strftime("%b %d, %Y").upper()
     except Exception: date=""
     FD=fonts_dir(fdir); NB=os.path.join(FD,"Gotham Narrow Bold.otf"); MED=os.path.join(FD,"Gotham Medium.otf")

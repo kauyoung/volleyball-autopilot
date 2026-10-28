@@ -1,10 +1,10 @@
 """
-Venom Rebels — make every team logo LOOK the same size (2026-10-21, Kenny).
+Volleyball Autopilot — make every team logo LOOK the same size (2026-10-21, Kenny).
 
 Logos are sized by their visible drawing (the non-transparent part), not by the
 image canvas, so empty padding in a PNG no longer makes a logo smaller. On top,
 team-logos\\logo-sizes.txt can give a logo an "optical" factor (a thin line-art
-logo looks smaller than a solid one at the same height), e.g.  venom-rebels = 1.09
+logo looks smaller than a solid one at the same height), e.g.  home-team = 1.09
 
     python logo_sizes.py      -> writes team-logos\\_logo-ink.txt for build-scoreboard.lua
                                  (stem  W H  x0 y0 x1 y1  factor), run by prepare-match.py
@@ -19,7 +19,7 @@ LOGOS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "team-logos")
 def ink_box(path):
     """(W, H, x0, y0, x1, y1) of the VISIBLE drawing; whole image if there is no alpha.
     Near-black parts (e.g. a black sticker outline) are left out: every logo sits on a
-    dark bar / dark badge, where they don't show (2026-10-21, Venom Chaos logo)."""
+    dark bar / dark badge, where they don't show (2026-10-21, a club logo)."""
     im = Image.open(path)
     W, H = im.size
     if im.mode in ("RGBA", "LA") or "transparency" in im.info:

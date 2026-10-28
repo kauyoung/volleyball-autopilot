@@ -1,6 +1,6 @@
 --[[
 ================================================================================
- Venom Rebels scoreboard — apply match data
+ Volleyball Autopilot scoreboard — apply match data
 ================================================================================
 
  Reads a match JSON file and writes keyframes onto the scoreboard nodes built by
@@ -45,7 +45,7 @@
 -- It prints the file it chose and the team names, so if it grabs the wrong one
 -- you'll see it immediately rather than wondering why the scores look odd.
 -- Set MATCH_FILE to a full path to override the search entirely.
-local MATCH_ROOT     = [[E:\Venom Matches]]
+local MATCH_ROOT     = [[E:\Volleyball Matches]]
 
 -- Where this script (and its siblings assemble-match.lua / build-scoreboard.lua /
 -- run-overlay.lua) live. Doubles as the fallback search location for the match

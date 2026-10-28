@@ -96,8 +96,8 @@ def parse_answer(txt, suggestion):
 def write_offset(folder, value, allow_any=False):
     """Put "offset": value into the .json copy inside the MATCH FOLDER (original kept once as
     <name>.json.before-offset.txt). Returns (path, old value). Refuses anything that isn't a match folder."""
-    if not allow_any and "venom matches" not in folder.lower().replace("/", "\\"):
-        raise ValueError("not a match folder under 'Venom Matches': " + folder)
+    if not allow_any and "volleyball matches" not in folder.lower().replace("/", "\\"):
+        raise ValueError("not a match folder under 'Volleyball Matches': " + folder)
     j = match_json(folder)
     if not j:
         raise FileNotFoundError("no scorekeeper .json in " + folder)

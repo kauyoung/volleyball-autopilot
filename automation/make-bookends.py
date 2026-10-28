@@ -1,12 +1,12 @@
 """
-Venom Rebels — intro card + match summary ("bookends"), 2026-09-28 (Kenny approved).
+Volleyball Autopilot — intro card + match summary ("bookends"), 2026-09-28 (Kenny approved).
 
 Both play ON TOP of the match video (Kenny records ~15 s before the first serve
 and ~30 s after the last point). Each is rendered as a 4K ProRes 4444 clip WITH
 ALPHA that goes on video track 3: a blurred + dimmed copy of the match video
 (its alpha ramps 0 -> 1, so the cut-in is invisible) plus the animated card.
 Design approved on previews (_overlay_check\\mock\\preview-*.mp4):
-  intro   = "centre card": logo pops, card opens, VENOM REBELS / VS / opponent
+  intro   = "centre card": logo pops, card opens, HOME TEAM / VS / opponent
             / neutral grey line / MATCH REPLAY · date; starts 2 s in; smooth
             1.2 s ease-in-out fade-out; scoreboard eases in after it.
   summary = FINAL tab, two team rows (set scores, sets won), "<WINNER> WIN a–b",
@@ -56,7 +56,7 @@ FPS = FPS_NUM / FPS_DEN
 W, H = 3840, 2160
 PREMULT = True                     # Resolve reads ProRes 4444 alpha as premultiplied (verified 2026-09-28)
 GREEN, BLUE, WHITE, GREY, DIMG = (112, 213, 73), (107, 189, 255), (255, 255, 255), (170, 170, 170), (120, 120, 120)
-SEASON = {"Venom Rebels": "VENOM REBELS 14U \u2013 2026-2027 SEASON"}
+SEASON = {"Home Team": "HOME TEAM 14U \u2013 2026-2027 SEASON"}
 DASH = "\u2013"
 
 INTRO_AT, INTRO_EARLIEST = 2.0, 0.5
@@ -678,7 +678,7 @@ def render_summary(p):
             return ("EACH", WHITE)
         name = p["team1"] if team_no == 1 else p["team2"]
         # 2026-10-02 (Kenny): opponent always "OPP" (standard stat-sheet short form)
-        if name.strip().lower() == "venom rebels":
+        if name.strip().lower() == "home team":
             txt = "REBELS"
         elif team_no == 2:
             txt = "OPP"

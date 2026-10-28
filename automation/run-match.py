@@ -417,8 +417,8 @@ def main():
     # tests ("zz" project) never write the YouTube text / thumbnail into the match folder
     # (2026-10-08: a test overwrote the Thundercats folder's own thumbnail.jpg)
     # 2026-10-14 test guard: a zz (test) project runs only on a zz folder, and a test run
-    # (VENOM_TEST=1, set by zz-test.py) only as a zz project — never on a real match folder
-    test = (a.project or "").lower().startswith("zz") or os.environ.get("VENOM_TEST") == "1"
+    # (AUTOPILOT_TEST=1, set by zz-test.py) only as a zz project — never on a real match folder
+    test = (a.project or "").lower().startswith("zz") or os.environ.get("AUTOPILOT_TEST") == "1"
     if test and not (a.folder and os.path.basename(a.folder.rstrip("\\")).lower().startswith("zz")
                      and (a.project or "").lower().startswith("zz")):
         stop("test runs need a zz project AND a zz folder (--project \"zz …\" --folder \"…\\zz …\")")

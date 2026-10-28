@@ -1,5 +1,5 @@
 """
-Venom Rebels — game-play-only video for TAVO (AI stats), 2026-09-28 (Kenny approved).
+Volleyball Autopilot — game-play-only video for TAVO (AI stats), 2026-09-28 (Kenny approved).
 
 TAVO's season budget is 120 hours of video and 20 GB per upload, so this makes a
 separate, trimmed 1080p file straight from the camera files (no Resolve, no

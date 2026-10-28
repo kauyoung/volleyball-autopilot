@@ -1,5 +1,5 @@
 """
-Venom Rebels — prepare (and export) a match (2026-09-28, Kenny approved).
+Volleyball Autopilot — prepare (and export) a match (2026-09-28, Kenny approved).
 
 exec'd inside Resolve's scripting (Claude's run_script_unsafe), with `resolve`
 defined and PM_PHASE set. EVERY call is kept well under the 60 s tool limit: slow
@@ -9,7 +9,7 @@ again while the result says "waiting".
   PM_PHASE = "setup"    (~15-30 s)
       match folder = PM_FOLDER, else the newest folder by date (Python, not Lua)
       + its scorekeeper .json (PM_JSON overrides)
-      -> new project "<date> <HHMM> Venom vs <Opponent>" (PM_PROJECT overrides)
+      -> new project "<date> <HHMM> <Team> vs <Opponent>" (PM_PROJECT overrides)
       -> assemble-match.lua with THAT folder passed in (MATCH_CLIP_FOLDER) — checked
       -> free-space check (YouTube + TAVO exports must fit on the drive)
       -> place-scoreboard.lua
@@ -57,7 +57,7 @@ OC = W + r"\_overlay_check"
 RDIR = OC + r"\review"
 CAND = OC + r"\thumb-candidates"
 PY = r"C:\Python314\python.exe"
-ROOT = r"E:\Venom Matches"
+ROOT = r"E:\Volleyball Matches"
 STATE = W + r"\prepare-state.json"
 LOG = W + r"\prepare-log.txt"
 PHASE = globals().get("PM_PHASE", "setup")
@@ -152,9 +152,9 @@ def match_json(folder):
     return max(js, key=os.path.getmtime) if js else None
 
 
-YT_PRESET_60 = "Venom YouTube 4K60 H265 10-bit 60M"   # 2026-10-26 (Kenny): 60 Mbps target (YouTube's 4K60 guide 53-68); was ~32
-YT_PRESET_10 = "Venom YouTube 4K60 H265 10-bit"   # 2026-10-19 (Kenny): 10-bit like the camera (Main10), same encoder settings
-YT_PRESET_8 = "Venom YouTube 4K60 H265"          # fallback (8-bit) if the 10-bit preset is missing
+YT_PRESET_60 = "Autopilot YouTube 4K60 H265 10-bit 60M"   # 2026-10-26 (Kenny): 60 Mbps target (YouTube's 4K60 guide 53-68); was ~32
+YT_PRESET_10 = "Autopilot YouTube 4K60 H265 10-bit"   # 2026-10-19 (Kenny): 10-bit like the camera (Main10), same encoder settings
+YT_PRESET_8 = "Autopilot YouTube 4K60 H265"          # fallback (8-bit) if the 10-bit preset is missing
 
 
 def load_youtube_preset(p):
@@ -216,11 +216,11 @@ def setup():
         say(f"ERROR: no DJI_ camera files in {folder}", out)
         return out
     m = json.load(open(js, encoding="utf-8"))
-    t1, t2, date = m.get("team1", "Venom Rebels"), m.get("team2", "Opponent"), m.get("date", "")
+    t1, t2, date = m.get("team1", "Home Team"), m.get("team2", "Opponent"), m.get("date", "")
     hhmm = ""
     if m.get("startedAt"):
         hhmm = m["startedAt"][11:13] + m["startedAt"][14:16] + " "
-    name = globals().get("PM_PROJECT") or f'{date} {hhmm}{"Venom" if t1 == "Venom Rebels" else t1} vs {t2}'
+    name = globals().get("PM_PROJECT") or f'{date} {hhmm}{t1} vs {t2}'
     say(f"match folder: {folder}", out)
     fm = (m.get("format") or {}).get("code", "bo3 (old file)")
     say(f"match file: {os.path.basename(js)} — {t1} vs {t2}, {len(m.get('events', []))} points, format {fm}", out)

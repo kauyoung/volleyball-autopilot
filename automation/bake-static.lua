@@ -1,6 +1,6 @@
 --[[
 ================================================================================
- Venom Rebels scoreboard — pre-draw the unchanging parts (speed, 2026-09-28)
+ Volleyball Autopilot scoreboard — pre-draw the unchanging parts (speed, 2026-09-28)
 ================================================================================
  Run AFTER run-overlay.lua (team names and logo are final by then), with
  _G.comp set to the scoreboard comp (the runner template does this) and the

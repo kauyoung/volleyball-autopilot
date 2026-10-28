@@ -1,6 +1,6 @@
 --[[
 ================================================================================
- Venom Rebels scoreboard — Fusion node graph builder
+ Volleyball Autopilot scoreboard — Fusion node graph builder
 ================================================================================
 
  Builds the entire scoreboard node graph described in
@@ -53,7 +53,7 @@ local SERVE_ICON_PATH = [[C:\Users\YOURNAME\Documents\Resolve Assets\volleyball-
 -- auto-overlay.lua fills these in from the match JSON automatically (via the
 -- SCOREBOARD_TEAM1/2 globals). The values below are only used when this
 -- script is run on its own.
-local TEAM1_NAME = rawget(_G, "SCOREBOARD_TEAM1") or "Venom Rebels"
+local TEAM1_NAME = rawget(_G, "SCOREBOARD_TEAM1") or "Home Team"
 local TEAM2_NAME = rawget(_G, "SCOREBOARD_TEAM2") or "Opponent"
 
 -- Team names are shown in capitals (broadcast style), whatever was typed in
@@ -122,7 +122,7 @@ local TAB_EXT       = 0.02     -- tabs are drawn this far down INTO the bar, the
                                -- bar's shape is cut out, so they join with no seam
 
 -- Team logo (optional). If a PNG named after Team 1 exists in LOGO_DIR
--- (lower-case, spaces -> dashes, e.g. "venom-rebels.png"), it's placed at the
+-- (lower-case, spaces -> dashes, e.g. "home-team.png"), it's placed at the
 -- outer end of the Team 1 cell and the name shifts inward to make room. No file
 -- = no logo, name back at the edge (so Thunderbolts works without one).
 -- apply-match.lua detects the Team1Logo node and allows for it when fitting.
@@ -171,7 +171,7 @@ local OVERALL_SIZE = 0.7125 -- 2026-10-26: 5% smaller (0.75 since 2026-10-14, 0.
 local SERVE_SIZE = 0.14    -- repo: drawn icon (0.168 = the author's photo ball)
 
 -- Club colours (from the brief — locked, don't change)
-local GREEN = { 0.439, 0.835, 0.286 }   -- #70D549  Venom
+local GREEN = { 0.439, 0.835, 0.286 }   -- #70D549  home team
 -- 2026-09-27: one blue everywhere (Kenny). Was the club blue #0A84FF, which
 -- was too dark to read as text; sky blue #6BBDFF is now used for the accent
 -- line, tag words and score flash alike.
@@ -365,7 +365,7 @@ end
 --------------------------------------------------------------------------------
 
 comp:Lock()
-comp:StartUndo("Build Venom scoreboard")
+comp:StartUndo("Build scoreboard")
 
 -- Optionally clear the graph
 if CLEAR_EXISTING then
@@ -469,7 +469,7 @@ place(plate("AccentRight", BLUE, 1.0,
 -- TEAM NAMES ---------------------------------------------------------------
 -- Text+ ignores a left/right anchor when it's set from a script, so both names
 -- are centre-anchored. A fixed centre gives UNEQUAL margins the moment the two
--- names differ in length — "Venom Rebels" sat nearer its edge than "Opponent"
+-- names differ in length — "Home Team" sat nearer its edge than "Opponent"
 -- did. So instead of hard-coding the centre, we work back from the outer edge:
 -- estimate the name's width, then place its centre so the OUTER edge always
 -- lands NAME_MARGIN in from the end of the bar. Both sides then match, whatever
@@ -494,10 +494,10 @@ local NAME2_NUDGE = -0.0015
 -- Gotham is proportional, so counting characters and multiplying by one average
 -- width is too crude: a space is roughly 40% of an average character and "l"/"i"
 -- about 45%, while "W"/"M" run 35% over. Treating them all as equal made
--- "Venom Rebels" (which contains a space) measure WIDER than it really is and
+-- "Home Team" (which contains a space) measure WIDER than it really is and
 -- "Opponent" (which ends in a narrow "t") measure NARROWER — and because the two
 -- names sit on opposite edges, those two errors push in opposite directions.
--- Net effect: Venom Rebels drifted away from its edge while Opponent crept
+-- Net effect: Home Team drifted away from its edge while Opponent crept
 -- toward its own. Weighting the characters removes most of that.
 local CHAR_W = {
   [" "] = 0.42,
@@ -1070,11 +1070,11 @@ comp:Unlock()
 --------------------------------------------------------------------------------
 
 print("=====================================================")
-print(" Venom Rebels scoreboard built.")
+print(" Volleyball Autopilot scoreboard built.")
 print(string.format(" %d merges, chained left to right.", mergeCount))
 print(string.format(" Teams: %s  vs  %s", TEAM1_NAME, TEAM2_NAME))
 print(HAS_LOGO and (" Team 1 logo: " .. LOGO_FILE)
-               or  (" Team 1 logo: none (no logo for " .. tostring(TEAM1_NAME) .. ")"))   -- 2026-10-09: LOGO_FILE is nil here (non-Venom team 1)
+               or  (" Team 1 logo: none (no logo for " .. tostring(TEAM1_NAME) .. ")"))   -- 2026-10-09: LOGO_FILE is nil here (non-home team 1)
 if type(TAG_PREVIEW) == "table" then print(" ** Tag PREVIEW built: " .. tostring(TAG_PREVIEW.text)) end
 print("")
 

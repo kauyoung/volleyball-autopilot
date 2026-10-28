@@ -1,6 +1,6 @@
 --[[
 ================================================================================
- Venom Rebels scoreboard — build + apply, one command
+ Volleyball Autopilot scoreboard — build + apply, one command
 ================================================================================
 
  Runs build-scoreboard.lua then apply-match.lua back to back, so putting the

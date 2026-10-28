@@ -1,5 +1,5 @@
 """
-Venom Rebels — copy the camera's SD card into a new match folder (2026-09-28).
+Volleyball Autopilot — copy the camera's SD card into a new match folder (2026-09-28).
 
 Kenny plugs the DJI card in; Claude runs this on his PC in the background:
 
@@ -17,11 +17,11 @@ Kenny plugs the DJI card in; Claude runs this on his PC in the background:
         it STOPS and lists the groups — re-run with --group N.
 
   --latest     use the newest scorekeeper file straight from the Google Drive
-               folder synced on this PC (F:\\My Drive\\Venom Matches – Scorekeeper),
+               folder synced on this PC (F:\\My Drive\\Volleyball Matches – Scorekeeper),
                2026-10-01 — no download through the chat. --recent lists the
                newest 8 there and exits.
   --list       show what's on the card (by day and group) and copy nothing
-  --source X:\\DCIM   a specific card     --dest-root  default E:\\Venom Matches
+  --source X:\\DCIM   a specific card     --dest-root  default E:\\Volleyball Matches
   --name "vs X"      folder name suffix when there's no --match
 
   * copies each clip while hashing it (SHA-1), then re-reads the copy and
@@ -50,7 +50,7 @@ LOG = os.path.join(WORK, "copy-card-log.txt")
 CHUNK = 8 * 1024 * 1024
 GAP_MIN = 20          # recordings further apart than this = a different match
 CLOCK_TOL_MIN = 5     # camera clock vs phone clock allowance
-DRIVE_DIR = "F:\\My Drive\\Venom Matches \u2013 Scorekeeper"   # Google Drive for desktop
+DRIVE_DIR = "F:\\My Drive\\Volleyball Matches \u2013 Scorekeeper"   # Google Drive for desktop
 
 
 def log(msg, mode="a"):
@@ -126,7 +126,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--source"); ap.add_argument("--date"); ap.add_argument("--name", default="match")
     ap.add_argument("--match"); ap.add_argument("--group", type=int)
-    ap.add_argument("--dest-root", default=r"E:\Venom Matches"); ap.add_argument("--list", action="store_true")
+    ap.add_argument("--dest-root", default=r"E:\Volleyball Matches"); ap.add_argument("--list", action="store_true")
     ap.add_argument("--latest", action="store_true"); ap.add_argument("--recent", action="store_true")
     a = ap.parse_args()
     log("copy-card " + time.strftime("%Y-%m-%d %H:%M"), "w")

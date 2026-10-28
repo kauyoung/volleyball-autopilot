@@ -1,5 +1,5 @@
 """
-Venom Rebels - join the YouTube export parts (set-break cuts, 2026-10-06).
+Volleyball Autopilot - join the YouTube export parts (set-break cuts, 2026-10-06).
 
 When a match has set-break cuts, prepare-match.py exports each kept stretch of the
 Match timeline as its own part (exporting a nested "cut" timeline was ~40 % slower).

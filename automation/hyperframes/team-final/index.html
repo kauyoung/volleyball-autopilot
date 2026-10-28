@@ -14,7 +14,7 @@
       @font-face { font-family: "Barlow Condensed"; font-weight: 800; src: url("fonts/barlow-condensed-latin-800-normal.woff2") format("woff2"); }
 
       :root {
-        --venom: #70d549;
+        --team1: #70d549;
         --opp: #6bbdff;
         --paper: #f2f4f1;
         --muted: rgba(242, 244, 241, 0.66);
@@ -29,7 +29,7 @@
       /* Diagonal panel wipe — same as the intro */
       #panelWrap { position: absolute; inset: 0; overflow: hidden; }
       #panel { position: absolute; top: -10%; left: -30%; width: 160%; height: 120%; background: rgba(6,9,7,0.86); transform: skewX(-14deg); }
-      #panel .edgeIn { position: absolute; top: 0; bottom: 0; right: -14px; width: 14px; background: var(--venom); }
+      #panel .edgeIn { position: absolute; top: 0; bottom: 0; right: -14px; width: 14px; background: var(--team1); }
 
       /* Header (2026-10-06, Kenny: no club / season line, FINAL higher with room under it) */
       #title { position: absolute; top: 78px; left: 0; right: 0; text-align: center; }
@@ -48,7 +48,7 @@
       #row2 .tint { background: rgba(107,189,255,0.16); }
       /* team-colour accent: a small pill set just inside the end, like the scoreboard's */
       .row .bar { position: absolute; left: 13px; top: 24px; bottom: 24px; width: 7px; border-radius: 4px; transform-origin: 50% 50%; }
-      #row1 .bar { background: var(--venom); }
+      #row1 .bar { background: var(--team1); }
       #row2 .bar { background: var(--opp); }
 
       .mini { position: absolute; left: 32px; top: 10px; width: 92px; height: 92px; }
@@ -88,7 +88,7 @@
         font-weight: 700; font-size: 36px; letter-spacing: 0.1em; white-space: nowrap; }
       #info .dot { width: 9px; height: 9px; background: rgba(242,244,241,0.4); transform: rotate(45deg); }
       #info .muted { color: rgba(242,244,241,0.82); }
-      #info .hl { color: var(--venom); }
+      #info .hl { color: var(--team1); }
 
       #measure, #measure2 { position: absolute; left: -9999px; top: 0; font-family: "Barlow Condensed", sans-serif; text-transform: uppercase; white-space: nowrap; visibility: hidden; }
       #measure { font-weight: 800; letter-spacing: 0.015em; }
@@ -154,7 +154,7 @@
       const COL_STEP_T = nSets <= 3 ? 0.14 : 0.28 / (nSets - 1);   // same total count-up time as 3 sets
       const colX = i => 1385 - (nSets - 1 - i) * COL_W;
       const parts = [V.splitName(M.team1.name, M), V.splitName(M.team2.name, M)];
-      const teamCol = ["var(--venom)", "var(--opp)"];
+      const teamCol = ["var(--team1)", "var(--opp)"];
 
       [["iDate", M.date], ["iFormat", M.format], ["iDetail", M.detail]].forEach(([id, v]) => {
         const el = document.getElementById(id); el.textContent = v || "";

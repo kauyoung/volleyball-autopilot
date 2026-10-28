@@ -55,7 +55,7 @@ TLOG = W + r"\tournament-log.txt"
 PENDING = W + r"\event-pending.txt"
 PIC_PENDING = W + r"\picture-pending.txt"
 PIC_ASKED = W + r"\picture-asked.txt"
-ROOT = r"E:\Venom Matches"
+ROOT = r"E:\Volleyball Matches"
 YT_GB_H, TAVO_GB_H = 29.0, 13.5         # same as prepare-match.py (2026-10-26: 60M preset, 4K H.265 TAVO)
 COPY_S_PER_GB = 12.5
 NOWIN = 0x08000000
@@ -553,11 +553,11 @@ def project_etas(t, spf):
 
 # ---------------------------------------------------------------- uploads after Kenny's OK (2026-10-26)
 # Claude writes upload-approved.txt ("all" or "1,3") when Kenny OKs the approval kit; each match is then
-# uploaded (Unlisted, Venom Rebels channel + season playlist) as soon as its export is OK, one at a time,
+# uploaded (Unlisted, Home Team channel + season playlist) as soon as its export is OK, one at a time,
 # while the next match exports. Status lines: "match <n> UPLOAD OK <url>" / "match <n> UPLOAD FAILED".
 UP_APPROVED = W + r"\upload-approved.txt"
 UP_STATUS = W + r"\yt-upload-status.txt"
-PLAYLIST = "Venom Rebels 14U \u2013 2026-2027 Season"
+PLAYLIST = "Home Team 14U \u2013 2026-2027 Season"
 UPQ, UPCUR = [], {}
 
 
@@ -599,7 +599,7 @@ def pump_uploads(a):
         if a.test:
             st(f"match {m['n']} upload skipped (test run)"); m["upload"] = "test - not uploaded"
             continue
-        args = [PY, W + r"\yt-upload.py", "upload", "--channel", "venom", "--video", m["export_file"],
+        args = [PY, W + r"\yt-upload.py", "upload", "--channel", "main", "--video", m["export_file"],
                 "--text", m["text"], "--thumb", m["thumbnail"], "--playlist", PLAYLIST]
         UPCUR.update({"m": m, "proc": subprocess.Popen(args, cwd=W, env=UTF8, creationflags=NOWIN)})
         st(f"match {m['n']} uploading \u2026")

@@ -1,7 +1,7 @@
 // ================= TEAM-NAME RULES (shared by intro + FINAL summary) =================
 // Layout: CLUB big on line 1 · TEAM + AGE GROUP smaller on line 2.
 // How the club/team split is decided (first match wins):
-//   1. Exact-name override from intro-names.txt  ("Venom Rebels = Venom | Rebels 14U")
+//   1. Exact-name override from intro-names.txt  ("Riverside Rapids = Riverside | Rapids 14U")
 //   2. A "|" typed in the name                   ("Mississauga | Mavericks 13U")
 //   3. A natural separator typed in the name      ("Durham Attack - Gold U14", "X: Y")
 //   4. Known club list, longest match first       ("Durham Attack" beats "Durham");
@@ -100,7 +100,7 @@
     return best || { lines: [name], size: largestSize([name], o.oneMin, 24, false, o.maxw) || 24 };
   }
 
-  // "VENOM REBELS", "THUNDERCATS POLAR": club + team words, no age group (for headlines)
+  // "RIVERSIDE RAPIDS", "THUNDERCATS POLAR": club + team words, no age group (for headlines)
   function fullName(parts) {
     return [parts.top, ...parts.bottom.split(" ").filter(x => x && !AGE.test(x))].join(" ").trim();
   }
