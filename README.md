@@ -60,10 +60,11 @@ flowchart TB
     C["🎥 Camera card<br/>4K60 clips"] --> D
     D["copy-card.py<br/>picks the clips<br/>by clock time"] --> K[("Backup drive<br/>verified copy")]
     D --> E["Resolve, auto<br/>scoreboard, cuts<br/>audio, wipes<br/>intro + FINAL"]
+    E --> H["Export<br/>4K60 H.265"]
     E --> G(["Review sheet<br/>one approval"])
-    G -->|approved| H["Export<br/>4K60 H.265"]
-    H --> I["YouTube<br/>Unlisted"]
     H --> J["TAVO file<br/>4K H.265"]
+    H --> I["YouTube<br/>Unlisted"]
+    G -->|approved| I
 ```
 
 <p align="center">
