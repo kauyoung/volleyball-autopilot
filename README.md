@@ -30,7 +30,7 @@ is blurred because the players are minors.*
 - **A phone scorekeeper** with two big buttons and a 5-second undo. It works offline and can send the match file to Google Drive. **[Try it on your phone](https://kauyoung.github.io/volleyball-autopilot/scorekeeper/volleyball-scorekeeper.html)** (demo copy, nothing is uploaded).
 - **Automatic editing**: warm-up trimmed, set breaks and time-outs cut out (restarting at the referee's serve whistle), sound levelled.
 - **Intro and FINAL screens** filled in from the match file: teams, date, set scores, longest run, biggest lead, match time.
-- **One approval per match**: a review sheet of every key moment. Nothing is exported for upload until you say OK.
+- **One approval per match**: a review sheet of every key moment. Nothing is uploaded until you say OK.
 - **YouTube-ready output**: one 4K60 10-bit H.265 file, exported about 2.4x faster than with a live Fusion scoreboard, with the title, chapters and thumbnail prepared and the video saved as Unlisted.
 - **A manual path for the free edition of Resolve**: Lua scripts you run from Resolve's Console.
 
