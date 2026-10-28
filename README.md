@@ -107,14 +107,12 @@ scoreboard as pictures), and prepares the YouTube upload. Details:
 on its own.
 
 ```mermaid
-flowchart LR
-    A["📱 Scorekeeper app<br/>one tap per rally"] -->|FINISH MATCH| B[("Google Drive<br/>match file")]
-    C["🎥 Camera card<br/>4K60 clips"] --> D["copy-card.py<br/>picks the clips by clock time"]
-    B --> D
-    D --> K[("Backup drive<br/>verified copy")]
-    D --> E["Resolve: setup<br/>timeline + Fusion scoreboard"]
-    E --> F["Resolve: finish<br/>cuts, audio, intro / FINAL, wipes"]
-    F --> G{"Review sheet<br/>one approval"}
+flowchart TB
+    A["📱 Scorekeeper app<br/>one tap per rally;<br/>FINISH MATCH sends<br/>the file to Google Drive"] --> D
+    C["🎥 Camera card<br/>4K60 clips"] --> D
+    D["copy-card.py<br/>picks the clips by clock time"] --> K[("Backup drive<br/>verified copy")]
+    D --> E["Resolve, automatic<br/>setup: timeline + scoreboard<br/>finish: cuts, audio,<br/>intro / FINAL, wipes"]
+    E --> G(["Review sheet<br/>one approval"])
     G -->|approved| H["Export<br/>scoreboard pictures, H.265"]
     H --> I["YouTube<br/>Unlisted"]
     H --> J["TAVO file<br/>4K H.265"]
