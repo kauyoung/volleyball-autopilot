@@ -108,12 +108,12 @@ on its own.
 
 ```mermaid
 flowchart TB
-    A["📱 Scorekeeper app<br/>one tap per rally;<br/>FINISH MATCH sends<br/>the file to Google Drive"] --> D
+    A["📱 Phone app<br/>one tap per rally<br/>→ Google Drive"] --> D
     C["🎥 Camera card<br/>4K60 clips"] --> D
-    D["copy-card.py<br/>picks the clips by clock time"] --> K[("Backup drive<br/>verified copy")]
-    D --> E["Resolve, automatic<br/>setup: timeline + scoreboard<br/>finish: cuts, audio,<br/>intro / FINAL, wipes"]
+    D["copy-card.py<br/>picks the clips<br/>by clock time"] --> K[("Backup drive<br/>verified copy")]
+    D --> E["Resolve, auto<br/>scoreboard, cuts,<br/>audio, wipes,<br/>intro + FINAL"]
     E --> G(["Review sheet<br/>one approval"])
-    G -->|approved| H["Export<br/>scoreboard pictures, H.265"]
+    G -->|approved| H["Export<br/>4K60 H.265"]
     H --> I["YouTube<br/>Unlisted"]
     H --> J["TAVO file<br/>4K H.265"]
 ```
