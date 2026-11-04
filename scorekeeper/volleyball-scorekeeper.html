@@ -39,6 +39,7 @@
   html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
   body {
     margin: 0;
+    padding-bottom: 130px !important;   /* room for the UNDO bar */
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, sans-serif;
     background: var(--bg);
     color: var(--label);
@@ -140,7 +141,7 @@
   }
   .btn-plain.danger { color: var(--red); }
   /* 2026-10-19: one-tap time-out (the video skips the dead time automatically) */
-  .timeout-btn { margin-top: 14px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+  .timeout-btn { width: 100%; margin-top: 14px; min-height: 64px !important; display: flex; align-items: center; justify-content: center; gap: 10px;
     background: var(--surface); color: var(--label); border: 2px dashed rgba(0,0,0,0.18);
     font-weight: 700; font-size: 18px; min-height: 58px; border-radius: var(--r-md); }
   .timeout-btn .to-sub { display: none; font-size: 13px; font-weight: 600; opacity: 0.8; }
@@ -162,13 +163,13 @@
   /* Status pill */
   .topline { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--s2); }
   .pill {
-    display: inline-flex; align-items: center;
-    font-size: 14px; font-weight: 600; color: var(--label-3);
-    background: var(--surface); padding: 7px 13px; border-radius: 100px;
+    display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+    font-size: 15px; font-weight: 700; color: var(--label-3);
+    background: var(--surface); padding: 8px 14px 8px 12px; border-radius: 100px;
   }
   .pill.live { color: var(--green-text); background: var(--green-dim); }
   .pill.stopped { color: var(--amber-text); background: var(--amber-dim); }
-  .pill .dot { width: 8px; height: 8px; min-width: 8px; border-radius: 50%; background: currentColor; margin-right: 7px; }
+  .pill .dot { display: block; flex: 0 0 10px; width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
   .pill.live .dot { animation: blink 1.8s ease-in-out infinite; }
   @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
   .timer { font-size: 15px; font-weight: 600; color: var(--label-3); font-variant-numeric: tabular-nums; }
@@ -266,6 +267,15 @@
   details.more > summary::-webkit-details-marker { display: none; }
   details.more[open] > summary { margin-bottom: var(--s2); }
   .more-note { font-size: 13px; line-height: 1.45; color: var(--label-3); margin: 6px 4px 0; }
+  /* 2026-11-04: helpers for a first-time scorekeeper */
+  .note-sm { font-size: 15px; line-height: 1.45; color: var(--label-2); margin: 0 0 var(--s2); }
+  .tap-help { text-align: center; font-size: 16px; font-weight: 700; color: var(--label-2); margin: 0 0 10px; }
+  .question { font-size: 20px; font-weight: 800; text-align: center; margin: var(--s2) 0 12px; }
+  .countdown { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 4px 0 var(--s2);
+               background: var(--green-dim); color: var(--green-text); border-radius: var(--r-md); padding: 14px; text-align: center; }
+  .countdown #moCountNum { font-size: 40px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+  .countdown #moCountText { font-size: 16px; font-weight: 700; }
+  .countdown.done { background: var(--amber-dim); color: var(--amber-text); }
   .footnote { font-size: 13px; line-height: 1.5; color: var(--label-3); text-align: center; margin-top: var(--s2); }
 </style>
 </head>
@@ -277,11 +287,11 @@
   <!-- ============ RESTORE: a match was in progress when the page closed ============ -->
   <section id="stRestore" hidden>
     <div class="card">
-      <h2 class="step-title">Continue your match?</h2>
+      <h2 class="step-title">Keep going with this match?</h2>
       <p class="step-sub" id="restoreInfo"></p>
       <div class="stack">
-        <button class="btn btn-big btn-go" id="restoreYes">Continue this match</button>
-        <button class="btn btn-plain danger" id="restoreNo">Throw it away and start a new match</button>
+        <button class="btn btn-big btn-go" id="restoreYes">Yes, keep going</button>
+        <button class="btn btn-plain danger" id="restoreNo">No, delete it and start over</button>
       </div>
     </div>
   </section>
@@ -295,19 +305,19 @@
         <input type="text" id="team1Name" value="Home Team" maxlength="30" autocomplete="off">
       </div>
       <div class="field">
-        <label for="team2Name">Opponent</label>
+        <label for="team2Name">Other team</label>
         <input type="text" id="team2Name" value="" placeholder="Type the other team's name" maxlength="30" autocomplete="off" autocapitalize="words">
-        <div class="field-note" id="nameNote">Shows on the scoreboard in the video.</div>
+        <div class="field-note" id="nameNote">This name shows on the video scoreboard.</div>
       </div>
       <div class="field">
-        <label>Sets (ask the ref if unsure)</label>
+        <label>How many sets? (ask the referee if you're not sure)</label>
         <div class="fmt" id="fmtPick">
           <button type="button" data-fmt="bo3">Sets to 25<small>Best 2 of 3</small></button>
           <button type="button" data-fmt="2of2">Sets to 25<small>2 sets only</small></button>
           <button type="button" data-fmt="bo3-15">Sets to 15<small>Best 2 of 3</small></button>
           <button type="button" data-fmt="2of2-15">Sets to 15<small>2 sets only</small></button>
-          <button type="button" data-fmt="scrim">Scrimmage<small>Sets to 25 · until time's up</small></button>
-          <button type="button" data-fmt="scrim-15">Scrimmage<small>Sets to 15 · until time's up</small></button>
+          <button type="button" data-fmt="scrim">Scrimmage<small>Sets to 25, until time runs out</small></button>
+          <button type="button" data-fmt="scrim-15">Scrimmage<small>Sets to 15, until time runs out</small></button>
         </div>
         <div class="fmt-note" id="fmtNote"></div>
       </div>
@@ -320,16 +330,17 @@
   <!-- ============ STEP 2: start recording ============ -->
   <section id="stReady" hidden>
     <div class="card">
-      <h2 class="step-title">Ready to start</h2>
+      <h2 class="step-title">Start recording</h2>
       <p class="step-sub" id="readyTeams"></p>
       <ol class="steps">
-        <li><span class="num">1</span><span>Press <b>RECORD</b> on the camera <b>a few minutes before the first serve</b> (the extra is trimmed off automatically).</span></li>
-        <li><span class="num">2</span><span>At the same moment, tap the green <b>START</b> button below.</span></li>
+        <li><span class="num">1</span><span>Start <b>recording</b> on the camera.</span></li>
+        <li><span class="num">2</span><span>Then tap <b>START</b> below.</span></li>
       </ol>
+      <p class="note-sm">It's fine to start a few minutes before the first serve. The extra gets trimmed off.</p>
     </div>
     <div class="stack" style="margin-top: var(--s3);">
       <button class="btn btn-big btn-go pulse" id="startBtn">START</button>
-      <button class="btn-link" id="readyBack">← Change team names</button>
+      <button class="btn-link" id="readyBack">Back</button>
     </div>
   </section>
 
@@ -344,52 +355,43 @@
       <div class="s" id="setTargetLabel">First to 25</div>
     </div>
     <div id="statusBanner" hidden></div>
+    <p class="tap-help">Tap the team that won the point</p>
 
     <button class="team-btn t1" id="t1Plus">
       <span class="who">
         <span class="name" id="t1DisplayName">Our Team</span>
-        <span class="hint">Tap when they win the point</span>
         <span class="sets">Sets won: <span id="t1Sets">0</span></span>
       </span>
       <span class="score" id="t1Score">0</span>
     </button>
     <button class="team-btn t2" id="t2Plus">
       <span class="who">
-        <span class="name" id="t2DisplayName">Opponent</span>
-        <span class="hint">Tap when they win the point</span>
+        <span class="name" id="t2DisplayName">Other team</span>
         <span class="sets">Sets won: <span id="t2Sets">0</span></span>
       </span>
       <span class="score" id="t2Score">0</span>
     </button>
     <button class="btn timeout-btn" id="timeoutBtn" type="button">
       <span id="timeoutLabel">⏸&nbsp; Time-out</span>
-      <span class="to-sub" id="timeoutSub">Tap again when play resumes · the video restarts 3 s before your tap</span>
+      <span class="to-sub" id="timeoutSub">Tap again when play starts</span>
     </button>
-    <button class="btn btn-plain" id="timeUpBtn" hidden style="margin-top:var(--s2)">Time's up — end the scrimmage</button>
+    <button class="btn btn-plain" id="timeUpBtn" hidden style="margin-top:var(--s2)">Time's up, end the scrimmage</button>
 
     <details class="more" id="playMore">
-      <summary>More options</summary>
+      <summary>Something went wrong?</summary>
       <div class="stack">
-        <button class="btn btn-plain" id="undoBtn">Undo last point</button>
-        <button class="btn btn-plain" id="t1Minus">Remove a point from <span class="n1">Our Team</span></button>
-        <button class="btn btn-plain" id="t2Minus">Remove a point from <span class="n2">Opponent</span></button>
-        <p class="more-note">"Remove a point" takes away that team's most recent point in this set, even if other points came after it.</p>
-        <button class="btn btn-plain" id="pauseBtn">Camera stopped mid-set (battery, card full…)</button>
-        <button class="btn btn-plain" id="forceEndBtn">End this set now (point cap / time limit)</button>
-        <button class="btn btn-plain danger" id="stopBtn">End match early (forfeit / out of time)</button>
+        <button class="btn btn-plain" id="t1Minus">Take a point away from <span class="n1">Our Team</span></button>
+        <button class="btn btn-plain" id="t2Minus">Take a point away from <span class="n2">Other team</span></button>
+        <p class="more-note">This removes that team's most recent point in this set.</p>
+        <button class="btn btn-plain" id="pauseBtn">The camera stopped recording (battery, full card)</button>
+        <button class="btn btn-plain" id="forceEndBtn">End this set now (point cap or time limit)</button>
+        <button class="btn btn-plain danger" id="stopBtn">End the match early (forfeit or out of time)</button>
       </div>
-      <div class="section-header">Sync offset</div>
-      <div class="card">
-        <div class="field">
-          <label for="offsetInput">Seconds to shift</label>
-          <input type="number" id="offsetInput" value="0" step="0.1">
-          <div class="field-note">Only if the camera started noticeably before or after START was tapped. Usually leave at 0.</div>
-        </div>
-      </div>
-      <div class="section-header" id="setHistoryTitle" hidden>Completed sets</div>
+      <input type="hidden" id="offsetInput" value="0">
+      <div class="section-header" id="setHistoryTitle" hidden>Finished sets</div>
       <div class="card" id="setHistoryPanel" hidden></div>
-      <div class="section-header">Point log</div>
-      <div class="card log" id="logPanel"><div class="empty-state">Points appear here as you log them</div></div>
+      <div class="section-header">Every point so far</div>
+      <div class="card log" id="logPanel"><div class="empty-state">Points show up here as you score them</div></div>
     </details>
   </section>
 
@@ -397,30 +399,29 @@
   <section id="stSetBreak" hidden>
     <div class="card">
       <h2 class="step-title" id="breakTitle">Set 1 is over</h2>
-      <p class="result-big" id="breakScore">25 – 18</p>
+      <p class="result-big" id="breakScore">25-18</p>
       <p class="step-sub" style="text-align:center" id="breakWho"></p>
-      <p class="step-sub" style="margin-bottom:var(--s2)"><b>Stopping the camera between sets?</b> Stop it first, then tap the first button. If you're leaving it recording, tap the second.</p>
+      <p class="question">Is the camera still recording?</p>
       <div class="stack">
-        <button class="btn btn-big btn-dark" id="breakStopped">I stopped the camera</button>
-        <button class="btn btn-plain" id="breakRolling">Camera is still recording — start next set</button>
-        <button class="btn btn-plain" id="breakTimeUp" hidden>Time's up — end the scrimmage here</button>
+        <button class="btn btn-big btn-go" id="breakRolling">Yes, start set 2</button>
+        <button class="btn btn-plain" id="breakStopped">No, I stopped it for the break</button>
+        <button class="btn btn-plain" id="breakTimeUp" hidden>Time's up, end the scrimmage here</button>
       </div>
     </div>
-    <button class="btn-link" id="breakUndo">Oops — undo that last point</button>
   </section>
 
   <!-- ============ Camera stopped: waiting to resume ============ -->
   <section id="stResume" hidden>
     <div class="card">
-      <span class="pill stopped" style="margin-bottom: var(--s2)"><span class="dot"></span>Camera stopped</span>
+      <span class="pill stopped" style="margin-bottom: var(--s2)"><span class="dot"></span><span>Camera stopped</span></span>
       <h2 class="step-title" id="resumeTitle">Next: Set 2</h2>
-      <ol class="steps">
-        <li><span class="num">1</span><span>Press <b>RECORD</b> on the camera.</span></li>
-        <li><span class="num">2</span><span>Tap the green button below.</span></li>
+      <ol class="steps" id="resumeSteps">
+        <li><span class="num">1</span><span>Start <b>recording</b> on the camera again.</span></li>
+        <li><span class="num">2</span><span>Then tap the green button below.</span></li>
       </ol>
     </div>
     <div class="stack" style="margin-top: var(--s3);">
-      <button class="btn btn-big btn-go pulse" id="resumeBtn">Camera is recording again</button>
+      <button class="btn btn-big btn-go pulse" id="resumeBtn">The camera is recording again</button>
     </div>
   </section>
 
@@ -430,13 +431,13 @@
       <p class="step-sub" id="moHead" hidden style="text-align:center;font-weight:700"></p>
       <h2 class="step-title" id="moTitle">Match over!</h2>
       <p class="result-big" id="moScore"></p>
+      <div class="countdown" id="moCount"><span id="moCountNum">0:30</span><span id="moCountText">Keep the camera recording for the celebration</span></div>
       <ol class="steps">
-        <li><span class="num">1</span><span>Keep recording about <b>30 more seconds</b> (the celebration and match summary go here), then stop the camera.</span></li>
-        <li><span class="num">2</span><span>Tap <b>FINISH MATCH</b>. The scores are sent to Kenny automatically.</span></li>
+        <li><span class="num">1</span><span>When the countdown ends, stop recording on the camera.</span></li>
+        <li><span class="num">2</span><span>Tap <b>FINISH MATCH</b>. The scores go to Kenny by themselves.</span></li>
       </ol>
       <button class="btn btn-big btn-go" id="finishBtn">FINISH MATCH</button>
     </div>
-    <button class="btn-link" id="moUndo">Oops — undo that last point</button>
   </section>
 
   <!-- ============ Done ============ -->
@@ -451,10 +452,10 @@
       <button class="btn btn-dark" id="newMatchBtn">Start a new match</button>
     </div>
     <details class="more">
-      <summary>More options</summary>
+      <summary>Scores didn't send?</summary>
       <div class="stack">
-        <button class="btn btn-plain" id="exportBtn">Export match file (backup)</button>
-        <p class="more-note">Only needed if sending to Kenny's Drive fails. On a phone this opens the share menu.</p>
+        <button class="btn btn-plain" id="exportBtn">Save the match file</button>
+        <p class="more-note">Only needed if sending to Kenny doesn't work. You can then text or email the file to him.</p>
       </div>
     </details>
   </section>
@@ -495,21 +496,21 @@ const TAP_GUARD_MS = 700;  // ignore repeat taps faster than any real rally
 // total points (equal total = tie).
 const FORMATS = {
   bo3:       { code: 'bo3',     sets: 3, mode: 'best', pts: 25, decider: 15,
-               label: 'sets to 25, best 2 of 3', desc: '2 sets to 25 · a 3rd set (to 15) only if it\'s 1–1. Win\u00a0by\u00a02.' },
+               label: 'sets to 25, best 2 of 3', desc: 'First team to win 2 sets. Sets go to 25, and a 3rd set (to 15) is only played if it\'s 1-1. Win by 2.' },
   '2of2':    { code: '2of2',    sets: 2, mode: 'all',  pts: 25, decider: 25,
-               label: 'sets to 25, 2 sets only', desc: 'Both sets to 25 are played · if 1–1, most total points wins. Win\u00a0by\u00a02.' },
+               label: 'sets to 25, 2 sets only', desc: 'Both sets are played, to 25. If it\'s 1-1, the team with more total points wins. Win by 2.' },
   'bo3-15':  { code: 'bo3-15',  sets: 3, mode: 'best', pts: 15, decider: 15,
-               label: 'sets to 15, best 2 of 3', desc: 'Sets to 15 (e.g. 12U, 4 v 4) · a 3rd set only if it\'s 1–1. Win\u00a0by\u00a02.' },
+               label: 'sets to 15, best 2 of 3', desc: 'First team to win 2 sets. Sets go to 15 (for example 12U or 4 v 4). A 3rd set only if it\'s 1-1. Win by 2.' },
   '2of2-15': { code: '2of2-15', sets: 2, mode: 'all',  pts: 15, decider: 15,
-               label: 'sets to 15, 2 sets only', desc: 'Both sets to 15 are played · if 1–1, most total points wins. Win\u00a0by\u00a02.' },
+               label: 'sets to 15, 2 sets only', desc: 'Both sets are played, to 15. If it\'s 1-1, the team with more total points wins. Win by 2.' },
   // 2026-10-04 (Kenny): friendly scrimmages during practice — no fixed number of
   // sets, just sets to 25 (or 15) until practice time runs out ('open' mode).
   // Time's up mid-set: the team ahead wins that set (a tie counts for nobody).
   // Winner: most sets; equal sets -> most total points; equal points = tie.
   scrim:      { code: 'scrim',    sets: 0, mode: 'open', pts: 25, decider: 25,
-               label: 'scrimmage, sets to 25', desc: 'Sets to 25 until practice time runs out · tap Time\'s up to finish (the team ahead wins an unfinished set). Win\u00a0by\u00a02.' },
+               label: 'scrimmage, sets to 25', desc: 'Play sets to 25 until practice time runs out, then tap Time\'s up. The team ahead wins an unfinished set. Win by 2.' },
   'scrim-15': { code: 'scrim-15', sets: 0, mode: 'open', pts: 15, decider: 15,
-               label: 'scrimmage, sets to 15', desc: 'Sets to 15 until practice time runs out · tap Time\'s up to finish (the team ahead wins an unfinished set). Win\u00a0by\u00a02.' },
+               label: 'scrimmage, sets to 15', desc: 'Play sets to 15 until practice time runs out, then tap Time\'s up. The team ahead wins an unfinished set. Win by 2.' },
   // "3 sets — all played" (3-team pools at Provincials) removed 2026-09-28 at
   // Kenny's request — rare; End this set now / End match early cover it.
 };
@@ -543,7 +544,7 @@ function noteFocus(v, extra) {
   focusLog.push(entry);
   try { localStorage.setItem('vbFocusLog', JSON.stringify(focusLog)); } catch (e) {}
   // also the first 3 min after START (in case START was tapped before pressing record)
-  if (running && startTime && now - startTime < 180000) { startFocus.push(entry); saveCheckpoint(); }
+  if (running && startTime && !otherCam && now - startTime < 180000) { startFocus.push(entry); saveCheckpoint(); }
 }
 noteFocus('show', { load: true });
 document.addEventListener('visibilitychange', () => noteFocus(document.visibilityState === 'visible' ? 'show' : 'hide'));
@@ -566,7 +567,7 @@ function currentElapsed() {
 function updateTimerDisplay() { el('timeDisplay').textContent = formatTime(currentElapsed()); }
 
 function teamNames() {
-  return [el('team1Name').value.trim() || 'Our Team', el('team2Name').value.trim() || 'Opponent'];
+  return [el('team1Name').value.trim() || 'Our Team', el('team2Name').value.trim() || 'Other team'];
 }
 function setTarget(setNo) { return (fmt.mode === 'best' && setNo >= 3) ? fmt.decider : fmt.pts; }
 // Final result from the finished sets (+ the set being played, if it's decided).
@@ -612,7 +613,7 @@ function render() {
   for (const [k, id] of Object.entries(STAGES)) el(id).hidden = (k !== stage);
   if (stage !== lastStage) { window.scrollTo({ top: 0 }); lastStage = stage; }
   // The quick-undo bar only makes sense while a just-scored point can still be taken back.
-  if (!['play', 'setbreak', 'matchover'].includes(stage)) hideSnack();
+  refreshUndoBar(stage);
 
   const [n1, n2] = teamNames();
   document.querySelectorAll('.n1').forEach(e => e.textContent = n1);
@@ -621,20 +622,22 @@ function render() {
   const open = fmt.mode === 'open';
   el('timeUpBtn').hidden = !open; el('breakTimeUp').hidden = !open; el('stopBtn').hidden = open;
   if (stage === 'setup') refreshNameNote();
-  if (stage === 'ready') el('readyTeams').textContent = `${n1}  vs  ${n2}  ·  ` +
-    fmt.label;
+  if (stage === 'ready') {
+    el('readyTeams').textContent = `${n1} vs ${n2}, ${fmt.label}`;
+  }
   if (stage === 'play') { refreshScoreboard(); refreshTimeoutBtn(); }
 
   if (stage === 'setbreak') {
     const winner = t1Score > t2Score ? n1 : n2;
     el('breakTitle').textContent = `Set ${currentSet} is over`;
-    el('breakScore').textContent = `${t1Score} – ${t2Score}`;
-    el('breakWho').textContent = t1Score === t2Score ? `Set ${currentSet} tied` : `${winner} win set ${currentSet}`;
-    el('breakRolling').textContent = `Camera is still recording — start Set ${currentSet + 1}`;
+    el('breakScore').textContent = `${t1Score}-${t2Score}`;
+    el('breakWho').textContent = t1Score === t2Score ? `Set ${currentSet} is tied` : `${winner} won set ${currentSet}`;
+    el('breakRolling').textContent = `Yes, start set ${currentSet + 1}`;
   }
   if (stage === 'resume') {
     const betweenSets = t1Score === 0 && t2Score === 0 && setHistory.some(h => h.set === currentSet - 1);
-    el('resumeTitle').textContent = betweenSets ? `Next: Set ${currentSet}` : `Camera stopped during Set ${currentSet}`;
+    el('resumeTitle').textContent = betweenSets ? `Next: set ${currentSet}` : `The camera stopped during set ${currentSet}`;
+
   }
   if (stage === 'matchover') {
     // sets after this (last) set — works for ties (2 sets both played, time limits)
@@ -642,13 +645,14 @@ function render() {
     const a = r.sets1, b = r.sets2;
     el('moHead').textContent = timeUp ? "Time's up!" : '';
     el('moHead').hidden = !timeUp;
+    startMatchOverCountdown();
     if (r.decidedBy === 'points') {
       el('moTitle').textContent = `${r.winner === 1 ? n1 : n2} win on total points!`;
-      el('moScore').textContent = `${a} – ${b} in sets · ${Math.max(r.points1, r.points2)} – ${Math.min(r.points1, r.points2)} in points`;
+      el('moScore').textContent = `Sets ${a}-${b}, points ${Math.max(r.points1, r.points2)}-${Math.min(r.points1, r.points2)}`;
     } else {
       el('moTitle').textContent = r.winner ? `${r.winner === 1 ? n1 : n2} win!` : 'Match tied!';
-      el('moScore').textContent = `${Math.max(a, b)} – ${Math.min(a, b)} in sets` +
-        (fmt.mode !== 'best' && !r.winner ? ` · ${r.points1} – ${r.points2} in points` : '');
+      el('moScore').textContent = `Sets ${Math.max(a, b)}-${Math.min(a, b)}` +
+        (fmt.mode !== 'best' && !r.winner ? `, points ${r.points1}-${r.points2}` : '');
     }
   }
   if (stage === 'done') renderDone();
@@ -663,7 +667,7 @@ function refreshScoreboard() {
   el('t1Sets').textContent = t1Sets;
   el('t2Sets').textContent = t2Sets;
   el('currentSetNum').textContent = currentSet;
-  el('setTargetLabel').textContent = `First to ${setTarget(currentSet)} · win by 2`;
+  el('setTargetLabel').textContent = `First to ${setTarget(currentSet)}, win by 2`;
   refreshBanner();
 }
 
@@ -683,11 +687,11 @@ function refreshLog() {
   const panel = el('logPanel');
   const realEvents = events.filter(e => e.t > 0 || e.team1 > 0 || e.team2 > 0);
   if (realEvents.length === 0) {
-    panel.innerHTML = '<div class="empty-state">Points appear here as you log them</div>';
+    panel.innerHTML = '<div class="empty-state">Points show up here as you score them</div>';
     return;
   }
   panel.innerHTML = realEvents.slice().reverse().map(e =>
-    `<div class="list-row"><span class="l">${formatTime(e.t)} · Set ${e.set}</span><span class="r">${e.team1} – ${e.team2}</span></div>`
+    `<div class="list-row"><span class="l">${formatTime(e.t)}, set ${e.set}</span><span class="r">${e.team1}-${e.team2}</span></div>`
   ).join('');
 }
 
@@ -698,7 +702,7 @@ function refreshSetHistory() {
   title.hidden = false; panel.hidden = false;
   panel.innerHTML = setHistory.map(s => {
     const w = s.winner === 1 ? n1 : (s.winner === 2 ? n2 : 'Tied');
-    return `<div class="list-row"><span class="l">Set ${s.set} · ${w}</span><span class="r">${s.t1} – ${s.t2}</span></div>`;
+    return `<div class="list-row"><span class="l">Set ${s.set}, ${w}</span><span class="r">${s.t1}-${s.t2}</span></div>`;
   }).join('');
 }
 
@@ -729,10 +733,10 @@ function refreshNameNote() {
   const long = [el('team1Name').value.trim(), n2].find(n => n && nameUnits(n) > NAME_MAX_UNITS);
   if (long) {
     note.className = 'field-note warn';
-    note.textContent = `"${long}" is too long for the video scoreboard — it would show as "${fittedName(long)}". Try a shorter version.`;
+    note.textContent = `"${long}" is too long for the video scoreboard. It would show as "${fittedName(long)}". Try a shorter name.`;
   } else {
     note.className = 'field-note';
-    note.textContent = n2 ? 'Looks good.' : 'Shows on the scoreboard in the video.';
+    note.textContent = n2 ? 'Looks good.' : 'This name shows on the video scoreboard.';
   }
 }
 ['team1Name', 'team2Name'].forEach(id => el(id).addEventListener('input', refreshNameNote));
@@ -755,6 +759,7 @@ el('setupNext').addEventListener('click', () => {
   render();
 });
 el('readyBack').addEventListener('click', () => { namesConfirmed = false; render(); });
+const otherCam = false;   // 2026-11-04 (Kenny): no "someone else runs the camera" option
 
 // ===========================================================================
 // SAVE / RESTORE
@@ -783,11 +788,11 @@ function checkForSavedMatch() {
   if (!data || !data.running) return;
   restoreData = data;
   const mins = Math.max(0, Math.floor((Date.now() - data.startTime) / 60000));
-  const n2 = (data.team2Name || 'Opponent').trim() || 'Opponent';
+  const n2 = (data.team2Name || 'Other team').trim() || 'Other team';
   const n1 = (data.team1Name || 'Our Team').trim() || 'Our Team';
   el('restoreInfo').innerHTML =
-    `<b>${n1} vs ${n2}</b><br>Set ${data.currentSet}, ${data.t1Score} – ${data.t2Score}` +
-    `${data.paused ? ' · camera stopped' : ''}<br>Started ${mins} min ago`;
+    `<b>${n1} vs ${n2}</b><br>Set ${data.currentSet}, ${data.t1Score}-${data.t2Score}` +
+    `${data.paused ? ' (camera stopped)' : ''}<br>Started ${mins} min ago`;
 }
 
 el('restoreYes').addEventListener('click', () => {
@@ -828,8 +833,8 @@ el('restoreNo').addEventListener('click', () => {
   const b = el('restoreNo');
   if (!discardArmed) {
     b.classList.add('armed');
-    b.textContent = 'Tap again to throw it away — this can\'t be undone';
-    discardArmed = setTimeout(() => { discardArmed = null; b.classList.remove('armed'); b.textContent = 'Throw it away and start a new match'; }, 4000);
+    b.textContent = 'Tap again to delete it. This can\'t be undone.';
+    discardArmed = setTimeout(() => { discardArmed = null; b.classList.remove('armed'); b.textContent = 'No, delete it and start over'; }, 4000);
     return;
   }
   clearTimeout(discardArmed); discardArmed = null;
@@ -851,7 +856,7 @@ function logEvent() {
 
 el('startBtn').addEventListener('click', () => {
   startTime = Date.now();
-  startFocus = focusLog.filter(x => x.w <= startTime && startTime - x.w < 30 * 60000);   // 2026-11-03
+  startFocus = otherCam ? [] : focusLog.filter(x => x.w <= startTime && startTime - x.w < 30 * 60000);   // 2026-11-03
   running = true;
   paused = false; pausedTotal = 0; pauseStartedAt = null;
   recordings = [{ start: startTime, end: null }];
@@ -877,15 +882,15 @@ function evaluateSet() {
     return { state: 'complete', team: hi > lo ? leaderNum : 0, matchOver: winsMatch(setsIfWon, currentSet) || isLastSet(currentSet) };
   }
   if (t1Score >= target - 1 && t2Score >= target - 1) {
-    if (hi === lo) return { state: 'deuce', text: `Tied ${hi}–${hi} · must win by 2` };
+    if (hi === lo) return { state: 'deuce', text: `Tied ${hi}-${hi}. A team has to win by 2.` };
     const wouldWin = (hi + 1 >= target) && ((hi + 1) - lo >= 2);
     if (wouldWin) {
-      return { state: 'point', text: `${setWord(setsIfWon, currentSet)} point — ${leaderName}` };
+      return { state: 'point', text: `${setWord(setsIfWon, currentSet)} point for ${leaderName}` };
     }
-    return { state: 'deuce', text: `Advantage ${leaderName} · must win by 2` };
+    return { state: 'deuce', text: `${leaderName} is up by 1. They need to win by 2.` };
   }
   if (hi > 0 && (hi + 1 >= target) && ((hi + 1) - lo >= 2)) {
-    return { state: 'point', text: `${setWord(setsIfWon, currentSet)} point — ${leaderName}` };
+    return { state: 'point', text: `${setWord(setsIfWon, currentSet)} point for ${leaderName}` };
   }
   return { state: 'none' };
 }
@@ -917,7 +922,7 @@ function addPoint(team) {
   logEvent();
   tapFeedback(team);
   const [n1, n2] = teamNames();
-  showSnack(`Point: ${team === 1 ? n1 : n2}  (${t1Score}–${t2Score})`);
+  showSnack(`Point for ${team === 1 ? n1 : n2} (${t1Score}\u2011${t2Score})`);   // non-breaking hyphen: the score never splits
 }
 el('t1Plus').addEventListener('click', () => addPoint(1));
 el('t2Plus').addEventListener('click', () => addPoint(2));
@@ -925,15 +930,34 @@ el('t2Plus').addEventListener('click', () => addPoint(2));
 // ---- Quick undo snackbar: shown for 5 s after every point ----
 let snackTimer = null;
 let snackUndoFn = null;
+// 2026-11-04 (Kenny): the UNDO bar stays at the bottom the whole time there is something to undo
+// (no more 5 s timeout); it always says what UNDO will take back.
 function showSnack(text, onUndo) {
   snackUndoFn = onUndo || null;
   el('snackText').textContent = text;
   el('snack').classList.add('show');
   clearTimeout(snackTimer);
-  snackTimer = setTimeout(hideSnack, 5000);
+}
+function lastPointText() {
+  const last = events[events.length - 1], prev = events[events.length - 2];
+  if (!last || !prev || last.set !== prev.set) return null;
+  const [n1, n2] = teamNames();
+  const who = last.team1 > prev.team1 ? n1 : n2;
+  return `Last point: ${who} (${last.team1}\u2011${last.team2})`;
+}
+function refreshUndoBar(stage) {
+  if (!['play', 'setbreak', 'matchover'].includes(stage)) { hideSnack(); return; }
+  if (snackUndoFn && timeoutOpen) return;                    // "Time-out started" bar: UNDO cancels it
+  const t = (stage !== 'play' || !timeoutOpen) ? lastPointText() : null;
+  if (t) { snackUndoFn = null; el('snackText').textContent = t; el('snack').classList.add('show'); }
+  else if (!snackUndoFn) hideSnack();
 }
 function hideSnack() { el('snack').classList.remove('show'); }
-el('snackUndo').addEventListener('click', () => { hideSnack(); if (snackUndoFn) snackUndoFn(); else undoLast(); });
+el('snackUndo').addEventListener('click', () => {
+  const fn = snackUndoFn; snackUndoFn = null;
+  if (fn) fn(); else { stopMatchOverCountdown(); undoLast(); }
+  refreshUndoBar(currentStage());
+});
 
 // ---- Time-out (2026-10-19; 2026-11-02 Kenny: 2nd tap = "Time-out over") ----
 // 1st tap: time-out starts (the video cuts it out). 2nd tap: "Time-out over" - the video restarts
@@ -964,14 +988,14 @@ el('timeoutBtn').addEventListener('click', () => {
     if (last) { last.endW = Date.now(); last.end_t = currentElapsed(); }
     timeoutOpen = false; stopTimeoutTimer();
     buzz(30); saveCheckpoint(); render(); refreshTimeoutBtn();
-    showSnack('Time-out over — the video restarts 3 s before this', undoTimeoutOver);
+    showSnack('Time-out over. Back to the game.', undoTimeoutOver);
     return;
   }
   timeouts.push({ t: currentElapsed(), w: Date.now(), set: currentSet });
   timeoutOpen = true; startTimeoutTimer();
   buzz(30);
   saveCheckpoint(); render(); refreshTimeoutBtn();
-  showSnack('Time-out — tap again when play resumes', cancelTimeout);
+  showSnack('Time-out started. Tap it again when play starts.', cancelTimeout);
 });
 function refreshTimeoutBtn() {
   const b = el('timeoutBtn');
@@ -980,7 +1004,7 @@ function refreshTimeoutBtn() {
   if (timeoutOpen) {
     const last = timeouts[timeouts.length - 1];
     const sec = last ? Math.max(0, Math.floor((Date.now() - last.w) / 1000)) : 0;
-    label = `⏸&nbsp; Time-out ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} — tap when play resumes`;
+    label = `⏸&nbsp; Time-out ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
     if (sec >= 60 && !timeoutBuzzed) { timeoutBuzzed = true; buzz([200, 120, 200]); }
   } else { stopTimeoutTimer(); }
   el('timeoutLabel').innerHTML = label;
@@ -997,7 +1021,7 @@ function undoLast() {
     if (timeUpForced) forcedSets = forcedSets.filter(s => s !== timeUpForced);
     timeUpForced = 0;
     saveCheckpoint();
-    showToast(`Scrimmage continues — set ${currentSet}, ${t1Score}–${t2Score}`);
+    showToast(`The scrimmage continues. Set ${currentSet}, ${t1Score}-${t2Score}.`);
     render();
     return;
   }
@@ -1006,7 +1030,7 @@ function undoLast() {
   if (forcedSets.includes(currentSet) && !(lastDone && lastDone.set === currentSet)) {
     forcedSets = forcedSets.filter(s => s !== currentSet);
     saveCheckpoint();
-    showToast(`Set ${currentSet} continues — score is ${t1Score}–${t2Score}`);
+    showToast(`Set ${currentSet} continues. The score is ${t1Score}-${t2Score}.`);
     render();
     return;
   }
@@ -1021,12 +1045,10 @@ function undoLast() {
   t1Score = now.team1; t2Score = now.team2; currentSet = now.set;
   refreshLog();
   saveCheckpoint();
-  showToast(`Undone — score is now ${t1Score}–${t2Score}`);
+  showToast(`Undone. The score is now ${t1Score}-${t2Score}.`);
   render();
 }
-el('undoBtn').addEventListener('click', undoLast);
-el('breakUndo').addEventListener('click', undoLast);
-el('moUndo').addEventListener('click', undoLast);
+
 
 // Remove that team's most recent point in THIS set, shifting later scores down,
 // so the export never contains a score going backwards.
@@ -1039,7 +1061,7 @@ function removeLastPoint(team) {
     const prev = events[i - 1];
     if (prev.set === currentSet && events[i][key] === prev[key] + 1) { idx = i; break; }
   }
-  if (idx === -1) { showToast('That team has no points to remove in this set.'); return; }
+  if (idx === -1) { showToast('That team has no points to take away in this set.'); return; }
   events.splice(idx, 1);
   for (let i = idx; i < events.length; i++) {
     if (events[i].set !== currentSet) break;
@@ -1048,7 +1070,7 @@ function removeLastPoint(team) {
   const last = events[events.length - 1];
   t1Score = last.team1; t2Score = last.team2; currentSet = last.set;
   refreshLog(); saveCheckpoint();
-  showToast(`Point removed — score is now ${t1Score}–${t2Score}`);
+  showToast(`Point taken away. The score is now ${t1Score}-${t2Score}.`);
   render();
 }
 el('t1Minus').addEventListener('click', () => removeLastPoint(1));
@@ -1115,13 +1137,34 @@ function endMatch() {
   queueDriveUpload();
 }
 
+// 2026-11-04: match over -> 30 s countdown, so a stand-in knows when to stop the camera
+let moTimer = null, moEndsAt = 0;
+function startMatchOverCountdown() {
+  if (moTimer) return;
+  moEndsAt = Date.now() + 30000;
+  const tick = () => {
+    const left = Math.max(0, Math.ceil((moEndsAt - Date.now()) / 1000));
+    el('moCountNum').textContent = `0:${String(left).padStart(2, '0')}`;
+    if (left === 0) {
+      el('moCount').classList.add('done');
+      el('moCountNum').textContent = 'Done';
+      el('moCountText').textContent = 'Stop recording on the camera now';
+      clearInterval(moTimer); moTimer = 'done'; buzz([150, 100, 150]);
+    }
+  };
+  el('moCount').classList.remove('done');
+  el('moCountText').textContent = 'Keep the camera recording for the celebration';
+  tick(); moTimer = setInterval(tick, 500);
+}
+function stopMatchOverCountdown() { if (moTimer && moTimer !== 'done') clearInterval(moTimer); moTimer = null; }
+
 // Set break. "I stopped the camera": pause first, THEN end the set, so the
 // next set's 0-0 is stamped at the moment the camera stopped. Auto set
 // alignment in apply-match.lua then snaps it to the real clip join anyway.
 el('breakStopped').addEventListener('click', () => { pauseCamera(); endSet(); buzz(30); render(); });
 el('breakRolling').addEventListener('click', () => { endSet(); buzz(30); render(); });
 el('resumeBtn').addEventListener('click', () => { resumeCamera(); buzz(40); render(); });
-el('finishBtn').addEventListener('click', () => { endSet(timeUp); endMatch(); buzz(60); });
+el('finishBtn').addEventListener('click', () => { stopMatchOverCountdown(); endSet(timeUp); endMatch(); buzz(60); });
 
 // Scrimmage (2026-10-04): "Time's up" — on the scoring screen (mid-set: the team
 // ahead wins that set, a tie counts for nobody) or at a set break. Two taps on the
@@ -1142,10 +1185,10 @@ function callTimeUp() {
 let timeUpArmed = null;
 el('timeUpBtn').addEventListener('click', () => {
   const b = el('timeUpBtn');
-  const label = "Time's up — end the scrimmage";
+  const label = "Time's up, end the scrimmage";
   if (!timeUpArmed) {
     b.classList.add('armed');
-    b.textContent = (t1Score || t2Score) ? `Tap again — set ${currentSet} ends at ${t1Score}–${t2Score}` : 'Tap again to end the scrimmage';
+    b.textContent = (t1Score || t2Score) ? `Tap again to end set ${currentSet} at ${t1Score}-${t2Score}` : 'Tap again to end the scrimmage';
     timeUpArmed = setTimeout(() => { timeUpArmed = null; b.classList.remove('armed'); b.textContent = label; }, 4000);
     return;
   }
@@ -1163,11 +1206,11 @@ el('pauseBtn').addEventListener('click', () => {
   if (!pauseArmed) {
     b.classList.add('armed');
     b.textContent = 'Tap again if the camera really stopped';
-    pauseArmed = setTimeout(() => { pauseArmed = null; b.classList.remove('armed'); b.textContent = 'Camera stopped mid-set (battery, card full…)'; }, 4000);
+    pauseArmed = setTimeout(() => { pauseArmed = null; b.classList.remove('armed'); b.textContent = 'The camera stopped recording (battery, full card)'; }, 4000);
     return;
   }
   clearTimeout(pauseArmed); pauseArmed = null;
-  b.classList.remove('armed'); b.textContent = 'Camera stopped mid-set (battery, card full…)';
+  b.classList.remove('armed'); b.textContent = 'The camera stopped recording (battery, full card)';
   el('playMore').open = false;
   pauseCamera();
   render();
@@ -1179,11 +1222,11 @@ el('pauseBtn').addEventListener('click', () => {
 let forceArmed = null;
 el('forceEndBtn').addEventListener('click', () => {
   const b = el('forceEndBtn');
-  const label = 'End this set now (point cap / time limit)';
+  const label = 'End this set now (point cap or time limit)';
   if (!running || paused || (t1Score === 0 && t2Score === 0)) { showToast('Score at least one point first.'); return; }
   if (!forceArmed) {
     b.classList.add('armed');
-    b.textContent = `Tap again to end set ${currentSet} at ${t1Score}–${t2Score}`;
+    b.textContent = `Tap again to end set ${currentSet} at ${t1Score}-${t2Score}`;
     forceArmed = setTimeout(() => { forceArmed = null; b.classList.remove('armed'); b.textContent = label; }, 4000);
     return;
   }
@@ -1203,11 +1246,11 @@ el('stopBtn').addEventListener('click', () => {
   if (!stopArmed) {
     b.classList.add('armed');
     b.textContent = 'Tap again to end the match now';
-    stopArmed = setTimeout(() => { stopArmed = null; b.classList.remove('armed'); b.textContent = 'End match early (forfeit / out of time)'; }, 4000);
+    stopArmed = setTimeout(() => { stopArmed = null; b.classList.remove('armed'); b.textContent = 'End the match early (forfeit or out of time)'; }, 4000);
     return;
   }
   clearTimeout(stopArmed); stopArmed = null;
-  b.classList.remove('armed'); b.textContent = 'End match early (forfeit / out of time)';
+  b.classList.remove('armed'); b.textContent = 'End the match early (forfeit or out of time)';
   el('playMore').open = false;
   endMatch();
 });
@@ -1219,12 +1262,12 @@ function renderDone() {
   const [n1, n2] = teamNames();
   const r = matchResult();
   el('doneSummary').innerHTML = r.decidedBy === 'points'
-    ? `<b>${r.winner === 1 ? n1 : n2}</b> won on total points (${Math.max(r.points1, r.points2)}–${Math.min(r.points1, r.points2)}) against ${r.winner === 1 ? n2 : n1} · ${r.sets1}–${r.sets2} in sets`
+    ? `<b>${r.winner === 1 ? n1 : n2}</b> won on total points (${Math.max(r.points1, r.points2)}-${Math.min(r.points1, r.points2)}) against ${r.winner === 1 ? n2 : n1}. Sets ${r.sets1}-${r.sets2}.`
     : t1Sets === t2Sets
-    ? `<b>${n1} vs ${n2}</b> — ${t1Sets}–${t2Sets} in sets`
-    : `<b>${t1Sets > t2Sets ? n1 : n2}</b> won ${Math.max(t1Sets, t2Sets)}–${Math.min(t1Sets, t2Sets)} against ${t1Sets > t2Sets ? n2 : n1}`;
+    ? `<b>${n1} vs ${n2}</b>, sets ${t1Sets}-${t2Sets}.`
+    : `<b>${t1Sets > t2Sets ? n1 : n2}</b> won ${Math.max(t1Sets, t2Sets)}-${Math.min(t1Sets, t2Sets)} against ${t1Sets > t2Sets ? n2 : n1}.`;
   el('doneSets').innerHTML = setHistory.map(s =>
-    `<div class="list-row"><span class="l">Set ${s.set}</span><span class="r">${s.t1} – ${s.t2}</span></div>`
+    `<div class="list-row"><span class="l">Set ${s.set}</span><span class="r">${s.t1}-${s.t2}</span></div>`
   ).join('');
   refreshDriveStatus();
 }
@@ -1235,7 +1278,7 @@ el('newMatchBtn').addEventListener('click', () => {
   const unsent = DRIVE_URL && loadPending().length > 0;
   if (unsent && !newArmed) {
     b.classList.add('armed');
-    b.textContent = 'Not sent to Kenny yet — tap again to start anyway';
+    b.textContent = 'Not sent to Kenny yet. Tap again to start anyway.';
     newArmed = setTimeout(() => { newArmed = null; b.classList.remove('armed'); b.textContent = 'Start a new match'; }, 5000);
     return;
   }
@@ -1389,7 +1432,7 @@ async function flushDriveUploads(showProgress) {
   let list = loadPending();
   if (list.length === 0) return;
   flushing = true;
-  if (showProgress) showDriveStatus('info', `<span>Sending scores to Kenny's Google Drive…</span>`);
+  if (showProgress) showDriveStatus('info', `<span>Sending the scores to Kenny...</span>`);
   try {
     for (const item of [...list]) {
       const ctrl = new AbortController();
@@ -1419,14 +1462,14 @@ function refreshDriveStatus() {
   if (!DRIVE_URL) return;
   if (loadPending().length > 0) {
     showDriveStatus('warn',
-      `<span>Saved on this phone. It will send to Kenny automatically when there's internet.</span>` +
-      `<button id="driveRetry"><span>Try now</span></button>`);
+      `<span>Saved on this phone. It will send to Kenny by itself when there's internet.</span>` +
+      `<button id="driveRetry"><span>Try again</span></button>`);
     return;
   }
   let last = null;
   try { last = JSON.parse(localStorage.getItem(LASTSENT_KEY)); } catch (e) {}
   if (last && !running && events.length > 0) {
-    showDriveStatus('done', `<span>✓ Scores sent to Kenny. You're all done!</span>`);
+    showDriveStatus('done', `<span>✓ Scores sent to Kenny. You're all done. Thanks for keeping score!</span>`);
   }
 }
 window.addEventListener('online', () => flushDriveUploads(false));

@@ -117,8 +117,11 @@ def phone_check(fb, rec_cam, start):
             when = f"{gap:.0f} s before START" if gap >= 0 else f"{-gap:.0f} s after START"
             return {"ok": True, "text": f"camera clock confirmed by your phone - recording started while the scorekeeper was in "
                                         f"the background, {when}"}
-    before = [sp for sp in spans if sp[1] <= start + 0.5 and start - sp[1] < 120]
-    after = [sp for sp in spans if sp[0] >= start - 0.5]
+    # 2026-11-04: only real "left the page and came back" stretches can estimate the record time; the page
+    # simply being open (e.g. a stand-in pressing record on the camera itself) says nothing -> camera clock rules
+    real = [sp for sp in spans if sp[0] > -1e17]
+    before = [sp for sp in real if sp[1] <= start + 0.5 and start - sp[1] < 120]
+    after = [sp for sp in real if sp[0] >= start - 0.5]
     if before:                                       # usual: record in Mimo, back to Safari ~2 s after the beep, START
         a, b = before[-1]
     elif after:                                      # START tapped first, then record
@@ -127,6 +130,11 @@ def phone_check(fb, rec_cam, start):
         return None                                  # nothing usable - fall back to the camera clock rules
     rough = start - max(a, b - 2.0)
     if not (-60.0 <= rough <= 120.0):
+        return None
+    if 0.0 <= start - rec_cam <= 10.0:
+        # 2026-11-04: the camera reports the usual 0-10 s record->START gap. The phone's last app switch can be
+        # something else (a text message, record pressed on the camera itself) - trust the camera clock; the
+        # video check still catches any small error (+-8 s is reliable)
         return None
     return {"ok": False, "offset": rough,
             "text": f"camera says recording started {start - rec_cam:.1f} s before START, but the scorekeeper page was in front "
