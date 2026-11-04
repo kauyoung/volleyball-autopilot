@@ -113,6 +113,32 @@ def pieces(segs, clips):
     return out
 
 
+def _vf_for(src):
+    """TAVO_VF for every piece, else tavo-vf.json next to the clips for the listed clips only (2026-11-01)"""
+    vf = os.environ.get("TAVO_VF")
+    if vf:
+        return vf
+    cf = os.path.join(os.path.dirname(src), "clip-fix.txt")     # 2026-11-02: same file as the YouTube video
+    if os.path.exists(cf):
+        j = json.load(open(cf, encoding="utf-8"))
+        if any(k in os.path.basename(src) for k in j.get("clips", [])):
+            z = float(j.get("zoom", 1)); sl = float(j.get("slope", 1)); pw = float(j.get("power", 1))
+            w, h = int(3840 / z) // 2 * 2, int(2160 / z) // 2 * 2
+            cx, cy = 1920 - float(j.get("pan", 0)) / z, 1080 + float(j.get("tilt", 0)) / z
+            x, y = int(round(min(max(cx - w / 2, 0), 3840 - w))), int(round(min(max(cy - h / 2, 0), 2160 - h)))
+            f = [f"crop={w}:{h}:{x}:{y}", "scale=3840:2160:flags=bicubic" if K4 else "scale=1920:1080:flags=bicubic"]
+            if sl != 1 or pw != 1:
+                e = f"clip(pow(val/255*{sl}\\,{pw})*255\\,0\\,255)"
+                f += ["format=rgb24", f"lutrgb=r='{e}':g='{e}':b='{e}'"]
+            return ",".join(f)
+    pf = os.path.join(os.path.dirname(src), "tavo-vf.json")
+    if os.path.exists(pf):
+        j = json.load(open(pf, encoding="utf-8"))
+        if any(k in os.path.basename(src) for k in j.get("clips", [])):
+            return j["vf"]
+    return None
+
+
 def encode(src, a, b, dst, gpu):
     if HEVC:
         rate = ["-b:v", "30M", "-maxrate", "45M", "-bufsize", "60M"] if K4 else ["-b:v", "8M", "-maxrate", "12M", "-bufsize", "16M"]
@@ -123,7 +149,8 @@ def encode(src, a, b, dst, gpu):
         codec = ["-c:v", "h264_nvenc", "-preset", PRESET, "-rc", "vbr"] + rate + ["-g", "120", "-profile:v", "high"]
     common = ["-map", "0:v:0", "-map", "0:a:0"] + codec + [
               "-c:a", "aac", "-b:a", "160k", "-ar", "48000", "-movflags", "+faststart", dst]
-    vf = os.environ.get("TAVO_VF")  # optional picture tweak (zoom/brightness), CPU filters after GPU decode (2026-10-06)
+    vf = _vf_for(src)  # optional picture tweak (zoom/brightness), CPU filters after GPU decode (2026-10-06;
+                       # 2026-11-01: per-clip via <match folder>\tavo-vf.json {"clips": [...], "vf": "..."})
     if vf:
         cmd = ["ffmpeg", "-y", "-v", "error"] + (["-hwaccel", "cuda"] if gpu else []) + [
                "-ss", f"{a:.3f}", "-to", f"{b:.3f}", "-i", src, "-vf", vf + ",format=yuv420p"] + common

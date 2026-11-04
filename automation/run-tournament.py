@@ -42,7 +42,7 @@ per match: project, file, finish time, thumbnail, text, picture + FLAG lines), t
 tournament-log.txt (copy logs). Uploads stay with Claude (one at a time, after each "EXPORT OK").
 Single-match days don't use this file at all.
 """
-import argparse, datetime as dt, glob, importlib.util, json, os, re, shutil, subprocess, sys, time, traceback
+import argparse, datetime as dt, glob, importlib.util, json, os, re, shutil, subprocess, sys, threading, time, traceback
 
 W = r"C:\Users\YOURNAME\scoreboard-pipeline"
 PY = r"C:\Python314\python.exe"
@@ -312,10 +312,10 @@ def announce_offsets(a):
     if sug:
         with open(T_OFF_SUGGEST, "w", encoding="utf-8") as f:
             json.dump(R["offset_suggestions"], f)
-        st("OFFSET SUGGESTED: " + "; ".join(
+        st("CAMERA START: " + "; ".join(
             f"match {k} ({MS[k - 1]['hhmm']} vs {MS[k - 1]['team2']}): {v['text']} -> --offset {ot.fmt(v['offset'])}"
             for k, v in sug.items())
-           + " — answer goes in offset-pending.txt: 'yes' (all suggested), '1:5, 3:2' (per match), 'all 5' or 'no'")
+           + " — handled automatically from the camera clock (2026-11-02), no answer needed")
     save()
 
 
@@ -349,7 +349,7 @@ def resolve_offsets(a):
         st("offset answer: " + (txt.strip() if txt else "none in 10 min — nothing applied"))
     for m, ex, ans in zip(MS, explicit, answers):
         sg = sug.get(m["n"])
-        if a.resume and os.path.exists(os.path.join(m["folder"], "_workflow", "prepare-state.json")):
+        if a.resume and m.get("folder") and os.path.exists(os.path.join(m["folder"], "_workflow", "prepare-state.json")):
             continue                                       # already set up: the scores are placed, leave them
         if ex is not None:
             m["offset"], m["offset_note"] = ex, f"{ot.fmt(ex)} s (--offset)"
@@ -427,11 +427,11 @@ def per_match(spec, n):
     return out
 
 
-def apply_overrides(a):
+def apply_overrides(a, only=None):
     """2026-10-26 (after the MYVB tournament): per-match opponent name (into the match FOLDER's .json copy
     only, never the Drive original) and per-match stage label (event.txt = "<event> \u00b7 <stage>")."""
     t2s, stages = per_match(a.team2, len(MS)), per_match(a.stage, len(MS))
-    for m in MS:
+    for m in (only if only is not None else MS):
         if m["n"] in t2s:
             js = [x for x in glob.glob(os.path.join(m["folder"], "*.json"))]
             if len(js) != 1:
@@ -446,10 +446,32 @@ def apply_overrides(a):
             st(f"match {m['n']}: event {m['event_full']}")
     save()
 
+COPY = {}                                         # 2026-10-26 perf: match n -> {"ev": Event, "log": [...]}
+
+
+def copy_wait(m):
+    """pipelined copy: wait for this match's clips (the copier runs one match at a time)"""
+    c = COPY[m["n"]]
+    if not c["ev"].is_set():
+        st(f"match {m['n']}: waiting for its clips to finish copying …")
+    c["ev"].wait()
+    log = c["log"] or []
+    tlog(f"--- match {m['n']} copy ---\n" + "\n".join(log))
+    if not log or "COPY OK" not in log[-1]:
+        tstop(f"card copy, match {m['n']} ({m['team2']}): " + (log[-1][9:] if log else "no log"))
+    m["folder"] = log[-1].split(" \u2014 ")[-1].strip()
+    st(f"copy ok: {m['folder']}")
+    save()
+
+
 def prepare_one(a, m):
     args = [PY, W + r"\run-match.py", "--folder", m["folder"], "--hold-export", "--no-picture-check"]
     if m.get("event_full") or R.get("event"):
         args += ["--event", m.get("event_full") or R["event"]]
+    if a.age:                                     # 2026-11-02: "15U" in YouTube titles only
+        args += ["--age", a.age]
+    if (a.two_sets or "").strip().lower() == "all" or m["n"] in [int(x) for x in re.findall(r"\d+", a.two_sets or "")]:
+        args += ["--two-sets"]
     if m.get("offset") is not None:
         args += ["--offset", ot.fmt(m["offset"])]
     if a.test:
@@ -570,6 +592,22 @@ def approved_set():
     return {int(x) for x in re.findall(r"\d+", txt)}
 
 
+def sync_gate(m, force=False):
+    """2026-11-03 (Kenny: the time sync is very important): an automatic upload waits for the match's score-
+    timing check and is HELD when it flags a set. Returns "ok", "wait" or "held: <reason>"."""
+    if force:
+        return "ok"
+    p = os.path.join(m.get("folder") or "", "sync-check.txt")
+    if not os.path.exists(p):
+        t0 = m.setdefault("sync_wait_since", time.time())
+        return "wait" if time.time() - t0 < 30 * 60 else "held: the score-timing check never finished"
+    txt = open(p, encoding="utf-8").read()
+    if "skipped" in txt:
+        return "held: the score-timing check was skipped (" + txt.strip().splitlines()[0][12:80] + ")"
+    flags = [l for l in txt.splitlines() if l.startswith("FLAG")]
+    return ("held: " + flags[0][6:140]) if flags else "ok"
+
+
 def pump_uploads(a):
     """start / finish queued uploads; returns True while something is still waiting or uploading"""
     if UPCUR.get("proc") is not None:
@@ -598,6 +636,14 @@ def pump_uploads(a):
         UPQ.remove(m)
         if a.test:
             st(f"match {m['n']} upload skipped (test run)"); m["upload"] = "test - not uploaded"
+            continue
+        g = sync_gate(m, force="sync-ok" in open(UP_APPROVED, encoding="utf-8").read().lower())
+        if g != "ok":
+            if g != "wait" and not m.get("held_said"):
+                m["upload"] = "HELD"; m["held_said"] = True
+                st(f"match {m['n']} UPLOAD HELD - {g[6:]} - needs Kenny's OK (upload-approved.txt '{m['n']} sync-ok')")
+                save(); write_summary()
+            UPQ.append(m)                              # stays queued: waits for the check / Kenny's sync-ok
             continue
         args = [PY, W + r"\yt-upload.py", "upload", "--channel", "main", "--video", m["export_file"],
                 "--text", m["text"], "--thumb", m["thumbnail"], "--playlist", PLAYLIST]
@@ -763,6 +809,8 @@ def main():
     ap.add_argument("--offset")                  # camera started N s before START: "5" or "1:5,3:2"
     ap.add_argument("--team2")                   # 2026-10-26: per-match opponent names "2:Ancaster Lions Stealth 15U,3:Unity Apex 15U"
     ap.add_argument("--stage")                   # 2026-10-26: per-match stage "1-4:Pool Play,5:Play Off" -> event.txt "<event> \u00b7 <stage>"
+    ap.add_argument("--age")                     # 2026-11-02: "15U" -> added after the opponent in YouTube titles/descriptions only
+    ap.add_argument("--two-sets")                # 2026-11-02: "3" / "1,3" / "all": scorekeeper set to best of 3 by mistake -> 2 sets total
     a = ap.parse_args()
     st("TOURNAMENT STARTED " + " ".join(sys.argv[1:]), first=True)
     open(TLOG, "w", encoding="utf-8").write("run-tournament " + time.strftime("%Y-%m-%d %H:%M") + "\n")
@@ -803,7 +851,31 @@ def main():
         return
 
     # 2. copy, match by match (each match's clips into its own folder)
-    if not a.folders:
+    # 2026-10-26 perf: when the picture check doesn't need the copied files (clock-time matches, or no
+    # picture check), the card copies in the background and match 1 is set up as soon as ITS clips are
+    # in. Card ~85 MB/s (~5 min per match) overlaps setup + finish (~6 min per match): ~20 min saved on
+    # a 5-match day. The copier only runs copy-card.py one match at a time (as before) and keeps the
+    # log lines; status/log writing and stopping stay in this thread.
+    pipelined = not a.folders and (R.get("picture_check") or a.no_picture_check)
+    if pipelined:
+        COPY.update({m["n"]: {"ev": threading.Event(), "log": None} for m in MS})
+        def copier():
+            for m in MS:
+                c = COPY[m["n"]]
+                try:
+                    subprocess.run([PY, W + r"\copy-card.py", "--match", m["json"]], cwd=W, env=UTF8, creationflags=NOWIN)
+                    c["log"] = open(W + r"\copy-card-log.txt", encoding="utf-8").read().strip().splitlines()
+                except Exception as e:
+                    c["log"] = [f"         copier error {e!r}"]
+                c["ev"].set()
+                if not c["log"] or "COPY OK" not in c["log"][-1]:
+                    for rest in MS[MS.index(m) + 1:]:          # stop copying; the main thread reports it
+                        COPY[rest["n"]]["log"] = ["         not copied (an earlier match's copy failed)"]
+                        COPY[rest["n"]]["ev"].set()
+                    return
+        threading.Thread(target=copier, name="card-copy", daemon=True).start()
+        st(f"copying the card in the background (match 1 is set up as soon as its clips are in)")
+    elif not a.folders:
         for m in MS:
             st(f"copying match {m['n']} of {len(MS)} ({m.get('gb', 0):.1f} GB) …")
             subprocess.run([PY, W + r"\copy-card.py", "--match", m["json"]], cwd=W, env=UTF8, creationflags=NOWIN)
@@ -837,11 +909,15 @@ def main():
     # 3b. camera-start offsets (2026-10-14): --offset or Kenny's answer; written by run-match into each folder's .json
     resolve_offsets(a)
 
-    # 3c. per-match opponent names / stage labels (2026-10-26)
-    apply_overrides(a)
+    # 3c. per-match opponent names / stage labels (2026-10-26); pipelined copy: per match, below
+    if not pipelined:
+        apply_overrides(a)
 
     # 4. setup + finish, match by match
     for m in MS:
+        if pipelined:
+            copy_wait(m)
+            apply_overrides(a, [m])
         if a.test:
             m["export_name"] = f"zz tournament {m['n']}"
         if a.resume and os.path.exists(os.path.join(m["folder"], "_workflow", "prepare-state.json")):

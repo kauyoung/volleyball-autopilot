@@ -109,11 +109,48 @@ def parse_choice(txt):
     return ("option 1: as filmed (answer not understood: " + txt[:40] + ")",) + PIC_OPTIONS[1][1:] + ("top",)
 
 
+CLIP_FIX_FOLDER = None
+
+
+def apply_clip_fix(r):
+    """2026-11-02 (Nov 1 Niagara: camera restarted with the wrong profile): the match folder's
+    clip-fix.txt {"clips": ["_0010_", ...], "zoom": z, "pan": px, "tilt": px, "slope": s, "power": p}
+    re-frames / brightens ONLY those camera clips (make-tavo.py reads the same file). Returns a log line."""
+    pf = os.path.join(CLIP_FIX_FOLDER or "", "clip-fix.txt")
+    if not CLIP_FIX_FOLDER or not os.path.exists(pf):
+        return ""
+    cf = json.load(open(pf, encoding="utf-8"))
+    p = r.GetProjectManager().GetCurrentProject()
+    tl = None
+    for i in range(1, p.GetTimelineCount() + 1):
+        x = p.GetTimelineByIndex(i)
+        if x.GetName().startswith("Match"):
+            tl = x; break
+    if not tl:
+        return "clip fix: no Match timeline"
+    p.SetCurrentTimeline(tl)
+    z, sl, pw = float(cf.get("zoom", 1)), float(cf.get("slope", 1)), float(cf.get("power", 1))
+    r.OpenPage("color")
+    done = []
+    for it in tl.GetItemListInTrack("video", 1) or []:
+        if any(k in it.GetName() for k in cf.get("clips", [])):
+            ok = (it.SetProperty("ZoomX", z) and it.SetProperty("ZoomY", z) and it.SetProperty("Pan", float(cf.get("pan", 0)))
+                  and it.SetProperty("Tilt", float(cf.get("tilt", 0))))
+            if sl != 1 or pw != 1:
+                ok = ok and it.SetCDL({"NodeIndex": "1", "Slope": f"{sl} {sl} {sl}", "Offset": "0 0 0",
+                                       "Power": f"{pw} {pw} {pw}", "Saturation": "1.0"})
+            done.append(it.GetName() + ("" if ok else " (FAILED)"))
+    r.OpenPage("edit")
+    r.GetProjectManager().SaveProject()
+    return f"clip fix (clip-fix.txt): zoom {z}, pan {cf.get('pan', 0)}, tilt {cf.get('tilt', 0)}, slope {sl}, power {pw} on " + ", ".join(done)
+
+
 def apply_picture(r, choice):
     """zoom / framing / brightness on the V1 camera clips of the Match timeline (notes: per-match tweaks)"""
     label, z, sl, pw, anchor = choice
     if z == 1 and sl == 1 and pw == 1:
-        return label + " — nothing to change"
+        cf = apply_clip_fix(r)
+        return label + " — nothing to change" + (f"; {cf}" if cf else "")
     p = r.GetProjectManager().GetCurrentProject()
     tl = None
     for i in range(1, p.GetTimelineCount() + 1):
@@ -139,7 +176,35 @@ def apply_picture(r, choice):
     chk = items[0].GetProperty("ZoomX") if items else None
     if ok != len(items) or not items:
         raise RuntimeError(f"applied to {ok} of {len(items)} clips")
-    return f"{label}, {anchor} edge kept — applied to {ok} camera clips (ZoomX now {chk}, Tilt {tilt:.0f})"
+    cf = apply_clip_fix(r)                     # 2026-11-02: per-clip fix wins over the whole-match choice
+    return f"{label}, {anchor} edge kept — applied to {ok} camera clips (ZoomX now {chk}, Tilt {tilt:.0f})" + (f"; {cf}" if cf else "")
+
+
+def resolve_popups():
+    """2026-11-02: a Resolve pop-up ("Message" window, e.g. Audio Output after a monitor/speaker change)
+    blocks every scripting call - and it can open off-screen where a 2nd monitor used to be. Finds them,
+    moves them onto the main screen, returns how many (the run stops so Claude can look at it)."""
+    try:
+        import ctypes, ctypes.wintypes as wt
+        u = ctypes.windll.user32
+        r = subprocess.run(["tasklist", "/FI", "IMAGENAME eq Resolve.exe", "/FO", "CSV", "/NH"], capture_output=True, text=True,
+                           creationflags=0x08000000)
+        pids = {int(x.split('","')[1]) for x in r.stdout.strip().splitlines() if x.startswith('"Resolve.exe"')}
+        found = []
+        Enum = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+        def cb(h, l):
+            pid = wt.DWORD(); u.GetWindowThreadProcessId(h, ctypes.byref(pid))
+            if pid.value in pids and u.IsWindowVisible(h):
+                n = u.GetWindowTextLengthW(h); b = ctypes.create_unicode_buffer(n + 1); u.GetWindowTextW(h, b, n + 1)
+                if b.value == "Message":
+                    found.append(h)
+            return True
+        u.EnumWindows(Enum(cb), 0)
+        for h in found:
+            u.SetWindowPos(h, 0, 200, 600, 0, 0, 0x0001 | 0x0004)
+        return len(found)
+    except Exception:
+        return 0
 
 
 def summary(extra=()):
@@ -150,8 +215,14 @@ def summary(extra=()):
             for l in res.get("log") or []:
                 if any(k in l for k in keys) and l not in lines:
                     lines.append(l)
+    try:                                      # 2026-11-02: the background sync check, if it has finished
+        sc = open(os.path.join(CLIP_FIX_FOLDER or "", "sync-check.txt"), encoding="utf-8").read().strip().splitlines()
+    except Exception:
+        sc = []
+    ctf = [l for l in results.get("camera_time", []) if l.startswith("FLAG") or "points placed" in l]   # 2026-11-03: camera-clock flags + gap
+    ctf += [l for l in results.get("picture_joins", []) if l.startswith("FLAG")]                       # 2026-11-03: picture changed after a restart
     with open(SUMMARY, "w", encoding="utf-8") as f:
-        f.write("\n".join(list(extra) + results.get("offset_lines", []) + lines) + "\n")
+        f.write("\n".join(list(extra) + results.get("offset_lines", []) + ctf + sc + lines) + "\n")
 
 
 def stop(reason):
@@ -281,8 +352,7 @@ def announce_offset(dest):
         with open(OFF_SUGGEST, "w", encoding="utf-8") as f:
             json.dump(sg, f)
         results["offset_suggestion"] = sg
-        st(f"OFFSET SUGGESTED: {sg['text']} (measured gap {sg['gap']:+.0f} s) -> suggest --offset {ot.fmt(sg['offset'])}; "
-           "answer goes in offset-pending.txt (yes / a number / no)")
+        st(f"CAMERA START: {sg['text']} (gap {sg['gap']:+.0f} s) - handled automatically from the camera clock, no answer needed")
         save()
     return sg
 
@@ -311,9 +381,13 @@ def resolve_offset(a, folder):
         else:
             how = "not asked"
         if val is None:
-            results["offset_lines"] = [f"FLAG: {sg['text']} (gap {sg['gap']:+.0f} s) — suggested --offset "
-                                       f"{ot.fmt(sg['offset'])} NOT applied ({how}); scores may show up early/late by about that much"]
-            st("offset: not applied (" + how + ")")
+            if how == "not asked":            # 2026-11-02: camera-time places clip 1 by the camera clock itself
+                results["offset_lines"] = ["offset: automatic - clips placed by the camera clock (camera-time)"]
+                st("offset: automatic from the camera clock (camera-time)")
+            else:
+                results["offset_lines"] = [f"FLAG: {sg['text']} (gap {sg['gap']:+.0f} s) — suggested --offset "
+                                           f"{ot.fmt(sg['offset'])} NOT applied ({how}); scores may show up early/late by about that much"]
+                st("offset: not applied (" + how + ")")
             save()
             return
     else:
@@ -404,7 +478,33 @@ def main():
     ap.add_argument("--rebuild", action="store_true")      # project exists -> use the next free "<name> vN" (+ "... - YouTube vN")
     ap.add_argument("--picture")                           # picture choice up front ("2", "1", "3 bottom", "z= s= p= a=") - no question
     ap.add_argument("--export-only", action="store_true")  # with --folder + --project: no setup/finish, just (picture +) export
+    ap.add_argument("--age")                               # 2026-11-02: "15U" -> YouTube title/description only (youtube-age.txt)
+    ap.add_argument("--youtube-name")                      # 2026-11-02: full opponent name for YouTube only (youtube-name.txt)
+    ap.add_argument("--two-sets", action="store_true")     # 2026-11-02: scorekeeper was set to best of 3 by mistake -> 2 sets total
     a = ap.parse_args()
+    FORMAT_MSG = None
+    global CLIP_FIX_FOLDER
+    CLIP_FIX_FOLDER = a.folder
+    if a.folder and os.path.isdir(a.folder):
+        if a.age:
+            open(os.path.join(a.folder, "youtube-age.txt"), "w", encoding="utf-8").write(a.age.strip())
+            # 2026-11-02 (Kenny): the age goes on YouTube only - drop it from the scoreboard name if the
+            # scorekeeper name ends with it ("Unity Apex 15u" -> "Unity Apex"); folder copies only
+            import glob as _g
+            for jp_ in _g.glob(os.path.join(a.folder, "*.json")) + _g.glob(os.path.join(a.folder, "*.original.txt")):
+                try:
+                    d_ = json.load(open(jp_, encoding="utf-8"))
+                    t2_ = str(d_.get("team2") or "")
+                    if t2_.upper().endswith(" " + a.age.strip().upper()):
+                        d_["team2"] = t2_[: -len(a.age.strip())].rstrip()
+                        json.dump(d_, open(jp_, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+                except Exception:
+                    pass
+        if a.youtube_name:
+            open(os.path.join(a.folder, "youtube-name.txt"), "w", encoding="utf-8").write(a.youtube_name.strip())
+        if a.two_sets:
+            r_ = subprocess.run([PY, W + r"\fix-format.py", a.folder, "--two-sets"], capture_output=True, text=True, creationflags=0x08000000)
+            FORMAT_MSG = "format: " + ((r_.stdout or r_.stderr).strip().splitlines() or ["no output"])[-1]
     if a.export_only and not (a.folder and a.project):
         stop("--export-only needs --folder and --project")
     if a.picture:                                    # 2026-10-26: TAVO (made during setup) gets the same brightening, never the zoom
@@ -414,6 +514,11 @@ def main():
         except Exception:
             pass
     st("RUN STARTED " + " ".join(sys.argv[1:]), first=True)
+    if resolve_popups():
+        stop("a Resolve pop-up is waiting (moved onto the main screen) - it blocks every Resolve command; "
+             "read it, close it, then run again")
+    if FORMAT_MSG:
+        st(FORMAT_MSG)
     # tests ("zz" project) never write the YouTube text / thumbnail into the match folder
     # (2026-10-08: a test overwrote the Thundercats folder's own thumbnail.jpg)
     # 2026-10-14 test guard: a zz (test) project runs only on a zz folder, and a test run
@@ -477,14 +582,24 @@ def main():
     if not a.export_only:
         try:
             ct = subprocess.run([PY, "-W", "ignore", W + r"\camera-time.py", folder], cwd=W, env=UTF8,
-                                capture_output=True, text=True, timeout=900, creationflags=NOWIN)
+                                capture_output=True, text=True, timeout=3600, creationflags=NOWIN)   # 2026-11-03: may measure from the video
             ct_lines = [l for l in (ct.stdout + ct.stderr).splitlines() if l.strip()]
             results["camera_time"] = ct_lines[-12:]
             for l in ct_lines:
-                if l.startswith("CAMERA TIME"):
+                if l.startswith("CAMERA TIME") or l.startswith("FLAG"):
                     st(l)
         except Exception as e:
             results["camera_time_error"] = repr(e)
+        # 2026-11-03 (Kenny #3): did the picture change across a camera restart (other mode / profile)?
+        try:
+            pj = subprocess.run([PY, "-W", "ignore", W + r"\picture-joins.py", folder], cwd=W, env=UTF8,
+                                capture_output=True, text=True, timeout=600, creationflags=NOWIN)
+            pj_lines = [l for l in (pj.stdout + pj.stderr).splitlines() if l.startswith(("FLAG", "PICTURE"))]
+            results["picture_joins"] = pj_lines[-10:]
+            for l in pj_lines:
+                st(l if l.startswith("FLAG") else "picture check: " + l[9:])
+        except Exception as e:
+            results["picture_joins_error"] = repr(e)
 
     # 2. Resolve (wait up to 10 min for Kenny to open it)
     sys.path.append(r"C:\ProgramData\Blackmagic Design\DaVinci Resolve\Support\Developer\Scripting\Modules")
@@ -549,6 +664,24 @@ def main():
                     results["rebuild_name_error"] = repr(e)
     if not res.get("ok"):
         stop("setup had problems — see run-match-result.json")
+    # 2026-11-02: per-set score-timing check runs in the background (writes <folder>\sync-check.txt;
+    # never changes anything - Kenny: export with the best guess, flag in the approval)
+    try:
+        try:
+            os.remove(os.path.join(folder, "sync-check.txt"))
+        except OSError:
+            pass
+        subprocess.Popen([PY, W + r"\sync-check.py", folder], cwd=W, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, creationflags=0x08000000 | 0x00000008 | 0x00000200)
+        st("sync check: started in the background (sync-check.txt)")
+    except Exception as e:
+        st(f"sync check: not started ({e!r})")
+    try:                                      # 2026-11-02: per-clip picture fix right after setup (preview shows it)
+        cf_ = apply_clip_fix(r)
+        if cf_:
+            st(cf_); results["clip_fix"] = cf_
+    except Exception as e:
+        st(f"*** clip fix failed: {e!r}")
 
     # 4. finish - 2026-10-27 (review row 3): starts as soon as the background work is ready
     # (checked every 3 s) instead of after a fixed 200 s + 45 s re-checks; finish() still checks itself

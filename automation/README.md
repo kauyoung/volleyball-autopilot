@@ -75,3 +75,16 @@ Lessons from the first full tournament (five matches in one day) went straight b
 - **TAVO files**: 4K H.265, optional brightening, the same time-out cuts as the YouTube video.
 - **Scoreboard fixes**: several events on one frame no longer ramp the serve ball in; tied stats show "EACH".
 - **Higher-bit-rate YouTube export** (60 Mbps preset) so YouTube's own re-encode starts from a cleaner file.
+
+## Score-timing and tournament fixes (November 2026)
+
+A second tournament exposed a few weak spots; each one is now handled automatically and tested on that day's footage:
+
+- **Scores line up with the camera's own clock** (`camera-time.py`). The camera usually starts recording a few seconds before the scorekeeper's START tap (record in the camera app, wait for the beep, switch back, tap START). Clip 1 is now placed by the camera's clock (synced to the phone by the camera app) and later clips by the camera's frame-accurate timecode, so any wait between record and START - 3 s, 20 s or 2 minutes - gives the same, correct timing. A timecode jump after a camera restart is detected and falls back to the file times.
+- **The phone double-checks the camera clock.** The scorekeeper silently notes when its page goes to the background and comes back (phone clock). The camera must have started recording while the page was in the background; if it did, the clock is confirmed. If not, the camera clock is off and the timing is rebuilt from the phone's estimate, refined by the video.
+- **Per-set timing check** (`sync-check.py`): averages how much the picture moves around every score tap and compares the pattern with an approved match (`sync-template.json`). Rallies repeat roughly every 20 s, so this check only confirms timing that is already close - it cannot find a large clock error on its own, which is why the phone check and an "unusual wait - right?" question exist.
+- **Uploads wait when the timing is in doubt**: in tournament mode a match whose timing check is flagged is held back from YouTube until the owner confirms (`upload-approved.txt` with `sync-ok`).
+- **Picture check across camera restarts** (`picture-joins.py`): after an SD-card stop the camera can come back in another lens mode or profile (wider, darker). Every restart is compared with the picture before it (layout + brightness, three frames each side) and flagged with a before/after image; the fix goes in a per-clip `clip-fix.txt` (zoom, pan, tilt, brightness) that both the YouTube export and the TAVO file use.
+- **Time-outs**: a second tap in the scorekeeper means "Time-out over" and the video restarts 3 s before it (else the serve whistle, else 60 s). A camera stop during a time-out is covered by the time-out cut; a mid-set stop shorter than 20 s is a plain cut.
+- **Format and name corrections**: `--two-sets` (a 2-set match scored as best of 3 by mistake), `--age 15U` (age group in YouTube titles only).
+- **Robustness**: a hidden Resolve dialog (often off-screen after a monitor change) blocks all scripting - the run now stops and says so; the intro/FINAL renderer retries once; an edited cut list is always the one exported; the camera card copies in the background so match 1 starts as soon as its clips are in.

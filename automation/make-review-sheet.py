@@ -145,7 +145,9 @@ def plan():
                    for t, lab in moments]
         if c.get("kind") == "timeout":          # 2026-10-19: time-out cuts - last frame before, the panel, the restart
             m_, s_ = int(c["cut_s"]) // 60, int(c["cut_s"]) % 60
-            how = "5 s before the serve whistle" if c.get("how") == "whistle" else "no clear whistle: 40 s before the point"
+            how = ("5 s before the serve whistle" if c.get("how") == "whistle" else
+                   "3 s before 'Time-out over'" if c.get("how") == "tap" else
+                   "60 s after the time-out tap" if c.get("kind") == "timeout" else "no clear whistle: 40 s before the point")
             moments.append((max(0.0, c["out_s"] - 1.3), f"Time-out {c.get('n', '')}: just before the cut ({m_}:{s_:02d} removed)"))
             moments.append((c["in_s"] + 0.9, f"Time-out {c.get('n', '')} wipe"))
             full[c["in_s"] + 0.9] = "Dark diagonal panel with \u201cTIME-OUT\u201d"

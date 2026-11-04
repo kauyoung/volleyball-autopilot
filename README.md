@@ -50,6 +50,13 @@ scoreboard as pictures), and prepares the YouTube upload. Details:
 [automation/README.md](automation/README.md). The manual workflow below still works
 on its own.
 
+**Score timing you can trust.** Scores are placed by the camera's own clock, so it
+doesn't matter how long you wait between pressing record and tapping START; the
+phone double-checks the camera clock, every set gets a timing check against the
+video, a camera restart that comes back with a different picture is flagged, and
+in tournament mode any match whose timing is in doubt waits for your OK before it
+goes to YouTube. See [November 2026 fixes](automation/README.md#score-timing-and-tournament-fixes-november-2026).
+
 ```mermaid
 flowchart TB
     A["📱 Phone app<br/>one tap per rally<br/>→ Google Drive"] --> D
@@ -276,7 +283,7 @@ Turn it off with `AUTO_ALIGN_SETS = false`.
 | `resolve-scripts/build-scoreboard.lua` | Builds the entire scoreboard's Fusion node graph from scratch: bar, score cells, team names, sets, serve indicator, "SET n" tab, SET POINT / MATCH POINT tags, optional team logo, outline, sheen, drop shadow and an overall fade. Team names are anchored on their outer edge, so both sit the same distance from the ends of the bar whatever their length. Look is configurable at the top (`BAR_WIDTH`, `BAR_RAISE`, `PILL_STYLE`, fonts, colours). Run once per match. |
 | `resolve-scripts/apply-match.lua` | Reads a match JSON file (see below) and writes keyframes onto the nodes `build-scoreboard.lua` created — score, sets, set number and serve indicator as instant "step" changes, plus the motion (score/sets pops, SET POINT / MATCH POINT tags worked out from the score, set-change dips, fade in/out). Also sets the team names from the file and **automatically re-aligns each set to its clip join** (see below). |
 | `resolve-scripts/run-overlay.lua` | Convenience wrapper — runs `build-scoreboard.lua` then `apply-match.lua` back to back. |
-| `scorekeeper/volleyball-scorekeeper.html` | Self-contained scorekeeping web app with a guided, one-screen-at-a-time flow simple enough for anyone at the gym: who's playing → press record + START → two giant team buttons with a 5-second UNDO → automatic set-over screen → FINISH MATCH. Timestamps every event, survives the page being closed mid-match, and exports the JSON file the Lua scripts consume — or sends it to Google Drive automatically (below). A one-tap **Time-out** button (cleared by the next point) records time-outs so the automated workflow can cut them out. |
+| `scorekeeper/volleyball-scorekeeper.html` | Self-contained scorekeeping web app with a guided, one-screen-at-a-time flow simple enough for anyone at the gym: who's playing → press record + START → two giant team buttons with a 5-second UNDO → automatic set-over screen → FINISH MATCH. Timestamps every event, survives the page being closed mid-match, and exports the JSON file the Lua scripts consume — or sends it to Google Drive automatically (below). A **Time-out** button (tap again for "Time-out over"; UNDO cancels) records time-outs so the automated workflow can cut them out. It also silently notes when the page goes to the background and comes back, so the workflow can double-check the camera's clock. |
 | `scorekeeper/scorekeeper-drive-upload.gs` | Optional Google Apps Script "web app" that receives the match file from the scorekeeper and saves it into a Drive folder, so nobody has to export or email anything. |
 | `tools/make-thumbnail.py` | Builds a 1280×720 YouTube thumbnail from the match file and a frame of the finished video: date, team names, team logo, and one score tile per set. |
 | `assets/volleyball-serve-icon-bold.png` | The serve-indicator icon `build-scoreboard.lua` places on whichever team is serving (bold version, used by default). `volleyball-serve-icon.png` is the original thin-line version. |
@@ -314,6 +321,11 @@ Turn it off with `AUTO_ALIGN_SETS = false`.
   serve-ball icon. The scorekeeper warns about long names when you type them.
 - The serve ball fades in/out over a few frames rather than cutting
   instantly. Cosmetic only.
+- **The video timing check can only confirm timing that is already close.**
+  Rallies repeat roughly every 20 s, so a camera clock that is off by about one
+  rally can still "look right" to the motion pattern. The phone check and the
+  "unusual wait - right?" question cover that case; keep the camera clock synced
+  (record from the camera's phone app).
 
 </details>
 

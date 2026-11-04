@@ -113,9 +113,19 @@ def cmd_text():
     if event.upper() == "SCRIMMAGE":
         event = ""
     note = _opt("description-note.txt")
+    # 2026-11-02 (Kenny): the scoreboard keeps the short name; the YouTube title/description get the
+    # full name from the match folder's youtube-name.txt (e.g. "Niagara Rapids 15U"), or the short name
+    # + youtube-age.txt (e.g. "15U") when the name doesn't already end with it
+    full = _opt("youtube-name.txt")
+    age = _opt("youtube-age.txt")
+    if full:
+        t2 = full
+    elif age and not t2.upper().endswith(age.upper()):
+        t2 = f"{t2} {age}"
     title = f'vs {t2}{kind}' + (f' | {event}' if event else '') + f' | {short}'
     if len(title) > 100:                       # YouTube's limit: drop the stage first, then the event
-        title = f'vs {t2}{kind} | {event.split(" \u00b7 ")[0]} | {short}' if event else title
+        ev_short = event.split(" \u00b7 ")[0] if event else ""
+    title = f'vs {t2}{kind} | {ev_short} | {short}' if event else title
     if len(title) > 100:
         title = f'vs {t2}{kind} | {short}'
     team1_full = "Home Team 14U" if t1 == "Home Team" else t1

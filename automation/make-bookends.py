@@ -91,6 +91,11 @@ WHISTLE_LEAD, WHISTLE_MIN_BEFORE = 5.0, 9.0
 TO_AFTER = 5.0
 TO_FALLBACK = float(os.environ.get("BK_TO_FALLBACK", 40.0))
 TO_MIN = float(os.environ.get("BK_TO_MIN", 20.0))
+TO_END_LEAD = 3.0          # 2026-11-02 (Kenny): resume 3 s before his "Time-out over" tap
+TO_WH_LO, TO_WH_HI = 30.0, 90.0   # serve whistle only counts 30-90 s after the time-out tap
+TO_DEFAULT = 60.0          # no tap/whistle: time-outs are max 1 min -> resume 60 s after the tap
+TO_FALLBACK_MIN = 10.0     # ...but at least this long before the next point
+TO_LONG, TO_SHORT = 90.0, 15.0
 WHISTLES = os.environ.get("BK_WHISTLES", "1") != "0"
 
 
@@ -297,19 +302,33 @@ def plan():
     try:
         mj = json.load(open(info["matchFile"], encoding="utf-8"))
         jo = float(mj.get("offset") or 0.0)
-        taps = [(float(x["t"]) + jo, int(x.get("set", 0))) for x in (mj.get("timeouts") or [])]
+        taps = [(float(x["t"]) + jo, int(x.get("set", 0)),
+                 (float(x["end_t"]) + jo) if x.get("end_t") is not None else None) for x in (mj.get("timeouts") or [])]
     except Exception:
         taps = []
     n_to = 0
-    for T, st_ in sorted(taps):
+    for T, st_, Te in sorted(taps):
         nxt_pts = [e[0] for e in real if e[0] > T + 1.0]
         if not nxt_pts:
             continue
         P = nxt_pts[0]
         A = T + TO_AFTER
-        w = serve_whistle(clips, A + 1.0, P - WHISTLE_MIN_BEFORE)
-        B, how = (w - WHISTLE_LEAD, "whistle") if w is not None else (P - TO_FALLBACK, "fixed")
+        # 2026-11-02 (Kenny): his own "Time-out over" tap wins (resume TO_END_LEAD s before it); otherwise a
+        # serve whistle only counts 30-90 s after the tap; otherwise resume TO_DEFAULT s after the tap
+        # (time-outs are max 1 min), never later than TO_FALLBACK_MIN s before the next point
+        if Te is not None and Te > A + 1.0:
+            B, how = min(Te - TO_END_LEAD, P - 1.0), "tap"
+        else:
+            w = serve_whistle(clips, T + TO_WH_LO, min(T + TO_WH_HI, P - WHISTLE_MIN_BEFORE))
+            if w is not None:
+                B, how = w - WHISTLE_LEAD, "whistle"
+            else:
+                B, how = min(T + TO_DEFAULT, P - TO_FALLBACK_MIN), "fixed"
         n_to += 1
+        if B - T > TO_LONG:
+            flags.append(f"time-out {n_to}: {int(B - T) // 60}:{int(B - T) % 60:02d} long - forgot to tap 'Time-out over'?")
+        if how == "tap" and Te - T < TO_SHORT:
+            flags.append(f"time-out {n_to}: only {Te - T:.0f} s between 'Time-out' and 'Time-out over' - tapped by mistake?")
         if any(c["out_s"] - 2 < B and A < c["in_s"] + 2 for c in cuts):
             log(f"time-out {n_to} at {T:.1f} s: falls inside a set break that is already cut - nothing extra")
             continue
@@ -371,7 +390,9 @@ def plan():
             continue
         if c.get("kind") == "timeout":
             log(f"time-out {c['n']}: cut {c['out_s']:.1f}-{c['in_s']:.1f} s ({int(c['cut_s']) // 60}:{int(c['cut_s']) % 60:02d} removed, "
-                + ("restart 5 s before the serve whistle" if c["how"] == "whistle" else f"no clear whistle - kept the last {TO_FALLBACK:.0f} s before the point")
+                + ("restart 5 s before the serve whistle" if c["how"] == "whistle" else
+                   "restart 3 s before your 'Time-out over' tap" if c["how"] == "tap" else
+                   f"no 'over' tap or clear whistle - restart {TO_DEFAULT:.0f} s after the tap")
                 + ", TIME-OUT wipe over the join)")
             continue
         if c["cut_s"] > 0:
@@ -753,13 +774,19 @@ if __name__ == "__main__":
         # BK_CLASSIC=1 in the environment skips straight to the classic one.
         done = False
         if not os.environ.get("BK_CLASSIC"):
-            try:
-                g = {"__name__": "hf_bookends"}
-                exec(open(os.path.join(WORK, "hf-bookends.py"), encoding="utf-8").read(), g)
-                done = g["render"](kind, p, log, logo_for)
-            except Exception as e:
-                msg = " ".join(str(e).split()).replace("FAILED", "failed").replace("ERROR", "error")[:300]
-                log(f"{kind}: new HyperFrames screen not used ({msg}) \u2014 drawing the classic one instead")
+            for attempt in (1, 2):           # 2026-11-02 (Kenny): one retry before falling back (Nov 1 Unity Apex)
+                try:
+                    g = {"__name__": "hf_bookends"}
+                    exec(open(os.path.join(WORK, "hf-bookends.py"), encoding="utf-8").read(), g)
+                    done = g["render"](kind, p, log, logo_for)
+                    break
+                except Exception as e:
+                    msg = " ".join(str(e).split()).replace("FAILED", "failed").replace("ERROR", "error")[:300]
+                    if attempt == 1:
+                        log(f"{kind}: HyperFrames render stopped ({msg[:120]}) \u2014 trying once more in 20 s")
+                        time.sleep(20)
+                    else:
+                        log(f"*** {kind}: new HyperFrames screen not used after 2 tries ({msg}) \u2014 drawing the classic one instead")
         if not done:
             try:
                 (render_intro if kind == "intro" else render_summary)(p)

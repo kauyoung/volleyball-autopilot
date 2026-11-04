@@ -567,6 +567,17 @@ def current_match():
             s[f] = json.load(open(os.path.join(snap, f), encoding="utf-8"))
         except Exception:
             pass
+    # 2026-11-02 (Nov 1 Niagara): a newer working bookends.json for THIS match (an edited cut list) wins
+    # over the snapshot, and is copied into it so every later step uses the same cuts
+    try:
+        wb, sb = os.path.join(W, "bookends.json"), os.path.join(snap, "bookends.json")
+        j = json.load(open(wb, encoding="utf-8"))
+        if (os.path.normcase(j.get("folder", "")) == os.path.normcase(folder)
+                and (not os.path.exists(sb) or os.path.getmtime(wb) > os.path.getmtime(sb) + 1)):
+            s["bookends.json"] = j
+            shutil.copy2(wb, sb)
+    except Exception:
+        pass
     return p, tl, folder, s
 
 

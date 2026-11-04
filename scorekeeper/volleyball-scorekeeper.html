@@ -363,7 +363,7 @@
     </button>
     <button class="btn timeout-btn" id="timeoutBtn" type="button">
       <span id="timeoutLabel">⏸&nbsp; Time-out</span>
-      <span class="to-sub" id="timeoutSub">The video skips it · ends at the next point · tap to cancel</span>
+      <span class="to-sub" id="timeoutSub">Tap again when play resumes · the video restarts 3 s before your tap</span>
     </button>
     <button class="btn btn-plain" id="timeUpBtn" hidden style="margin-top:var(--s2)">Time's up — end the scrimmage</button>
 
@@ -529,6 +529,26 @@ function releaseWakeLock() {
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && running && !paused) requestWakeLock();
 });
+
+// 2026-11-03: silent second clock for the video sync. Kenny presses record in the DJI Mimo app, then comes
+// back to Safari and taps START. The moments this page is hidden / shown again (phone clock) are kept for
+// the 30 min before START and go into the match file, so the workflow can check the camera's clock against
+// the phone: the camera must have started recording while this page was hidden. Nothing is shown or heard.
+let focusLog = [], startFocus = [];
+try { focusLog = JSON.parse(localStorage.getItem('vbFocusLog')) || []; } catch (e) { focusLog = []; }
+function noteFocus(v, extra) {
+  const now = Date.now();
+  focusLog = focusLog.filter(x => now - x.w < 30 * 60000);
+  const entry = Object.assign({ v, w: now }, extra || {});
+  focusLog.push(entry);
+  try { localStorage.setItem('vbFocusLog', JSON.stringify(focusLog)); } catch (e) {}
+  // also the first 3 min after START (in case START was tapped before pressing record)
+  if (running && startTime && now - startTime < 180000) { startFocus.push(entry); saveCheckpoint(); }
+}
+noteFocus('show', { load: true });
+document.addEventListener('visibilitychange', () => noteFocus(document.visibilityState === 'visible' ? 'show' : 'hide'));
+window.addEventListener('pagehide', () => noteFocus('hide'));
+window.addEventListener('pageshow', (ev) => { if (ev.persisted) noteFocus('show'); });
 
 function formatTime(totalSeconds) {
   const h = Math.floor(totalSeconds / 3600);
@@ -744,7 +764,7 @@ function saveCheckpoint() {
     localStorage.setItem('vbScorekeeperCheckpoint', JSON.stringify({
       startTime, running, paused, pausedTotal, pauseStartedAt, events, setHistory, recordings, timeouts, timeoutOpen,
       t1Score, t2Score, t1Sets, t2Sets, currentSet, format: fmt.code, forcedSets, timeUp, timeUpForced,
-      team1Name: el('team1Name').value, team2Name: el('team2Name').value
+      team1Name: el('team1Name').value, team2Name: el('team2Name').value, startFocus
     }));
   } catch (e) {}
 }
@@ -774,12 +794,13 @@ el('restoreYes').addEventListener('click', () => {
   const data = restoreData;
   restoreData = null;
   startTime = data.startTime;
+  startFocus = data.startFocus || [];
   running = true;
   paused = data.paused || false;
   pausedTotal = data.pausedTotal || 0;
   pauseStartedAt = data.pauseStartedAt || null;
   events = data.events;
-  timeouts = data.timeouts || []; timeoutOpen = !!data.timeoutOpen;
+  timeouts = data.timeouts || []; timeoutOpen = !!data.timeoutOpen; if (timeoutOpen) setTimeout(startTimeoutTimer, 0);
   recordings = data.recordings || [{ start: data.startTime, end: null }];
   fmt = FORMATS[data.format] || FORMATS.bo3;
   forcedSets = data.forcedSets || [];
@@ -830,6 +851,7 @@ function logEvent() {
 
 el('startBtn').addEventListener('click', () => {
   startTime = Date.now();
+  startFocus = focusLog.filter(x => x.w <= startTime && startTime - x.w < 30 * 60000);   // 2026-11-03
   running = true;
   paused = false; pausedTotal = 0; pauseStartedAt = null;
   recordings = [{ start: startTime, end: null }];
@@ -913,25 +935,55 @@ function showSnack(text, onUndo) {
 function hideSnack() { el('snack').classList.remove('show'); }
 el('snackUndo').addEventListener('click', () => { hideSnack(); if (snackUndoFn) snackUndoFn(); else undoLast(); });
 
-// ---- Time-out (2026-10-19): one tap; the next point ends it. Tap again (or UNDO) to cancel. ----
+// ---- Time-out (2026-10-19; 2026-11-02 Kenny: 2nd tap = "Time-out over") ----
+// 1st tap: time-out starts (the video cuts it out). 2nd tap: "Time-out over" - the video restarts
+// 3 s before that tap. UNDO on the message cancels a tap made by mistake. No 2nd tap: the next
+// point still ends it and the workflow uses the serve whistle / 60 s rule. A timer runs on the
+// button and the phone buzzes once at 1:00 (time-outs are max 1 minute).
+let timeoutTimer = null, timeoutBuzzed = false;
 function cancelTimeout() {
   if (!timeoutOpen) return;
   timeouts.pop(); timeoutOpen = false;
-  saveCheckpoint(); render();
+  stopTimeoutTimer(); saveCheckpoint(); render(); refreshTimeoutBtn();
 }
+function undoTimeoutOver() {
+  const last = timeouts[timeouts.length - 1];
+  if (!last || !last.endW) return;
+  delete last.endW; delete last.end_t;
+  timeoutOpen = true; startTimeoutTimer(); saveCheckpoint(); render(); refreshTimeoutBtn();
+}
+function startTimeoutTimer() {
+  stopTimeoutTimer(); timeoutBuzzed = false;
+  timeoutTimer = setInterval(refreshTimeoutBtn, 1000);
+}
+function stopTimeoutTimer() { if (timeoutTimer) { clearInterval(timeoutTimer); timeoutTimer = null; } }
 el('timeoutBtn').addEventListener('click', () => {
   if (!running || paused) return;
-  if (timeoutOpen) { cancelTimeout(); showSnack('Time-out cancelled'); return; }
+  if (timeoutOpen) {
+    const last = timeouts[timeouts.length - 1];
+    if (last) { last.endW = Date.now(); last.end_t = currentElapsed(); }
+    timeoutOpen = false; stopTimeoutTimer();
+    buzz(30); saveCheckpoint(); render(); refreshTimeoutBtn();
+    showSnack('Time-out over — the video restarts 3 s before this', undoTimeoutOver);
+    return;
+  }
   timeouts.push({ t: currentElapsed(), w: Date.now(), set: currentSet });
-  timeoutOpen = true;
+  timeoutOpen = true; startTimeoutTimer();
   buzz(30);
-  saveCheckpoint(); render();
-  showSnack('Time-out marked — the video will skip it', cancelTimeout);
+  saveCheckpoint(); render(); refreshTimeoutBtn();
+  showSnack('Time-out — tap again when play resumes', cancelTimeout);
 });
 function refreshTimeoutBtn() {
   const b = el('timeoutBtn');
   b.classList.toggle('on', timeoutOpen);
-  el('timeoutLabel').innerHTML = timeoutOpen ? '⏸&nbsp; Time-out in progress' : '⏸&nbsp; Time-out';
+  let label = '⏸&nbsp; Time-out';
+  if (timeoutOpen) {
+    const last = timeouts[timeouts.length - 1];
+    const sec = last ? Math.max(0, Math.floor((Date.now() - last.w) / 1000)) : 0;
+    label = `⏸&nbsp; Time-out ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} — tap when play resumes`;
+    if (sec >= 60 && !timeoutBuzzed) { timeoutBuzzed = true; buzz([200, 120, 200]); }
+  } else { stopTimeoutTimer(); }
+  el('timeoutLabel').innerHTML = label;
   b.disabled = !running || paused;
 }
 
@@ -1189,7 +1241,7 @@ el('newMatchBtn').addEventListener('click', () => {
   }
   clearTimeout(newArmed); newArmed = null;
   b.classList.remove('armed'); b.textContent = 'Start a new match';
-  startTime = null; running = false; paused = false;
+  startTime = null; running = false; paused = false; startFocus = [];
   pausedTotal = 0; pauseStartedAt = null;
   events = []; setHistory = []; recordings = []; forcedSets = [];
   timeouts = []; timeoutOpen = false;
@@ -1269,7 +1321,12 @@ function buildMatchData() {
            recordings: recs, events: out,
            // 2026-10-19: time-out taps (video pipeline cuts from tap + 5 s to just before the next serve)
            timeouts: timeouts.map(x => ({ t: Math.round(Math.max(0, x.t + offset) * 1000) / 1000, set: x.set,
-                                          ...(x.w ? { at: localIso(x.w), wms: x.w } : {}) })) };
+                                          ...(x.w ? { at: localIso(x.w), wms: x.w } : {}),
+                                          // 2026-11-02: "Time-out over" tap (video restarts 3 s before it)
+                                          ...(x.endW ? { endAt: localIso(x.endW), endW: x.endW } : {}) })),
+           // 2026-11-03: when this page was hidden / shown from 30 min before to 3 min after START (phone clock) - the
+           // camera has to have started recording while it was hidden (Mimo in front)
+           focusBeforeStart: startFocus.map(x => ({ v: x.v, wms: x.w, ...(x.load ? { load: true } : {}) })) };
 }
 
 // The phone's LOCAL date (toISOString() is UTC, which rolls over at 8 pm in Toronto).
