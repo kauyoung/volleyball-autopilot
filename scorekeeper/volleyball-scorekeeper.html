@@ -162,15 +162,20 @@
 
   /* Status pill */
   .topline { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--s2); }
+  /* 2026-11-04: the status dot is drawn by the pill itself (::before) in its own reserved space on the
+     left, so no browser or content blocker can collapse it under the text */
   .pill {
-    display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
-    font-size: 15px; font-weight: 700; color: var(--label-3);
-    background: var(--surface); padding: 8px 14px 8px 12px; border-radius: 100px;
+    position: relative; display: inline-block; white-space: nowrap;
+    font-size: 15px; font-weight: 700; line-height: 20px; color: var(--label-3);
+    background: var(--surface); padding: 8px 14px 8px 32px; border-radius: 100px;
+  }
+  .pill::before {
+    content: ""; position: absolute; left: 13px; top: 50%; width: 10px; height: 10px; margin-top: -5px;
+    border-radius: 50%; background: currentColor;
   }
   .pill.live { color: var(--green-text); background: var(--green-dim); }
   .pill.stopped { color: var(--amber-text); background: var(--amber-dim); }
-  .pill .dot { display: block; flex: 0 0 10px; width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
-  .pill.live .dot { animation: blink 1.8s ease-in-out infinite; }
+  .pill.live::before { animation: blink 1.8s ease-in-out infinite; }
   @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
   .timer { font-size: 15px; font-weight: 600; color: var(--label-3); font-variant-numeric: tabular-nums; }
 
@@ -347,7 +352,7 @@
   <!-- ============ STEP 3: scoring ============ -->
   <section id="stPlay" hidden>
     <div class="topline">
-      <span class="pill live" id="statusPill"><span class="dot"></span><span id="statusText">Recording</span></span>
+      <span class="pill live" id="statusPill"><span id="statusText">Recording</span></span>
       <span class="timer" id="timeDisplay">00:00:00</span>
     </div>
     <div class="set-head">
@@ -413,7 +418,7 @@
   <!-- ============ Camera stopped: waiting to resume ============ -->
   <section id="stResume" hidden>
     <div class="card">
-      <span class="pill stopped" style="margin-bottom: var(--s2)"><span class="dot"></span><span>Camera stopped</span></span>
+      <span class="pill stopped" style="margin-bottom: var(--s2)"><span>Camera stopped</span></span>
       <h2 class="step-title" id="resumeTitle">Next: Set 2</h2>
       <ol class="steps" id="resumeSteps">
         <li><span class="num">1</span><span>Start <b>recording</b> on the camera again.</span></li>
