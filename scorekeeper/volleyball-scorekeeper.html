@@ -163,7 +163,7 @@
   /* Status pill */
   .topline { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--s2); }
   /* 2026-11-04: the status dot is drawn by the pill itself (::before) in its own reserved space on the
-     left, so no browser or content blocker can collapse it under the text */
+     left, so no browser or content blocker can collapse it under the text (iPhone + Chrome desktop) */
   .pill {
     position: relative; display: inline-block; white-space: nowrap;
     font-size: 15px; font-weight: 700; line-height: 20px; color: var(--label-3);
@@ -282,12 +282,115 @@
   .countdown #moCountText { font-size: 16px; font-weight: 700; }
   .countdown.done { background: var(--amber-dim); color: var(--amber-text); }
   .footnote { font-size: 13px; line-height: 1.5; color: var(--label-3); text-align: center; margin-top: var(--s2); }
+
+  /* ===== 2026-11-04 polish layer (same screens, cleaner look) ===== */
+  :root {
+    --bg: #F4F5F7; --label: #0F172A; --label-2: #334155; --label-3: #64748B; --label-4: #94A3B8;
+    --line: rgba(15,23,42,0.08);
+    --team1: #2F9E44; --team1-2: #237A34;
+    --opp: #6BBDFF;  --opp-2: #4AA6F2;
+    --green: #22A447; --green-2: #1B8A3B;
+    --ink: #0F172A;
+    --r-lg: 20px; --r-md: 14px; --r-sm: 12px;
+  }
+  body { font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+         font-feature-settings: "cv11" 1; letter-spacing: -0.006em; }
+  .team-btn .score, .timer, #moCountNum { font-variant-numeric: tabular-nums; }
+  .list-row .r { font-variant-numeric: normal; }
+  .appbar { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 2px 0 18px; }
+  .appbar .mark { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
+                  background: linear-gradient(145deg, var(--team1), var(--team1-2)); box-shadow: 0 2px 6px rgba(47,158,68,0.35); }
+  .appbar h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.015em; margin: 0; color: var(--ink); }
+  .card { border-radius: var(--r-lg); border: 1px solid var(--line);
+          box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.05); }
+  .step-title { font-size: 24px; font-weight: 800; letter-spacing: -0.025em; color: var(--ink); }
+  .step-sub { font-size: 16px; color: var(--label-3); }
+  .steps li { font-size: 17px; font-weight: 500; color: var(--label-2); border-bottom: 1px solid var(--line); }
+  .steps .num { flex: 0 0 28px; height: 28px; font-size: 14px; background: var(--ink); margin-top: 1px; }
+  .field label, .section-header { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: var(--label-3); }
+  .field input { background: #F8FAFC; border: 1px solid var(--line); border-radius: var(--r-sm); font-size: 18px; font-weight: 600; }
+  .field input:focus { border-color: var(--opp-2); box-shadow: 0 0 0 4px rgba(107,189,255,0.25); background: #fff; }
+  .fmt button { background: #F8FAFC; border: 1px solid var(--line); font-size: 16px; font-weight: 700; color: var(--ink); }
+  .fmt button small { font-size: 14px; color: var(--label-3); font-weight: 500; }
+  .fmt button.on { background: rgba(107,189,255,0.12); border-color: var(--opp-2); box-shadow: 0 0 0 1px var(--opp-2) inset; }
+  .fmt button.on::after { content: ""; width: 18px; height: 18px; border-radius: 50%; right: 10px; top: 10px;
+    background: var(--opp-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat; }
+  .fmt-note { color: var(--label-3); }
+  .btn { border-radius: var(--r-md); font-weight: 700; letter-spacing: -0.015em; }
+  .btn-go { background: linear-gradient(180deg, var(--green), var(--green-2)); color: #fff;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 6px 16px rgba(34,164,71,0.28); }
+  .btn-dark { background: var(--ink); box-shadow: 0 6px 16px rgba(15,23,42,0.18); }
+  .btn-plain { border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(15,23,42,0.04); color: var(--ink); }
+  .btn-link { color: var(--label-3); font-weight: 600; }
+  .pulse { animation: goPulse2 1.8s ease-in-out infinite; }
+  @keyframes goPulse2 { 0%,100% { box-shadow: 0 6px 16px rgba(34,164,71,0.28), 0 0 0 0 rgba(34,164,71,0.45); }
+                        50% { box-shadow: 0 6px 16px rgba(34,164,71,0.28), 0 0 0 10px rgba(34,164,71,0); } }
+  .topline { margin-bottom: 14px; }
+  .pill { font-size: 14px; letter-spacing: 0; padding: 7px 14px 7px 30px; }
+  .pill::before { left: 12px; width: 9px; height: 9px; margin-top: -4.5px; }
+  .pill.live { background: rgba(34,164,71,0.10); color: #157A34; box-shadow: 0 0 0 1px rgba(34,164,71,0.18) inset; }
+  .pill.stopped { box-shadow: 0 0 0 1px rgba(255,159,10,0.25) inset; }
+  .timer { font-size: 14px; font-weight: 600; color: var(--label-3); background: #fff; border: 1px solid var(--line);
+           padding: 6px 12px; border-radius: 100px; }
+  .set-head .t { font-size: 17px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); }
+  .set-head .s { font-size: 15px; font-weight: 600; color: var(--label-2); margin-top: 2px; }
+  .tap-help { font-size: 15px; font-weight: 600; color: var(--label-3); margin-bottom: 12px; }
+  .team-btn { border-radius: 22px; min-height: 148px; padding: 18px 22px;
+              box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 10px 24px rgba(15,23,42,0.12); }
+  .team-btn.t1 { background: linear-gradient(160deg, var(--team1) 0%, var(--team1-2) 100%); }
+  .team-btn.t2 { background: linear-gradient(160deg, var(--opp) 0%, var(--opp-2) 100%); color: #0B2540; }
+  .team-btn .name { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; }
+  .team-btn .sets { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+                    padding: 4px 10px; background: rgba(255,255,255,0.18); }
+  .team-btn.t2 .sets { background: rgba(255,255,255,0.35); }
+  .team-btn .score { font-size: 88px; font-weight: 800; letter-spacing: -0.05em; }
+  .timeout-btn { border: 1.5px solid rgba(15,23,42,0.14); color: var(--ink); background: #fff; border-radius: var(--r-md);
+                 box-shadow: 0 1px 2px rgba(15,23,42,0.04); font-size: 17px; }
+  .timeout-btn .ico { flex-shrink: 0; }
+  #timeoutLabel { display: inline-flex; align-items: center; gap: 8px; }
+  .timeout-btn.on { background: linear-gradient(180deg, #FFB020, #F59E0B); border-color: #E08E00; color: #1D1400;
+                    box-shadow: 0 6px 16px rgba(245,158,11,0.3); }
+  #statusBanner, .banner { border-radius: var(--r-md); }
+  details.more > summary { background: transparent; color: var(--label-3); font-size: 15px; font-weight: 600; padding: 12px; }
+  details.more > summary::after { content: " ›"; }
+  .result-big { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; color: var(--ink); }
+  .question { font-size: 19px; color: var(--ink); }
+  .countdown { border: 1px solid rgba(34,164,71,0.18); }
+  .snack { background: rgba(15,23,42,0.92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+           border-radius: 18px; padding: 10px 10px 10px 18px; font-size: 15px; font-weight: 600;
+           box-shadow: 0 12px 32px rgba(15,23,42,0.28); }
+  .snack button { background: #fff; color: var(--ink); border-radius: 12px; font-weight: 800; letter-spacing: 0.02em; min-height: 46px; }
+  .toast { background: #fff; color: var(--ink); box-shadow: 0 12px 32px rgba(15,23,42,0.16), 0 0 0 1px var(--line);
+           border-left: 4px solid #F59E0B; text-align: left; font-weight: 600; }
+  .list-row { border-bottom: 1px solid var(--line); }
+  /* 2026-11-04: alignment. Working screens (setup, ready, scoring, resume, done) line up on the left edge;
+     the two announcement screens (set over, match over) are centred top to bottom. */
+  .set-head { display: flex; justify-content: space-between; align-items: baseline; text-align: left; margin: 2px 2px 14px; }
+  .set-head .s { margin-top: 0; }
+  .tap-help { text-align: left; margin: 0 2px 10px; }
+  #stSetBreak .card, #stMatchOver .card { text-align: center; }
+  #stSetBreak .step-title, #stMatchOver .step-title { text-align: center; }
+  #stSetBreak .note-sm { text-align: center; }
+  #stMatchOver .steps li { text-align: left; }
+  details.more > summary { text-align: left; padding-left: 4px; }
+  #statusBanner { justify-content: center; text-align: center; margin-bottom: 14px; }
+  /* 2026-11-04: no pill shapes - rounded rectangles like every other element; status and timer match in height */
+  .pill { border-radius: 10px; padding: 7px 12px 7px 29px; line-height: 20px; }
+  .pill::before { left: 12px; }
+  .timer { border-radius: 10px; padding: 7px 12px; line-height: 20px; font-size: 14px; }
+  .team-btn .sets { border-radius: 8px; }
+  details.more > summary { text-align: center; padding-left: 12px; }   /* both help links centred */
 </style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 <div class="wrap">
 
-  <header><h1>🏐 Volleyball Scorekeeper</h1></header>
+  <header class="appbar">
+    <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9.2"/><path d="M12 2.8c1.2 3.6.6 7.2-1.8 10.2M21 13.6c-3.6.4-7-.8-9.6-3.6M4.4 17.6c1.8-3.4 4.6-5.6 8.4-6.2"/></svg></span>
+    <h1>Volleyball Scorekeeper</h1>
+  </header>
 
   <!-- ============ RESTORE: a match was in progress when the page closed ============ -->
   <section id="stRestore" hidden>
@@ -360,7 +463,6 @@
       <div class="s" id="setTargetLabel">First to 25</div>
     </div>
     <div id="statusBanner" hidden></div>
-    <p class="tap-help">Tap the team that won the point</p>
 
     <button class="team-btn t1" id="t1Plus">
       <span class="who">
@@ -377,7 +479,7 @@
       <span class="score" id="t2Score">0</span>
     </button>
     <button class="btn timeout-btn" id="timeoutBtn" type="button">
-      <span id="timeoutLabel">⏸&nbsp; Time-out</span>
+      <span id="timeoutLabel"><svg class="ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.2" fill="currentColor"/></svg> Time-out</span>
       <span class="to-sub" id="timeoutSub">Tap again when play starts</span>
     </button>
     <button class="btn btn-plain" id="timeUpBtn" hidden style="margin-top:var(--s2)">Time's up, end the scrimmage</button>
@@ -406,10 +508,11 @@
       <h2 class="step-title" id="breakTitle">Set 1 is over</h2>
       <p class="result-big" id="breakScore">25-18</p>
       <p class="step-sub" style="text-align:center" id="breakWho"></p>
-      <p class="question">Is the camera still recording?</p>
+      <p class="question">Stop recording on the camera for the break</p>
+      <p class="note-sm" style="text-align:center">It gives the camera a chance to cool down. Then tap the green button.</p>
       <div class="stack">
-        <button class="btn btn-big btn-go" id="breakRolling">Yes, start set 2</button>
-        <button class="btn btn-plain" id="breakStopped">No, I stopped it for the break</button>
+        <button class="btn btn-big btn-go" id="breakStopped">I stopped the camera</button>
+        <button class="btn btn-plain" id="breakRolling">I left it recording, start set 2</button>
         <button class="btn btn-plain" id="breakTimeUp" hidden>Time's up, end the scrimmage here</button>
       </div>
     </div>
@@ -637,7 +740,7 @@ function render() {
     el('breakTitle').textContent = `Set ${currentSet} is over`;
     el('breakScore').textContent = `${t1Score}-${t2Score}`;
     el('breakWho').textContent = t1Score === t2Score ? `Set ${currentSet} is tied` : `${winner} won set ${currentSet}`;
-    el('breakRolling').textContent = `Yes, start set ${currentSet + 1}`;
+    el('breakRolling').textContent = `I left it recording, start set ${currentSet + 1}`;
   }
   if (stage === 'resume') {
     const betweenSets = t1Score === 0 && t2Score === 0 && setHistory.some(h => h.set === currentSet - 1);
@@ -1005,11 +1108,11 @@ el('timeoutBtn').addEventListener('click', () => {
 function refreshTimeoutBtn() {
   const b = el('timeoutBtn');
   b.classList.toggle('on', timeoutOpen);
-  let label = '⏸&nbsp; Time-out';
+  let label = '<svg class="ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.2" fill="currentColor"/></svg> Time-out';
   if (timeoutOpen) {
     const last = timeouts[timeouts.length - 1];
     const sec = last ? Math.max(0, Math.floor((Date.now() - last.w) / 1000)) : 0;
-    label = `⏸&nbsp; Time-out ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+    label = `<svg class="ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.2" fill="currentColor"/></svg> Time-out ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
     if (sec >= 60 && !timeoutBuzzed) { timeoutBuzzed = true; buzz([200, 120, 200]); }
   } else { stopTimeoutTimer(); }
   el('timeoutLabel').innerHTML = label;
@@ -1401,12 +1504,12 @@ function matchFilename() {
 }
 
 // ===========================================================================
-// AUTO-SEND TO GOOGLE DRIVE (scorekeeper-drive-upload.gs Google Apps Script)
+// AUTO-SEND TO GOOGLE DRIVE (scorekeeper-drive-upload.gs, Google Apps Script)
 // Kept on the phone first, then sent; retries on reopen / back online /
 // back to foreground until Drive confirms.
 // ===========================================================================
 const DRIVE_URL = '';
-const DRIVE_KEY = 'CHANGE-ME';
+const DRIVE_KEY = 'CHANGE-ME';   // rotated 2026-10-27 (must match SECRET_KEY in the Apps Script)
 const PENDING_KEY = 'vbPendingUploads';
 const LASTSENT_KEY = 'vbLastSent';
 
