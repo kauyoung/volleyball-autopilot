@@ -1355,7 +1355,8 @@ function localIso(ms) {
 }
 function matchFilename() {
   const [n1, n2] = teamNames();
-  const safe = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  // a name with no plain letters or digits (only symbols, or e.g. Chinese) still needs a valid file name
+  const safe = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'team';
   // start time in the name (2026-09-28): two matches vs the same team on one day
   // (pool + playoff) no longer share a file name.
   const d = new Date(startTime || Date.now()), p = n => String(n).padStart(2, '0');

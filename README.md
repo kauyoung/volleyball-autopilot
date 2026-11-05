@@ -240,6 +240,12 @@ it and retries automatically (on reopen, when back online, when the page
 returns to the foreground) until Drive confirms. If you change the script
 later, redeploy it as a new version or the old one keeps running.
 
+The key is readable by anyone who opens the page, so the script protects the
+folder itself: it only accepts real match files (file-name pattern, size,
+scores, a recent start date), it never replaces an existing file with a
+different one (the newcomer goes to a `_held` subfolder), and it accepts at
+most 20 files a day.
+
 </details>
 
 ## Automatic set alignment
