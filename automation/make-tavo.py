@@ -1,5 +1,5 @@
 """
-Volleyball Autopilot — game-play-only video for TAVO (AI stats), 2026-09-28 (Kenny approved).
+Volleyball Autopilot — game-play-only video for TAVO (AI stats), 2026-09-28 (approved).
 
 TAVO's season budget is 120 hours of video and 20 GB per upload, so this makes a
 separate, trimmed 1080p file straight from the camera files (no Resolve, no
@@ -10,7 +10,7 @@ scoreboard, no intro/summary):
   * 1920x1080, same frame rate as the camera (59.94), H.264 ~12 Mbps (~5.4 GB/hour),
     camera audio AAC 160k, fast-start MP4
   * output: <match folder>\\<date> <team1> vs <team2> - TAVO.mp4
-    Kenny uploads it to TAVO himself.
+    the owner uploads it to TAVO himself.
 
   C:\\Python314\\python.exe make-tavo.py            (uses youtube-info.json from apply-match)
   OFF by default since 2026-10-06 (the coach picks which games go to TAVO): setup runs it
@@ -38,20 +38,20 @@ WORK = r"C:\Users\YOURNAME\scoreboard-pipeline"
 INFO = os.environ.get("TAVO_INFO") or os.path.join(WORK, "youtube-info.json")
 LOG = os.path.join(WORK, "tavo-log.txt")
 FPS_NUM, FPS_DEN = 60000, 1001
-BEFORE = float(os.environ.get("TAVO_BEFORE", 60))    # 1 min before each set's first point (Kenny, 2026-09-28; was 2 min)
+BEFORE = float(os.environ.get("TAVO_BEFORE", 60))    # 1 min before each set's first point (the owner, 2026-09-28; was 2 min)
 AFTER = float(os.environ.get("TAVO_AFTER", 5))
 MAX_GB = 19.5
-# 2026-10-26 (Kenny, MYVB tournament): TAVO_4K=1 keeps 3840x2160 (H.264 ~40 Mbps, ~18 GB/hour - a
+# 2026-10-26 (the owner, MYVB tournament): TAVO_4K=1 keeps 3840x2160 (H.264 ~40 Mbps, ~18 GB/hour - a
 # 40-min match ~12 GB, under TAVO's 20 GB per upload); TAVO_BRIGHT=1 = the YouTube "brighter" look
 # (slope 1.06 / power 0.85) on the luma, full frame; TAVO_CUT_TIMEOUTS=1 cuts the time-outs exactly
 # like the YouTube video (the match's _workflow\bookends.json "timeout" cuts).
-# defaults since 2026-10-26 afternoon (Kenny): 4K + time-outs cut ON (set "0" to turn off); brightening
+# defaults since 2026-10-26 afternoon: 4K + time-outs cut ON (set "0" to turn off); brightening
 # only when asked (run-tournament / run-match set TAVO_BRIGHT=1 when the YouTube picture choice is "brighter")
 K4 = os.environ.get("TAVO_4K", "1") != "0"
 BRIGHT = os.environ.get("TAVO_BRIGHT") == "1"
 CUT_TO = os.environ.get("TAVO_CUT_TIMEOUTS", "1") != "0"
 OUT_W, OUT_H = (3840, 2160) if K4 else (1920, 1080)
-# 2026-10-26 (Kenny: TAVO accepts H.265): H.265 by default - ~40 % faster at 4K (the H.264 encoder was
+# 2026-10-26 (TAVO accepts H.265): H.265 by default - ~40 % faster at 4K (the H.264 encoder was
 # the bottleneck) and ~25 % smaller; TAVO_CODEC=h264 for the old H.264 files
 HEVC = os.environ.get("TAVO_CODEC", "hevc").lower() != "h264"
 # 2026-10-26 perf test (20 s of the Oct 25 Maverick clip, 4K60, brightened): p5 15.8 s, p4 12.1 s

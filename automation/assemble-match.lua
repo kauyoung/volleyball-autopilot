@@ -83,7 +83,7 @@ local FRAME_RATE_FALLBACK = "59.94"
 local TIMELINE_W  = "3840"
 local TIMELINE_H  = "2160"
 
--- Named after the MATCH date (2026-09-27, Kenny): taken from the first camera
+-- Named after the MATCH date (2026-09-27): taken from the first camera
 -- file's name (DJI_YYYYMMDDhhmmss_...), else a date at the start of the match
 -- folder's name, else today. Filled in below once the clips are found.
 local TIMELINE_NAME = "Match " .. os.date("%Y-%m-%d")

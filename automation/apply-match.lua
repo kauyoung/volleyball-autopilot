@@ -548,7 +548,7 @@ end
 
 local sc1, sc2, st1, st2, setNo, srv1, srv2 = {}, {}, {}, {}, {}, {}, {}
 
--- 2026-10-25 (Kenny: both serve balls showing at the end of Play Off set 1): several
+-- 2026-10-25 (both serve balls showing at the end of Play Off set 1): several
 -- events on the SAME frame (scorekeeper double taps, set start + first points, a camera
 -- gap) made animate() write its "hold" key at f-1 more than once - the second write
 -- overwrote the first with the wrong value and the Blend spline then RAMPED the other
@@ -915,7 +915,7 @@ if SCORE_POP then
                          math.floor(SCORE_POP_SEC * fps + 0.5))
       local rgb = TEAM_RGB[team]
       local tintF = math.floor(SCORE_TINT_SEC * fps + 0.5)
-      -- 2026-10-14 (Kenny): on the point that wins a set, the score turns the
+      -- 2026-10-14: on the point that wins a set, the score turns the
       -- team colour and STAYS that colour until the next set starts (the 0-0
       -- event, hidden by the set-change dip); other points flash as before.
       local wins = setWins(team)
@@ -966,7 +966,7 @@ for team = 1, 2 do
     local base = 0.043
     pcall(function() local v = node.Size[0] if type(v) == "number" then base = v end end)
     local n = pulse(node, "Size", frames, base, base * SCORE_POP_SCALE, math.floor(SCORE_POP_SEC * fps + 0.5))
-    -- 2026-10-14 (Kenny): the number stays white; a rounded box in the team
+    -- 2026-10-14: the number stays white; a rounded box in the team
     -- colour (Team<n>SetsChipMerge) shows behind it: on at the win, held
     -- 0.25 s, faded out by 1.4 s.
     for _, input in ipairs({ "Red1", "Green1", "Blue1" }) do
@@ -1056,7 +1056,7 @@ local NAME_CHAR_W  = 0.01265  -- Barlow Condensed Bold CAPS at NAME_SIZE 0.0407 
 local NAMES_UPPERCASE = true
 local NAME_MARGIN  = 0.020    -- gap from the end of the bar to the text
 -- Keep BAR_WIDTH in step with build-scoreboard.lua (0.75 until 2026-09-25).
-local BAR_WIDTH    = 0.875   -- 2026-10-21 (Kenny): was 0.85; keep in step with build-scoreboard.lua
+local BAR_WIDTH    = 0.875   -- 2026-10-21: was 0.85; keep in step with build-scoreboard.lua
 local BAR_L, BAR_R = 0.5 - BAR_WIDTH / 2, 0.5 + BAR_WIDTH / 2
 -- Keep these in step with build-scoreboard.lua. Names are edge-anchored now
 -- (2026-09-25), so these only correct the font's side bearings: 40px from
@@ -1065,7 +1065,7 @@ local NAME1_NUDGE  = 0.0030
 local NAME2_NUDGE  = -0.0015
 
 -- Widest a name may be before it reaches the serve ball. The ball sits at
--- 0.3598 / 0.6402 (moved out from 0.3631 on 2026-09-27, Kenny) and is ~0.0093
+-- 0.3598 / 0.6402 (moved out from 0.3631 on 2026-09-27, the owner) and is ~0.0093
 -- wide either side of that; 0.341 still leaves ~26 px (4K) before the ball. Symmetric, so one number covers both sides.
 -- The inner limit (~0.341) is fixed by the serve ball; the outer start moves
 -- with the bar, so the room grows as the bar widens.

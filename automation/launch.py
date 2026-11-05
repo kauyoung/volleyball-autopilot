@@ -1,5 +1,5 @@
 """
-Start a pipeline script on Kenny's PC so it runs NOW (2026-10-26 perf fix).
+Start a pipeline script on the owner's PC so it runs NOW (2026-10-26 perf fix).
 
 Why: a process started with subprocess.Popen from inside Resolve's scripting
 connection (Claude's run_script_unsafe) used to sit frozen until the NEXT call

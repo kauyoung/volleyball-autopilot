@@ -1,6 +1,6 @@
 """
-Volleyball Autopilot - picture check across camera restarts (2026-11-03, Kenny #3; Nov 1 Niagara: after the SD-card
-restart the camera came back with another profile - wider and darker - and nobody noticed until Kenny did).
+Volleyball Autopilot - picture check across camera restarts (2026-11-03, the owner #3; Nov 1 Niagara: after the SD-card
+restart the camera came back with another profile - wider and darker - and nobody noticed until the owner did).
 
     C:\\Python314\\python.exe picture-joins.py "<match folder>"
 
@@ -142,7 +142,7 @@ def main(folder):
             fixes.append({"clips": [tag], "zoom": 1.0, "pan": 0, "tilt": 0, "slope": slope, "power": power})
             lines.append(f"FLAG: picture changed after the camera restart before {name} - " + "; ".join(why) +
                          " - probably another camera mode/profile (Nov 1 Niagara). See picture-joins.jpg; fix with clip-fix.txt "
-                         "after Kenny OKs a preview (brightness hint in clip-fix.suggested.txt: slope "
+                         "after the owner OKs a preview (brightness hint in clip-fix.suggested.txt: slope "
                          f"{slope}, power {power}; zoom/pan must be set by eye)")
             sheet.append((name, A, B))
             continue                                 # keep the last right picture as the reference

@@ -1,5 +1,5 @@
 """
-Volleyball Autopilot — copy every match folder to Kenny's external hard drive (2026-10-03).
+Volleyball Autopilot — copy every match folder to the owner's external hard drive (2026-10-03).
 
     python archive-matches.py            # find the external drive by itself
     python archive-matches.py X:         # or name it

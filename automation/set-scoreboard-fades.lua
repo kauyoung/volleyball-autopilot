@@ -1,7 +1,7 @@
 -- Re-times the scoreboard's whole-board fade (FadeAllMerge Blend) for the
 -- intro/summary bookends (2026-09-28). Globals (seconds): SB_IN_A..SB_IN_B =
 -- fade in, SB_OUT_A..SB_OUT_B = fade out. Writes _overlay_check\fade-log.txt.
--- Set-break cuts (2026-10-06, Kenny): SB_GAPS = { {hide, show_a, show_b}, ... } (seconds):
+-- Set-break cuts (2026-10-06): SB_GAPS = { {hide, show_a, show_b}, ... } (seconds):
 -- the board goes to 0 at `hide` (the wipe already covers the screen there), stays hidden
 -- through the cut and the panel's exit, and fades back in slowly from show_a to show_b.
 local msg

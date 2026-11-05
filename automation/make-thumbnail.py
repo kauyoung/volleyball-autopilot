@@ -1,9 +1,9 @@
-# Volleyball Autopilot YouTube thumbnail (layout approved by Kenny 2026-10-05/06).
+# Volleyball Autopilot YouTube thumbnail (layout approved by the owner 2026-10-05/06).
 #   PY make-thumbnail.py <match.json> <frame.jpg> <out.jpg> [fonts-dir]
 # One left edge; "VS" centred between the names with a rule each side; our badge only;
 # one tile (event name, else SCRIMMAGE, else none). Safe margins: 120 px left/right, >= 84 px
 # top/bottom for the text (WhatsApp / YouTube crop and round the corners); the corner badge sits
-# 54 px from the top so a long opponent's VS rule never touches it (Kenny 2026-10-06; he went
+# 54 px from the top so a long opponent's VS rule never touches it (the owner 2026-10-06; he went
 # back to this layout from the "hero badge" option B, kept in _backup-2026-10-06-before-final-tidy).
 # Long names: shrink -> two lines -> smaller -> trim with "…" (never past the margins).
 # The whole block is re-flowed so nothing ever overlaps the tile or the bottom margin.
@@ -15,8 +15,8 @@ GREEN=(112,213,73); SKY=(107,189,255); WHITE=(255,255,255); INK=(2,3,3)
 FILES=r"C:\Users\YOURNAME\scoreboard-pipeline"
 LOGO1=FILES+r"\team-logo-square.png"
 MX, TOP, BOTTOM = 120, 84, H-88          # safe area
-BADGE_R = 74          # 2026-10-06: badge in the top-right corner (Kenny: it sat on the VS line)
-BADGE_TOP = 54        # top of the green ring; 30 px above the text safe line so it clears the VS rule (Kenny 2026-10-06)
+BADGE_R = 74          # 2026-10-06: badge in the top-right corner (it sat on the VS line)
+BADGE_TOP = 54        # top of the green ring; 30 px above the text safe line so it clears the VS rule (the owner 2026-10-06)
 BADGE_BOT = BADGE_TOP + 2*(BADGE_R+6)
 RULE_GAP = 34         # min space between the badge ring and the VS rule
 
@@ -72,7 +72,7 @@ def main(match, frame, out, fdir=None):
     cx=W-MX-BADGE_R-6
     maxw1=cx-BADGE_R-6-40-L          # our name stops before the badge
     maxw2=W-MX-L                     # opponent row has the full width
-    # The tile at the bottom = the tournament / event name (2026-10-06, Kenny: "FINAL" makes no
+    # The tile at the bottom = the tournament / event name (2026-10-06: "FINAL" makes no
     # sense on a thumbnail) - <match folder>\event.txt. No event: SCRIMMAGE for a scrimmage,
     # otherwise no tile at all.
     try: event=open(os.path.join(os.path.dirname(os.path.abspath(match)),"event.txt"),encoding="utf-8").read().strip().upper()

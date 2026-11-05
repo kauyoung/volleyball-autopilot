@@ -10,7 +10,7 @@ Volleyball Autopilot — one-command end-to-end test on the permanent fixture (2
                                            # (later points moved 30 s; min cut 8 s, fallback 15 s for the short fixture)
     python zz-test.py --team2 "Lakeview Thunder 14U" # 2026-10-21: opponent name in the zz copy only (name fit / logo checks)
 
-Safety (Kenny, 2026-10-14 — two earlier tests overwrote real files):
+Safety (the owner, 2026-10-14 — two earlier tests overwrote real files):
   * refuses to start while a real run is busy or Resolve is rendering;
   * snapshots every state file in the scripts folder (status/summary/result/log .txt/.json,
     approval kits) and PUTS THEM BACK afterwards; the test's own copies go to
@@ -84,7 +84,7 @@ def busy():
         import DaVinciResolveScript as d
         r = d.scriptapp("Resolve")
         if not r:
-            return "Resolve isn't open (Kenny opens it from the Start menu)"
+            return "Resolve isn't open (the owner opens it from the Start menu)"
         p = r.GetProjectManager().GetCurrentProject()
         if p and p.IsRenderingInProgress():
             return f"Resolve is rendering ({p.GetName()})"
@@ -169,7 +169,7 @@ def set_team2(folder, name):
 
 
 def tidy_after():
-    """2026-10-19 (Kenny): the test cleans up after itself — its Resolve test project(s) are deleted
+    """2026-10-19: the test cleans up after itself — its Resolve test project(s) are deleted
     (zz test / zz tournament only, never while rendering) and only the last 3 test logs and
     state backups are kept. Returns a short note."""
     notes = []

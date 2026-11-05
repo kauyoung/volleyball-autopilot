@@ -1,5 +1,5 @@
 """
-Volleyball Autopilot - match format correction (2026-11-02, Kenny: Nov 1 Unity Apex was scored as best of 3
+Volleyball Autopilot - match format correction (2026-11-02: Nov 1 Unity Apex was scored as best of 3
 by mistake; the match was 2 sets total).
 
     C:\\Python314\\python.exe fix-format.py "<match folder>" --two-sets

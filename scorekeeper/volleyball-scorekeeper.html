@@ -99,7 +99,7 @@
   .field-note { font-size: 14px; line-height: 1.45; color: var(--label-3); margin-top: var(--s1); }
   .field-note.warn { color: var(--amber-text); font-weight: 600; }
   /* Match format picker — 2x2 grid so the whole setup screen fits on a phone
-     without scrolling (2026-10-02, Kenny) */
+     without scrolling (2026-10-02) */
   .fmt { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s1); }
   .fmt button {
     position: relative; text-align: left; min-height: 60px; padding: 9px 12px; border-radius: var(--r-sm);
@@ -439,7 +439,7 @@
       <div class="countdown" id="moCount"><span id="moCountNum">0:30</span><span id="moCountText">Keep the camera recording for the celebration</span></div>
       <ol class="steps">
         <li><span class="num">1</span><span>When the countdown ends, stop recording on the camera.</span></li>
-        <li><span class="num">2</span><span>Tap <b>FINISH MATCH</b>. The scores go to Kenny by themselves.</span></li>
+        <li><span class="num">2</span><span>Tap <b>FINISH MATCH</b>. The scores upload to Google Drive by themselves.</span></li>
       </ol>
       <button class="btn btn-big btn-go" id="finishBtn">FINISH MATCH</button>
     </div>
@@ -460,7 +460,7 @@
       <summary>Scores didn't send?</summary>
       <div class="stack">
         <button class="btn btn-plain" id="exportBtn">Save the match file</button>
-        <p class="more-note">Only needed if sending to Kenny doesn't work. You can then text or email the file to him.</p>
+        <p class="more-note">Only needed if the upload to Google Drive doesn't work. You can then text or email the file instead.</p>
       </div>
     </details>
   </section>
@@ -496,7 +496,7 @@ const TAP_GUARD_MS = 700;  // ignore repeat taps faster than any real rally
 // Match formats (2026-09-28, from the OVA Youth Competitions Manual: formats 2/2,
 // 2/3, 3/3 are on each tournament's schedule; all sets win by 2, no cap unless
 // the schedule says so). 'best' stops once a team has 2 sets; 'all' plays every set.
-// 2026-10-02 (Kenny): 15-point formats added (12U / 4 v 4). 'pts' = points per
+// 2026-10-02: 15-point formats added (12U / 4 v 4). 'pts' = points per
 // set; in the 2-sets-only formats a 1–1 match goes to the team with the most
 // total points (equal total = tie).
 const FORMATS = {
@@ -508,7 +508,7 @@ const FORMATS = {
                label: 'sets to 15, best 2 of 3', desc: 'First team to win 2 sets. Sets go to 15 (for example 12U or 4 v 4). A 3rd set only if it\'s 1-1. Win by 2.' },
   '2of2-15': { code: '2of2-15', sets: 2, mode: 'all',  pts: 15, decider: 15,
                label: 'sets to 15, 2 sets only', desc: 'Both sets are played, to 15. If it\'s 1-1, the team with more total points wins. Win by 2.' },
-  // 2026-10-04 (Kenny): friendly scrimmages during practice — no fixed number of
+  // 2026-10-04: friendly scrimmages during practice — no fixed number of
   // sets, just sets to 25 (or 15) until practice time runs out ('open' mode).
   // Time's up mid-set: the team ahead wins that set (a tie counts for nobody).
   // Winner: most sets; equal sets -> most total points; equal points = tie.
@@ -517,7 +517,7 @@ const FORMATS = {
   'scrim-15': { code: 'scrim-15', sets: 0, mode: 'open', pts: 15, decider: 15,
                label: 'scrimmage, sets to 15', desc: 'Play sets to 15 until practice time runs out, then tap Time\'s up. The team ahead wins an unfinished set. Win by 2.' },
   // "3 sets — all played" (3-team pools at Provincials) removed 2026-09-28 at
-  // Kenny's request — rare; End this set now / End match early cover it.
+  // Rare; End this set now / End match early cover it.
 };
 let fmt = FORMATS.bo3;
 let forcedSets = [];      // sets ended with "End this set now" (point cap / time limit)
@@ -536,7 +536,7 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && running && !paused) requestWakeLock();
 });
 
-// 2026-11-03: silent second clock for the video sync. Kenny presses record in the DJI Mimo app, then comes
+// 2026-11-03: silent second clock for the video sync. The scorekeeper presses record in the camera app, then comes
 // back to Safari and taps START. The moments this page is hidden / shown again (phone clock) are kept for
 // the 30 min before START and go into the match file, so the workflow can check the camera's clock against
 // the phone: the camera must have started recording while this page was hidden. Nothing is shown or heard.
@@ -764,7 +764,7 @@ el('setupNext').addEventListener('click', () => {
   render();
 });
 el('readyBack').addEventListener('click', () => { namesConfirmed = false; render(); });
-const otherCam = false;   // 2026-11-04 (Kenny): no "someone else runs the camera" option
+const otherCam = false;   // 2026-11-04: no "someone else runs the camera" option
 
 // ===========================================================================
 // SAVE / RESTORE
@@ -935,7 +935,7 @@ el('t2Plus').addEventListener('click', () => addPoint(2));
 // ---- Quick undo snackbar: shown for 5 s after every point ----
 let snackTimer = null;
 let snackUndoFn = null;
-// 2026-11-04 (Kenny): the UNDO bar stays at the bottom the whole time there is something to undo
+// 2026-11-04: the UNDO bar stays at the bottom the whole time there is something to undo
 // (no more 5 s timeout); it always says what UNDO will take back.
 function showSnack(text, onUndo) {
   snackUndoFn = onUndo || null;
@@ -964,7 +964,7 @@ el('snackUndo').addEventListener('click', () => {
   refreshUndoBar(currentStage());
 });
 
-// ---- Time-out (2026-10-19; 2026-11-02 Kenny: 2nd tap = "Time-out over") ----
+// ---- Time-out (2026-10-19; 2026-11-02: 2nd tap = "Time-out over") ----
 // 1st tap: time-out starts (the video cuts it out). 2nd tap: "Time-out over" - the video restarts
 // 3 s before that tap. UNDO on the message cancels a tap made by mistake. No 2nd tap: the next
 // point still ends it and the workflow uses the serve whistle / 60 s rule. A timer runs on the
@@ -1283,7 +1283,7 @@ el('newMatchBtn').addEventListener('click', () => {
   const unsent = DRIVE_URL && loadPending().length > 0;
   if (unsent && !newArmed) {
     b.classList.add('armed');
-    b.textContent = 'Not sent to Kenny yet. Tap again to start anyway.';
+    b.textContent = 'Not uploaded to Google Drive yet. Tap again to start anyway.';
     newArmed = setTimeout(() => { newArmed = null; b.classList.remove('armed'); b.textContent = 'Start a new match'; }, 5000);
     return;
   }
@@ -1401,7 +1401,7 @@ function matchFilename() {
 }
 
 // ===========================================================================
-// AUTO-SEND TO GOOGLE DRIVE (scorekeeper-drive-upload.gs in Kenny's account)
+// AUTO-SEND TO GOOGLE DRIVE (scorekeeper-drive-upload.gs Google Apps Script)
 // Kept on the phone first, then sent; retries on reopen / back online /
 // back to foreground until Drive confirms.
 // ===========================================================================
@@ -1437,7 +1437,7 @@ async function flushDriveUploads(showProgress) {
   let list = loadPending();
   if (list.length === 0) return;
   flushing = true;
-  if (showProgress) showDriveStatus('info', `<span>Sending the scores to Kenny...</span>`);
+  if (showProgress) showDriveStatus('info', `<span>Uploading the scores to Google Drive...</span>`);
   try {
     for (const item of [...list]) {
       const ctrl = new AbortController();
@@ -1467,14 +1467,14 @@ function refreshDriveStatus() {
   if (!DRIVE_URL) return;
   if (loadPending().length > 0) {
     showDriveStatus('warn',
-      `<span>Saved on this phone. It will send to Kenny by itself when there's internet.</span>` +
+      `<span>Saved on this phone. It will upload to Google Drive by itself when there's internet.</span>` +
       `<button id="driveRetry"><span>Try again</span></button>`);
     return;
   }
   let last = null;
   try { last = JSON.parse(localStorage.getItem(LASTSENT_KEY)); } catch (e) {}
   if (last && !running && events.length > 0) {
-    showDriveStatus('done', `<span>✓ Scores sent to Kenny. You're all done. Thanks for keeping score!</span>`);
+    showDriveStatus('done', `<span>✓ Scores uploaded to Google Drive. You're all done. Thanks for keeping score!</span>`);
   }
 }
 window.addEventListener('online', () => flushDriveUploads(false));

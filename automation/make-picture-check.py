@@ -1,5 +1,5 @@
 """
-make-picture-check.py — the early picture check (2026-10-08, Kenny: every match, because the
+make-picture-check.py — the early picture check (2026-10-08: every match, because the
 camera spot or ISO can change even in a familiar gym).
 
     PY make-picture-check.py <video clip> <out.jpg>
@@ -10,13 +10,13 @@ side by side, 2 x 2, 1280x720:
   2  Brighter                      (slope 1.06, power 0.85)
   3  Brighter + zoom 5 %           (zoom 1.05, top edge kept)
   4  Brighter + zoom 10 %          (zoom 1.10, top edge kept)
-Kenny answers "1".."4" (optionally "bottom"/"centre" for the zoom anchor). run-match.py
+the owner answers "1".."4" (optionally "bottom"/"centre" for the zoom anchor). run-match.py
 applies it to the V1 camera clips just before the export (see OPTIONS / parse_choice there).
 """
 import os, subprocess, sys
 from PIL import Image, ImageDraw, ImageFont
 
-# 2026-10-26 (Kenny picked 4 by mistake at the MYVB tournament): the zoom options say they crop
+# 2026-10-26 (the owner picked 4 by mistake at the MYVB tournament): the zoom options say they crop
 OPTIONS = {1: ("As filmed", 1.00, 1.00, 1.00), 2: ("Brighter (full frame)", 1.00, 1.06, 0.85),
            3: ("Brighter + ZOOM 5% (crops edges)", 1.05, 1.06, 0.85), 4: ("Brighter + ZOOM 10% (crops edges)", 1.10, 1.06, 0.85)}
 NOWIN = 0x08000000

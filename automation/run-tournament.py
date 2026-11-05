@@ -1,5 +1,5 @@
 """
-run-tournament.py — tournament mode (2026-10-09, Kenny approved the plan).
+run-tournament.py — tournament mode (2026-10-09, the owner approved the plan).
 
 Several matches from one day (different gyms) in ONE run, around the normal single-match chain:
 
@@ -28,7 +28,7 @@ Several matches from one day (different gyms) in ONE run, around the normal sing
                        "5" = every match, "1:5,3:2" = per match (same style as the picture answer). Written
                        into each match FOLDER's copy of the .json only (run-match.py --offset). Without it, a
                        measured gap > 3 s is announced before the copy ("OFFSET SUGGESTED" +
-                       tournament-offset-suggestion.txt) and Claude asks Kenny; the answer arrives as
+                       tournament-offset-suggestion.txt) and Claude asks the owner; the answer arrives as
                        offset-pending.txt ("yes" = all suggested, "1:5, 3:2", "all 5", "no"), waited for up to
                        10 min after the copy only if Claude wrote offset-asked.txt. Never applied without --offset or an answer.
          --resume      a match whose folder already has _workflow\\ (setup + finish done) isn't set up
@@ -320,7 +320,7 @@ def announce_offsets(a):
 
 
 def resolve_offsets(a):
-    """After the copy: decide each match's offset (--offset, or Kenny's answer). m['offset'] -> run-match --offset."""
+    """After the copy: decide each match's offset (--offset, or the owner's answer). m['offset'] -> run-match --offset."""
     n = len(MS)
     ex_txt = parse_multi(a.offset, n) if a.offset else [None] * n
     explicit = []
@@ -356,7 +356,7 @@ def resolve_offsets(a):
         elif sg and ans is not None:
             v, note = ot.parse_answer(ans, sg)
             if v is not None:
-                m["offset"], m["offset_note"] = v, f"{ot.fmt(v)} s (Kenny: {note}; {sg['text']})"
+                m["offset"], m["offset_note"] = v, f"{ot.fmt(v)} s ({note}; {sg['text']})"
     save()
 
 
@@ -573,8 +573,8 @@ def project_etas(t, spf):
 
 
 
-# ---------------------------------------------------------------- uploads after Kenny's OK (2026-10-26)
-# Claude writes upload-approved.txt ("all" or "1,3") when Kenny OKs the approval kit; each match is then
+# ---------------------------------------------------------------- uploads after the owner's OK (2026-10-26)
+# Claude writes upload-approved.txt ("all" or "1,3") when the owner OKs the approval kit; each match is then
 # uploaded (Unlisted, Home Team channel + season playlist) as soon as its export is OK, one at a time,
 # while the next match exports. Status lines: "match <n> UPLOAD OK <url>" / "match <n> UPLOAD FAILED".
 UP_APPROVED = W + r"\upload-approved.txt"
@@ -593,7 +593,7 @@ def approved_set():
 
 
 def sync_gate(m, force=False):
-    """2026-11-03 (Kenny: the time sync is very important): an automatic upload waits for the match's score-
+    """2026-11-03 (the time sync is very important): an automatic upload waits for the match's score-
     timing check and is HELD when it flags a set. Returns "ok", "wait" or "held: <reason>"."""
     if force:
         return "ok"
@@ -641,9 +641,9 @@ def pump_uploads(a):
         if g != "ok":
             if g != "wait" and not m.get("held_said"):
                 m["upload"] = "HELD"; m["held_said"] = True
-                st(f"match {m['n']} UPLOAD HELD - {g[6:]} - needs Kenny's OK (upload-approved.txt '{m['n']} sync-ok')")
+                st(f"match {m['n']} UPLOAD HELD - {g[6:]} - needs the owner's OK (upload-approved.txt '{m['n']} sync-ok')")
                 save(); write_summary()
-            UPQ.append(m)                              # stays queued: waits for the check / Kenny's sync-ok
+            UPQ.append(m)                              # stays queued: waits for the check / the owner's sync-ok
             continue
         args = [PY, W + r"\yt-upload.py", "upload", "--channel", "main", "--video", m["export_file"],
                 "--text", m["text"], "--thumb", m["thumbnail"], "--playlist", PLAYLIST]
@@ -906,7 +906,7 @@ def main():
             time.sleep(15)
         st("event: " + (R["event"] or "none"))
 
-    # 3b. camera-start offsets (2026-10-14): --offset or Kenny's answer; written by run-match into each folder's .json
+    # 3b. camera-start offsets (2026-10-14): --offset or the owner's answer; written by run-match into each folder's .json
     resolve_offsets(a)
 
     # 3c. per-match opponent names / stage labels (2026-10-26); pipelined copy: per match, below
@@ -948,11 +948,11 @@ def main():
 
     # 7. exports, one after another; 8. TAVO afterwards
     export_all(a, picks)
-    # uploads still queued: wait for them (and up to 3 h for Kenny's OK if it hasn't come yet)
+    # uploads still queued: wait for them (and up to 3 h for the owner's OK if it hasn't come yet)
     t_up = time.time()
     while pump_uploads(a) and time.time() - t_up < 3 * 3600:
         if approved_set() is None and UPQ and time.time() - t_up < 5:
-            st("exports done \u2014 uploads wait for Kenny's OK (upload-approved.txt)")
+            st("exports done \u2014 uploads wait for the owner's OK (upload-approved.txt)")
         time.sleep(30)
     if UPQ:
         st("uploads NOT done (no OK in 3 h): " + ", ".join(str(m["n"]) for m in UPQ))

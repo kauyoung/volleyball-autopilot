@@ -1,5 +1,5 @@
 """
-offset_tools.py — camera-start offset helpers (2026-10-14, Kenny approved).
+offset_tools.py — camera-start offset helpers (2026-10-14).
 
 "offset" = seconds the camera was already recording before START was tapped
 (positive = camera started early). apply-match.lua shifts every score by it
@@ -12,7 +12,7 @@ Used by run-match.py and run-tournament.py:
                                      ASK_GAP_S and the folder's .json doesn't already compensate for it
   suggestion_from_gap(gap, existing) same rule from a gap number
   gap_from_clips(rec_starts, clip_starts)   the gap before any copy (same rule as copy-card.py)
-  parse_answer(text, suggestion)     Kenny's reply -> (offset or None, note)
+  parse_answer(text, suggestion)     the owner's reply -> (offset or None, note)
   write_offset(folder, value)        writes "offset" into THAT FOLDER'S COPY of the .json only
                                      (the original on Google Drive is never opened for writing)
 Nothing here ever applies an offset by itself: callers apply it only with --offset or after a "yes".

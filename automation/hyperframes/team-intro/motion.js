@@ -12,9 +12,9 @@
     DRAWER: "teamDrawer",
     EASE: "teamEase",
     STAGGER: 0.06,
-    ENTER: 0.45,         // how long main elements take to arrive (text, rows, badges, tiles) — Kenny prefers this unhurried pace
+    ENTER: 0.45,         // how long main elements take to arrive (text, rows, badges, tiles) — the owner prefers this unhurried pace
     PANEL: 0.55,         // the opening diagonal panel wipe
-    TEMPO: 1.7,          // overall pace: 1 = as authored, 1.7 = "relaxed" (Kenny's pick, 2026-10-03)
+    TEMPO: 1.7,          // overall pace: 1 = as authored, 1.7 = "relaxed" (the owner's pick, 2026-10-03)
     INTRO_HOLD: 0.05,     // seconds the finished intro stays still before its exit (real time, not scaled by TEMPO)
     COUNT: 0.8,          // number count-ups on the FINAL screen (seconds)
     CLIP: {

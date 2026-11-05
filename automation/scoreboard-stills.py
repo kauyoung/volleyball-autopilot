@@ -1,5 +1,5 @@
 """
-Scoreboard stills (2026-10-19, Kenny: "go" on step 3 of the export-speed work).
+Scoreboard stills (2026-10-19: "go" on step 3 of the export-speed work).
 
 Why: the live Fusion scoreboard caps the YouTube export at ~1x real time and makes it
 slow down after 15-23 min (47 -> 30 fps). Pre-drawing the scoreboard as pictures and

@@ -1,5 +1,5 @@
 """
-Volleyball Autopilot — prepare (and export) a match (2026-09-28, Kenny approved).
+Volleyball Autopilot — prepare (and export) a match (2026-09-28).
 
 exec'd inside Resolve's scripting (Claude's run_script_unsafe), with `resolve`
 defined and PM_PHASE set. EVERY call is kept well under the 60 s tool limit: slow
@@ -31,7 +31,7 @@ again while the result says "waiting".
                               switches the live scoreboard back on (export_status and
                               finish do this by themselves; use it before hand edits)
 
-Scoreboard pictures (2026-10-19, Kenny "go"): the export phase first draws the scoreboard
+Scoreboard pictures (2026-10-19, the owner "go"): the export phase first draws the scoreboard
 as pictures (scoreboard-stills.py, ~10 min for a full match, repeat while "waiting") and
 exports with those instead of the live Fusion scoreboard: ~2.4x faster, no slowdown, same
 look. Anything odd -> the live scoreboard, as before. Off: scoreboard-mode.txt = "live"
@@ -152,8 +152,8 @@ def match_json(folder):
     return max(js, key=os.path.getmtime) if js else None
 
 
-YT_PRESET_60 = "Autopilot YouTube 4K60 H265 10-bit 60M"   # 2026-10-26 (Kenny): 60 Mbps target (YouTube's 4K60 guide 53-68); was ~32
-YT_PRESET_10 = "Autopilot YouTube 4K60 H265 10-bit"   # 2026-10-19 (Kenny): 10-bit like the camera (Main10), same encoder settings
+YT_PRESET_60 = "Autopilot YouTube 4K60 H265 10-bit 60M"   # 2026-10-26: 60 Mbps target (YouTube's 4K60 guide 53-68); was ~32
+YT_PRESET_10 = "Autopilot YouTube 4K60 H265 10-bit"   # 2026-10-19: 10-bit like the camera (Main10), same encoder settings
 YT_PRESET_8 = "Autopilot YouTube 4K60 H265"          # fallback (8-bit) if the 10-bit preset is missing
 
 
@@ -272,7 +272,7 @@ def setup():
         return out
 
     # 2) free space: the YouTube export (+ TAVO file when asked for) must fit (before any heavy work)
-    # TAVO is OFF by default (2026-10-06, Kenny: the coach picks which games go to TAVO) —
+    # TAVO is OFF by default (2026-10-06: the coach picks which games go to TAVO) —
     # PM_TAVO = True turns it on for this match; later: make-tavo.py with TAVO_INFO (see its docstring)
     tavo = bool(globals().get("PM_TAVO"))
     n = re.search(r"Timeline is (\d+) frames", a)
@@ -544,7 +544,7 @@ def finish():
     resolve.OpenPage("edit")   # noqa: F821
     pm.SaveProject()
     out["ok"] = (" 0 missing" in sheet) and bool(out.get("youtube_text"))
-    say("FINISH DONE — pick the thumbnail (prep-upload.py thumbnail <n>), then show Kenny the sheet + thumbnail + text"
+    say("FINISH DONE — pick the thumbnail (prep-upload.py thumbnail <n>), then show the owner the sheet + thumbnail + text"
         if out["ok"] else "*** FINISH HAD PROBLEMS ***", out)
     return out
 
@@ -621,9 +621,9 @@ def export():
     # never overwrite an existing export (2026-09-28 — a test once overwrote a finished file)
     if os.path.exists(os.path.join(folder, name + ".mp4")):
         say(f"ERROR: {name}.mp4 already exists in {folder} — nothing started. Move/rename it first "
-            "(Kenny decides), or use PM_EXPORT_NAME for a different name.", out)
+            "(the owner decides), or use PM_EXPORT_NAME for a different name.", out)
         return out
-    # 2026-10-19 (Kenny "go"): scoreboard pictures instead of the live Fusion scoreboard —
+    # 2026-10-19 (the owner "go"): scoreboard pictures instead of the live Fusion scoreboard —
     # ~2.4x faster export, no slowdown (scoreboard-stills.py). Anything odd -> live scoreboard.
     sb_used, sbs = False, None
     if not globals().get("PM_LIVE_SCOREBOARD"):
@@ -647,7 +647,7 @@ def export():
     else:
         say("scoreboard: live (asked for this run)", out)
     close_popups()
-    # 2026-10-19 (Kenny "go"): with the scoreboard pictures the nested "YouTube cut" timeline exports
+    # 2026-10-19 (the owner "go"): with the scoreboard pictures the nested "YouTube cut" timeline exports
     # as fast as the parts (zz test: 106.6 vs 106 fps; the ~40 % penalty was the live Fusion
     # scoreboard), so it goes out as ONE file — no join afterwards (~3-4 min saved on a full match,
     # audio encoded once). Live scoreboard: parts + join as before.
@@ -804,7 +804,7 @@ def export_status():
 
 
 def sb_prepare():
-    """2026-10-19 (Kenny "go"): draw the scoreboard pictures ahead of the export — run-match calls
+    """2026-10-19 (the owner "go"): draw the scoreboard pictures ahead of the export — run-match calls
     this while it waits for the picture choice (which only changes the camera clips)."""
     out = {"phase": "sb_prepare"}
     p, tl, folder, s = current_match()

@@ -1,5 +1,5 @@
 """
-Camera-gap wipe (2026-10-26, Kenny): the set-break wipe panel with
+Camera-gap wipe (2026-10-26): the set-break wipe panel with
 "CAMERA TECHNICAL DIFFICULTY" + a second line (e.g. "3:40 OF SET 1 NOT RECORDED").
     C:\\Python314\\python.exe make-camera-wipe.py <suffix> "<line 1>" ["<line 2>"]
 writes set-wipe\\wipe-in-<suffix>.mov + wipe-out-<suffix>.mov (same length as every other wipe,

@@ -1,5 +1,5 @@
 """
-Camera timeline from clock times (2026-10-26, Kenny: "how do we fix this when the camera
+Camera timeline from clock times (2026-10-26: "how do we fix this when the camera
 unexpectedly stops?").
 
     C:\\Python314\\python.exe camera-time.py "<match folder>" [--dry-run]
@@ -29,11 +29,11 @@ FFPROBE = r"C:\ffmpeg\bin\ffprobe.exe"
 SEAMLESS = 3.0          # s: a join this close to "start + duration" is a chapter split, not a stop
 MIN_GAP = 3.0           # s: shorter stops are treated as seamless
 SHORT_GAP = float(os.environ.get("CT_SHORT_GAP", 20.0))
-CLOCK_OK = (-60.0, 120.0)  # 2026-11-03: record->START gaps the camera clock is trusted for (Nov 1: 2.9-4.7 s; Kenny may
+CLOCK_OK = (-60.0, 120.0)  # 2026-11-03: record->START gaps the camera clock is trusted for (Nov 1: 2.9-4.7 s; the owner may
                            # wait 20 s+; negative = START tapped before recording). Outside = clock suspect
 TC_JUMP = 2.5           # s: timecode vs file-name time of a later clip differing more than this = timecode jumped
-TYPICAL = 4.0           # s: Kenny's usual Mimo-record -> beep -> Safari START gap (last resort)
-AUTO_MAX = 15.0         # s: the camera can't sensibly start more than this before START (else its clock is off)   # 2026-11-02 (Kenny): mid-set stops shorter than this = plain cut, no wipe
+TYPICAL = 4.0           # s: the owner's usual Mimo-record -> beep -> Safari START gap (last resort)
+AUTO_MAX = 15.0         # s: the camera can't sensibly start more than this before START (else its clock is off)   # 2026-11-02: mid-set stops shorter than this = plain cut, no wipe
 NW = 0x08000000
 
 
@@ -89,7 +89,7 @@ CONFIRMED = []
 
 def phone_check(fb, rec_cam, start):
     """2026-11-03 (#2): the scorekeeper page logs when it was hidden / shown (phone clock) in the 30 min before START.
-    Kenny presses record in Mimo while the page is hidden, then comes back and taps START. Returns None (no data),
+    the owner presses record in Mimo while the page is hidden, then comes back and taps START. Returns None (no data),
     or {"ok": True} when the camera's record time falls in a hidden stretch, else {"ok": False, "offset": rough}."""
     if not fb:
         return None
@@ -182,10 +182,10 @@ def main(folder, dry=False):
 
     # 1. clock time (s) of every tap
     start = (ev[0]["wms"] / 1000) if ev[0].get("wms") else iso_s(src["startedAt"])
-    # 2026-11-02 (Kenny): the camera clock is synced to his phone by the DJI Mimo app, and he presses
+    # 2026-11-02: the camera clock is synced to his phone by the DJI Mimo app, and he presses
     # record in Mimo first, waits for the beep, then taps START - so the camera really starts a few
     # seconds before START. Clip 1 is placed by the CAMERA clock (file-name time + 0.5 s, the name is
-    # cut to whole seconds) instead of at START. Verified on Nov 1: Georgetown 4.7 s (Kenny approved 5),
+    # cut to whole seconds) instead of at START. Verified on Nov 1: Georgetown 4.7 s (the owner approved 5),
     # Niagara 2.9 s (motion check 3.0-3.4). A fresh --offset (run-match writes "offset") still wins.
     manual = cur.get("offset")
     if manual not in (None, 0, 0.0, "0"):
@@ -210,7 +210,7 @@ def main(folder, dry=False):
         elif CLOCK_OK[0] <= auto <= CLOCK_OK[1]:
             offset, how = round(auto, 2), "camera clock"
         else:
-            # 2026-11-03 (Kenny: "really fix the timing"): camera clock looks off (Mimo didn't sync it,
+            # 2026-11-03 ("really fix the timing"): camera clock looks off (Mimo didn't sync it,
             # phone time set by hand...) -> measure the offset from the motion pattern instead of guessing
             print(f"CAMERA TIME: camera clock looks off ({auto:+.1f} s) - measuring the timing from the video (motion check, ~1 min per 5 min of video)", flush=True)
             mo, detail = motion_offset(folder)
@@ -281,7 +281,7 @@ def main(folder, dry=False):
             set_at.append((w, x["set"]))
         prev_sc = sc
     real_w = [w for w, _ in set_at]
-    # time-outs: a tap inside a camera stop is no longer dropped (2026-11-02, Kenny): it is put just
+    # time-outs: a tap inside a camera stop is no longer dropped (2026-11-02): it is put just
     # before the restart so the time-out cut covers the join
     new_to, to_clock = [], []
     for x in tos:

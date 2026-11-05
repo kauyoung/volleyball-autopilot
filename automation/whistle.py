@@ -1,12 +1,12 @@
 """
-Serve-whistle finder, v2 (2026-10-22, Kenny "go"): the 2026-10-19 finder + a per-match PITCH FILTER.
+Serve-whistle finder, v2 (2026-10-22, the owner "go"): the 2026-10-19 finder + a per-match PITCH FILTER.
 match_pitch(clips, fps) learns the referee's whistle pitch once per match (mode of all long tonal
 events, ~10 s for a 1.5 h match); serve_whistle(..., pitch=p) then only counts whistles within
 PITCH_TOL Hz of it, so squeaks / other courts (~2 kHz) can't win the "last candidate" rule.
 pitch=None -> exactly the old behaviour. Benchmarked on 1,518 hand-labelled serves (HF dataset
 GYdevy/volleyball-whistles, 10 matches, +-1 s): hit 76.9 -> 83.0 %, >3 s off 10.8 -> 2.0 %
 (>=40 s windows 27.9 -> 14.3 %). Oct 18 match: changed 5 picks, all 5 confirmed right on video.
-Shorter whistles (0.25-0.30 s) were rejected: at Kenny's gym they grabbed rally-end whistles.
+Shorter whistles (0.25-0.30 s) were rejected: at the owner's gym they grabbed rally-end whistles.
 Old version: _backup-2026-10-22-whistle/whistle.py.
 """
 import os, subprocess

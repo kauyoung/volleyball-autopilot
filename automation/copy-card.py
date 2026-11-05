@@ -1,7 +1,7 @@
 """
 Volleyball Autopilot — copy the camera's SD card into a new match folder (2026-09-28).
 
-Kenny plugs the DJI card in; Claude runs this on his PC in the background:
+the owner plugs the DJI card in; Claude runs this on his PC in the background:
 
   C:\\Python314\\python.exe copy-card.py --match <scorekeeper .json>
         picks the clips that belong to THAT match: the scorekeeper (since
@@ -27,7 +27,7 @@ Kenny plugs the DJI card in; Claude runs this on his PC in the background:
   * copies each clip while hashing it (SHA-1), then re-reads the copy and
     checks the hash — a bad card read can't give a silently broken file.
     .part files are renamed only when verified; a re-run resumes.
-  * never deletes anything from the card (Kenny formats it in the camera)
+  * never deletes anything from the card (the owner formats it in the camera)
 
 Progress + result go to copy-card-log.txt; the last line is "COPY OK ...",
 "COPY NEEDS A CHOICE ..." or "*** COPY FAILED ...".

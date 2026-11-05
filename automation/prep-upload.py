@@ -1,6 +1,6 @@
 """
 Volleyball Autopilot — prepare the YouTube upload while the export is still rendering.
-(2026-09-27, Kenny approved "#5: make the thumbnail while the video exports")
+(2026-09-27, the owner approved "#5: make the thumbnail while the video exports")
 
 Everything here reads the RAW camera files and the scorekeeper data, never the
 export, so it can run the moment the overlay is applied:
@@ -24,7 +24,7 @@ export, so it can run the moment the overlay is applied:
          bottom 20% of the frame anyway, so using raw footage (no scoreboard)
          looks the same as grabbing it from the finished video.
 
-Runs on Kenny's PC (C:\\Python314 has Pillow; ffmpeg/ffprobe on PATH).
+Runs on the owner's PC (C:\\Python314 has Pillow; ffmpeg/ffprobe on PATH).
 """
 import json, os, re, subprocess, sys, datetime, glob
 
@@ -97,11 +97,11 @@ def cmd_text():
     scrim = str((info.get("format") or {}).get("code") or "").startswith("scrim")
     forced = set(int(x) for x in (info.get("forcedSets") or []))
     kind = " | Scrimmage" if scrim else ""
-    # 2026-10-18 (Kenny): titles leave out the result - no Won/Lost, no match or set scores.
+    # 2026-10-18: titles leave out the result - no Won/Lost, no match or set scores.
     # The result stays in the description.
-    # 2026-10-25 (Kenny): our own channel - the title starts with the opponent ("vs X"); the
+    # 2026-10-25: our own channel - the title starts with the opponent ("vs X"); the
     # description still says "Home Team 14U vs X"
-    # 2026-10-26 (Kenny, after the MYVB tournament): the match folder's event.txt (event + stage,
+    # 2026-10-26 (the owner, after the MYVB tournament): the match folder's event.txt (event + stage,
     # e.g. "MYVB 15U Tier 1 \u00b7 Pool Play") goes into the title and on top of the description;
     # an optional description-note.txt (e.g. a camera-gap note) goes on the line after it.
     def _opt(name):
@@ -113,7 +113,7 @@ def cmd_text():
     if event.upper() == "SCRIMMAGE":
         event = ""
     note = _opt("description-note.txt")
-    # 2026-11-02 (Kenny): the scoreboard keeps the short name; the YouTube title/description get the
+    # 2026-11-02: the scoreboard keeps the short name; the YouTube title/description get the
     # full name from the match folder's youtube-name.txt (e.g. "Niagara Rapids 15U"), or the short name
     # + youtube-age.txt (e.g. "15U") when the name doesn't already end with it
     full = _opt("youtube-name.txt")
@@ -172,7 +172,7 @@ def cmd_text():
             kept.append((t, name))
     kept[0] = (0, kept[0][1])
 
-    # 2026-10-02 (Kenny): link previews (WhatsApp, iMessage, Facebook) drop the line
+    # 2026-10-02: link previews (WhatsApp, iMessage, Facebook) drop the line
     # breaks and show only the first ~100 characters, so line 1 is a complete
     # one-line summary that reads well on its own; the details follow below it.
     summary = f"{final} ({scores}) · {team1_full} vs {t2} · {long_}"

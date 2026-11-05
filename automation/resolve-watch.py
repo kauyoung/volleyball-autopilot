@@ -10,7 +10,7 @@ resolve-watch.txt next to this script:
     2026-10-03 14:09:00 GONE (Resolve not running)
 
 Claude reads that file from its own sandbox, which works even when Resolve (and
-the Resolve tools) are stuck — so a freeze is reported to Kenny at once instead
+the Resolve tools) are stuck — so a freeze is reported to the owner at once instead
 of after repeated timeouts. A frozen Resolve is never killed automatically.
 One copy at a time (resolve-watch.pid); stops after 8 hours or when Resolve has
 been closed for 15 minutes.

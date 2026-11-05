@@ -1,7 +1,7 @@
 """
-Volleyball Autopilot - thumbnail layout PROPOSALS (2026-10-06, Kenny: "the placement of the texts
+Volleyball Autopilot - thumbnail layout PROPOSALS (2026-10-06: "the placement of the texts
 and the logo doesn't look right ... keep all the texts, just move them around").
-Not used by the workflow yet - make-thumbnail.py stays the live one until Kenny picks.
+Not used by the workflow yet - make-thumbnail.py stays the live one until the owner picks.
   python thumb-layouts.py <A|B> <match.json> <frame.jpg> <out.jpg> <fonts dir>
 A = "centred matchup": everything on the centre line, badge on top, event box at the bottom
 B = "hero badge": a large badge on the right, the text block left-aligned beside it

@@ -1,12 +1,12 @@
 """
-Volleyball Autopilot - automatic score-timing check per set (2026-11-02, Kenny: "there has to be a way for you to
+Volleyball Autopilot - automatic score-timing check per set (2026-11-02: "there has to be a way for you to
 check the time sync"; 2026-11-03: any record->START gap, wide search, cache).
 
     C:\\Python314\\python.exe sync-check.py "<match folder>"                   -> sync-check.txt (verdict)
     C:\\Python314\\python.exe sync-check.py --measure [--hint S] "<folder>"    -> one "MEASURE {json}" line
 
 Averages how much the picture moves around every score tap of a set (players rally, then stop) and
-compares that pattern with sync-template.json (Nov 1 Georgetown, timing approved by Kenny). The shift
+compares that pattern with sync-template.json (Nov 1 Georgetown, timing approved by the owner). The shift
 that lines them up = the offset (s the camera started before START) that set needs.
 - verdict mode searches +-8 s around the offset camera-time applied (so a 20 s or 90 s record->START gap
   is checked just as well as 4 s) and writes  SYNC CHECK: set n OK (+0.2 s ...)  or  FLAG: set n ...
@@ -202,11 +202,11 @@ def main(folder, measure=False, hint=None):
             lines.append(f"SYNC CHECK: set {s} OK ({resid:+.1f} s, match {corr:.2f})")
     how = str(cur.get("offsetHow") or "camera clock")
     if how == "camera clock" and not (0.0 <= off <= 10.0) and not cur.get("clockConfirmed"):
-        # 2026-11-03: an unusual record->START wait is fine if Kenny really waited - but a clock off by ~one rally
-        # (~20 s) can fool the video check, so it is confirmed with Kenny (holds the tournament upload until then)
+        # 2026-11-03: an unusual record->START wait is fine if the owner really waited - but a clock off by ~one rally
+        # (~20 s) can fool the video check, so it is confirmed with the owner (holds the tournament upload until then)
         when = f"{off:g} s after pressing record" if off > 0 else f"{-off:g} s BEFORE recording started"
         lines.append(f"FLAG: camera clock says START came {when} (usual 2-6 s after) - "
-                     f"confirm with Kenny (else the camera clock is off)")
+                     f"confirm with the owner (else the camera clock is off)")
     if not (how == "camera clock" or how == "set by hand"):
         lines.append(f"FLAG: score timing was not taken from the camera clock ({how[:120]}) - check the first points by eye")
     bad = [l for l in lines if l.startswith("FLAG") or "unclear" in l]

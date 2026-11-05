@@ -1,8 +1,8 @@
 """
-Volleyball Autopilot — review sheet (2026-09-28, Kenny approved).
+Volleyball Autopilot — review sheet (2026-09-28).
 
 One image showing ~12-17 key moments of the finished scoreboard, each with its
-video time and what the scoreboard SHOULD read there, so Kenny can check a
+video time and what the scoreboard SHOULD read there, so the owner can check a
 match in a couple of minutes instead of scrubbing 90 minutes in Resolve.
 The same frames are Claude's own verification renders.
 
@@ -15,7 +15,7 @@ The same frames are Claude's own verification renders.
       extracts the frames, crops the scoreboard, writes
       "<match folder>\\<date> <team1> vs <team2> - review sheet.jpg"
 
-Runs on Kenny's PC (C:\\Python314 has Pillow; ffmpeg on PATH).
+Runs on the owner's PC (C:\\Python314 has Pillow; ffmpeg on PATH).
 """
 import json, os, subprocess, sys
 

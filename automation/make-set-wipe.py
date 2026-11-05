@@ -1,9 +1,9 @@
 """
-Volleyball Autopilot - set-break wipe (2026-10-06, Kenny).
+Volleyball Autopilot - set-break wipe (2026-10-06).
 
 The intro's 14-degree panel wipe (hyperframes\team-intro: green leading edge, blue
 trailing edge, same easing), made fully opaque so the cut between two sets is hidden.
-"SET n" is printed ON the panel (Kenny: no separate text animation, no green line):
+"SET n" is printed ON the panel (no separate text animation, no green line):
 the leading edge uncovers it as the panel sweeps in and the trailing edge wipes it
 away as the panel leaves - text and panel move as one.
 4K ProRes 4444 clips, premultiplied alpha, made once per set number:

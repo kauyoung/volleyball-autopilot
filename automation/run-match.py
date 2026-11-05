@@ -1,5 +1,5 @@
 """
-run-match.py — hands-off match chain (2026-10-07, Kenny approved the idea).
+run-match.py — hands-off match chain (2026-10-07, the owner approved the idea).
 
 Runs the whole "start the volleyball workflow" chain on the PC without Claude
 checking in between steps: card copy -> setup -> finish (waits by itself) ->
@@ -9,13 +9,13 @@ ends. Same scripts, same settings, same results as running the phases one by one
     PY run-match.py [--recent] [--folder "<match folder>"] [--event "YRV 15U Tournament" | --ask-event]
                     [--offset N] [--tavo] [--hold-export] [--project "zz ..."] [--export-name "zz ..."]
 
-  --ask-event    (2026-10-08) Claude asked Kenny for the event while the card copies; his
+  --ask-event    (2026-10-08) Claude asked the owner for the event while the card copies; his
                  answer arrives as event-pending.txt (written after this run started; "none"
                  = no event). Waited for up to 10 min before setup, then it goes on without.
 
 Early picture check (2026-10-08, every match): ~1 min after the start it grabs one frame from
 the card (or --folder) and writes _overlay_check\picture-check.jpg (4 options; status line
-"PICTURE CHECK READY"). Kenny's answer arrives as picture-pending.txt ("1".."4", optionally
+"PICTURE CHECK READY"). the owner's answer arrives as picture-pending.txt ("1".."4", optionally
 "bottom"/"centre", or "z=1.08 s=1.04 p=0.90 a=top"); it's applied to the V1 camera clips just
 before the export. No answer 10 min after finish -> option 1 (as filmed). --no-picture-check skips it.
 
@@ -29,7 +29,7 @@ writes run-summary.txt (flags, event, TAVO, files, finish time) for Claude to re
                  only (never the original on Google Drive) before setup. Without --offset, if copy-card
                  measured a camera-vs-START gap of more than 3 s, the run says so (status line "OFFSET
                  SUGGESTED" + offset-suggestion.txt, same ~1 min as the picture check) and Claude asks
-                 Kenny; his answer arrives as offset-pending.txt ("yes" / a number / "no"), waited for up
+                 the owner; his answer arrives as offset-pending.txt ("yes" / a number / "no"), waited for up
                  to 10 min only if Claude wrote offset-asked.txt. Nothing is applied without --offset or a "yes";
                  otherwise run-summary.txt gets a FLAG line with the suggested --offset.
   --folder       skip the card copy and use this match folder (re-runs, tests)
@@ -37,7 +37,7 @@ writes run-summary.txt (flags, event, TAVO, files, finish time) for Claude to re
   --project / --export-name   test names (Thundercats folder only, "zz ...")
 
 Talks to Resolve through Resolve Studio's own external scripting (Resolve must be
-open and started by Kenny, not by the Claude app — checked). Never starts Resolve.
+open and started by the owner, not by the Claude app — checked). Never starts Resolve.
 
 Status: run-match-status.txt (one line per step). The last line is one of
   RUN READY FOR APPROVAL ...   (approval images ready; export end ESTIMATED — 2026-10-19: sent before the export starts)
@@ -253,7 +253,7 @@ def connect():
     parent = ps.stdout.strip().lower()
     results["resolve_parent"] = parent
     if "claude" in parent:
-        stop("Resolve was started by the Claude app — Kenny: save, close and reopen Resolve from the Start menu")
+        stop("Resolve was started by the Claude app — the owner: save, close and reopen Resolve from the Start menu")
     return r
 
 
@@ -340,7 +340,7 @@ def shrink(src, dst, width=None, scale=None):
 
 def announce_offset(dest):
     """2026-10-14: as soon as copy-card has measured the camera-vs-START gap (or from the folder's
-    copy-info.txt), say so — status line + offset-suggestion.txt — so Claude can ask Kenny in the first
+    copy-info.txt), say so — status line + offset-suggestion.txt — so Claude can ask the owner in the first
     message. Nothing is applied here."""
     try:
         sg = ot.suggest(dest)
@@ -359,7 +359,7 @@ def announce_offset(dest):
 
 def resolve_offset(a, folder):
     """Put the camera-start offset into THIS folder's .json copy (never the Drive original).
-    --offset N wins; otherwise a measured gap > 3 s is applied only if Kenny said yes."""
+    --offset N wins; otherwise a measured gap > 3 s is applied only if the owner said yes."""
     fresh = lambda f: os.path.exists(f) and os.path.getmtime(f) >= T_START - 5
     val, how = None, None
     sg = results.get("offset_suggestion") or ot.suggest(folder)
@@ -377,7 +377,7 @@ def resolve_offset(a, folder):
                 if i < 40:
                     time.sleep(15)
             val, note = ot.parse_answer(txt, sg)
-            how = "Kenny: " + note
+            how = "the owner: " + note
         else:
             how = "not asked"
         if val is None:
@@ -488,7 +488,7 @@ def main():
     if a.folder and os.path.isdir(a.folder):
         if a.age:
             open(os.path.join(a.folder, "youtube-age.txt"), "w", encoding="utf-8").write(a.age.strip())
-            # 2026-11-02 (Kenny): the age goes on YouTube only - drop it from the scoreboard name if the
+            # 2026-11-02: the age goes on YouTube only - drop it from the scoreboard name if the
             # scorekeeper name ends with it ("Unity Apex 15u" -> "Unity Apex"); folder copies only
             import glob as _g
             for jp_ in _g.glob(os.path.join(a.folder, "*.json")) + _g.glob(os.path.join(a.folder, "*.original.txt")):
@@ -536,7 +536,7 @@ def main():
     except OSError:
         pass
 
-    # 1. card copy (Resolve isn't needed yet, so Kenny can still open it meanwhile)
+    # 1. card copy (Resolve isn't needed yet, so the owner can still open it meanwhile)
     folder = a.folder
     if not folder:
         st("copying the card …")
@@ -590,7 +590,7 @@ def main():
                     st(l)
         except Exception as e:
             results["camera_time_error"] = repr(e)
-        # 2026-11-03 (Kenny #3): did the picture change across a camera restart (other mode / profile)?
+        # 2026-11-03 (the owner #3): did the picture change across a camera restart (other mode / profile)?
         try:
             pj = subprocess.run([PY, "-W", "ignore", W + r"\picture-joins.py", folder], cwd=W, env=UTF8,
                                 capture_output=True, text=True, timeout=600, creationflags=NOWIN)
@@ -601,7 +601,7 @@ def main():
         except Exception as e:
             results["picture_joins_error"] = repr(e)
 
-    # 2. Resolve (wait up to 10 min for Kenny to open it)
+    # 2. Resolve (wait up to 10 min for the owner to open it)
     sys.path.append(r"C:\ProgramData\Blackmagic Design\DaVinci Resolve\Support\Developer\Scripting\Modules")
     os.environ.setdefault("RESOLVE_SCRIPT_LIB", r"C:\Program Files\Blackmagic Design\DaVinci Resolve\fusionscript.dll")
     for i in range(20):
@@ -616,7 +616,7 @@ def main():
         time.sleep(30)
     r = connect()
 
-    # 2b. event name Kenny gave after the start (2026-10-08)
+    # 2b. event name the owner gave after the start (2026-10-08)
     if a.ask_event and not a.event:
         for i in range(40):
             if os.path.exists(PENDING) and os.path.getmtime(PENDING) >= T_START - 5:
@@ -665,7 +665,7 @@ def main():
     if not res.get("ok"):
         stop("setup had problems — see run-match-result.json")
     # 2026-11-02: per-set score-timing check runs in the background (writes <folder>\sync-check.txt;
-    # never changes anything - Kenny: export with the best guess, flag in the approval)
+    # never changes anything - the owner: export with the best guess, flag in the approval)
     try:
         try:
             os.remove(os.path.join(folder, "sync-check.txt"))
@@ -751,7 +751,7 @@ def main():
         st("RUN READY FOR PICTURE CHECK (export not started)")
         return
 
-    # 5b'. 2026-10-19 (Kenny "go"): the approval goes out NOW — the kit is ready — with an ESTIMATED
+    # 5b'. 2026-10-19 (the owner "go"): the approval goes out NOW — the kit is ready — with an ESTIMATED
     # export end (scoreboard pictures ~1.5 + 0.12 min per video minute, then the export at ~0.6x the
     # video length; live scoreboard 0.95x; +5 min margin). The upload reminder re-checks export_status
     # and moves itself if the export runs long. The measured time follows as "EXPORT RUNNING".
@@ -784,8 +784,8 @@ def main():
     except Exception as e:
         results["early_approval_error"] = repr(e)
 
-    # 5c. picture choice (2026-10-08): wait up to 10 min for Kenny's answer, else as filmed
-    # waits only if Claude actually sent Kenny the picture (picture-asked.txt written after this
+    # 5c. picture choice (2026-10-08): wait up to 10 min for the owner's answer, else as filmed
+    # waits only if Claude actually sent the owner the picture (picture-asked.txt written after this
     # run started) — an older run sheet that never sends it exports as filmed with no 10-min wait
     asked = W + r"\picture-asked.txt"
     fresh = lambda f: os.path.exists(f) and os.path.getmtime(f) >= T_START - 5
@@ -793,7 +793,7 @@ def main():
         apply_picture_now(r, a.picture)
     elif not a.no_picture_check and (fresh(asked) or fresh(PIC_PENDING)):
         txt = None
-        # 2026-10-19 (Kenny "go"): the scoreboard pictures are drawn during this wait (the picture
+        # 2026-10-19 (the owner "go"): the scoreboard pictures are drawn during this wait (the picture
         # choice only changes the camera clips); the picture is applied once Resolve is free again
         sb = {"state": "waiting"}
         def sb_step():

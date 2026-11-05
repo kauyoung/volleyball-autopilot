@@ -1,5 +1,5 @@
 """
-Volleyball Autopilot — fix the match audio BEFORE the export (2026-09-27, Kenny approved).
+Volleyball Autopilot — fix the match audio BEFORE the export (2026-09-27).
 
 Replaces the old after-export step (export a 22 GB "-master" file, then re-read
 and re-write all 22 GB just to raise the volume). Now the camera audio alone is
@@ -8,7 +8,7 @@ settings as before), put back into the timeline, and the video is exported once.
 
 Two parts:
 
-1) On Kenny's PC, in the background, right after assemble-match.lua:
+1) On the owner's PC, in the background, right after assemble-match.lua:
      C:\\Python314\\python.exe fix-audio.py make "<match folder>"
    Joins the audio of the DJI_ camera files in chapter order. Each file's audio
    is trimmed / padded to EXACTLY its video length (frames x 1001/60000 s), which
@@ -90,7 +90,7 @@ def make(folder, fade_end=None, fade_start=0.0):
         log(f"  {os.path.basename(f)}: {n} frames = {dur:.6f} s")
     joined = ";".join(parts) + ";" + "".join(f"[a{i}]" for i in range(len(clips))) \
         + f"concat=n={len(clips)}:v=0:a=1"
-    # 2026-10-19 (Kenny "go"): read the camera files ONCE. The joined camera sound goes to a
+    # 2026-10-19 (the owner "go"): read the camera files ONCE. The joined camera sound goes to a
     # temporary 32-bit float WAV (lossless copy of the decoded audio, ~2 GB for 90 min) and both
     # loudness passes read that instead of re-reading ~50 GB of video twice. Same result.
     import shutil, tempfile, time as _t
@@ -136,7 +136,7 @@ def _make_rest(folder, fade_end, fade_start, ins, joined, total):
               f":offset={m['target_offset']}:print_format=summary")
     out = os.path.join(OUT_DIR or folder, WAV_NAME)
     # Fades: 1 s fade-in at the start and a 3 s fade-out ending where the video
-    # ends (Kenny, 2026-09-28; was 1 s out only). The fade-out also stops the
+    # ends (the owner, 2026-09-28; was 1 s out only). The fade-out also stops the
     # ~1 dB AAC peak spike Resolve's encoder made when the sound stopped abruptly.
     # If the camera stopped before the export end (held last frame), the fade
     # ends with the footage and the held part is silent.
@@ -146,7 +146,7 @@ def _make_rest(folder, fade_end, fade_start, ins, joined, total):
     # stays silent while "SET n" is on the dark panel, and comes back over UP s as the
     # panel moves off (no hard audio jump at the join).
     DIP, UP, dips = 0.6, 0.9, ""
-    # Set-break ambience (2026-10-14, Kenny): instead of silence under the "SET n" wipe, the set's
+    # Set-break ambience (2026-10-14): instead of silence under the "SET n" wipe, the set's
     # own sound carries on, ducked to AMB_GAIN (0.25 = -12 dB): it eases down over the wipe-in, the
     # break sound that follows the cut point carries on under the wipe-out, and the new set's sound
     # comes in over NEW_IN s once the panel has gone. AMBIENT = False brings back the old silent dip.

@@ -43,7 +43,7 @@
 -- 2026-09-27: bolder version (strokes ~35% thicker) so the ball matches the
 -- weight of the bold text around it. The original thin icon is still there as
 -- volleyball-serve-icon.png if we ever want it back.
--- 2026-10-20 (Kenny): now a photo of the OVA 14U ball (Mikasa VQ200W) with a
+-- 2026-10-20: now a photo of the OVA 14U ball (Mikasa VQ200W) with a
 -- thin white rim, 512px. The drawn icon above is the fallback: point this back
 -- at volleyball-serve-icon-bold.png and set SERVE_SIZE to 0.14.
 -- Repo copy: the drawn icon (assets/volleyball-serve-icon-bold.png). The author's own build
@@ -76,7 +76,7 @@ local NAME_FONT_STYLE = "Bold"
 -- Was 0.75; 0.85 gives each team-name cell 0.05 more (~135px at 4K after the
 -- 0.70 scale). The score/sets cells in the middle don't move — only the two
 -- outer name cells grow. Keep in step with BAR_WIDTH in apply-match.lua.
--- 2026-10-21 (Kenny): 0.85 -> 0.875 (+3%, ~36px further out each end at 4K) so
+-- 2026-10-21: 0.85 -> 0.875 (+3%, ~36px further out each end at 4K) so
 -- "ANCASTER LIONS STEALTH" fits in full. Inner layout (scores, SETS, serve balls) unchanged.
 local BAR_WIDTH = 0.875
 
@@ -94,7 +94,7 @@ local PILL_ABOVE = true
 
 -- Look of the "SET n" box (and the SET POINT tags, which share its row):
 --   "float"  separate rounded pill floating above the bar, wide letter-spacing
---            (the original — Kenny, 2026-09-27: "looks out of place")
+--            (the original — the owner, 2026-09-27: "looks out of place")
 --   "clean"  same floating pill, but tighter, bolder, brighter text, snug pill
 --   "tab"    a tab joined to the top of the bar, exactly as wide as the grey
 --            score cell and the same grey, so it reads as the score box's
@@ -104,17 +104,17 @@ local PILL_STYLE = rawget(_G, "SCOREBOARD_PILL_STYLE") or "tab"   -- chosen 2026
 local BAR_TOP    = 0.115 + 0.0575            -- top edge of the bar (pre-MasterSize)
 local TAB_H      = 0.052
 -- The SET tab must be EXACTLY the score cell's shade, or the outline/separator
--- lines (white 0.16 on top) read brighter on one than the other (Kenny,
+-- lines (white 0.16 on top) read brighter on one than the other (the owner,
 -- 2026-09-27). The cell is white 0.12 over black 0.74, i.e. effective alpha
 -- 1 - 0.26*0.88 = 0.771 and colour 0.1252/0.771 = 0.162 — same result over
 -- any background video.
 local TAB_GREY   = { 0.162, 0.162, 0.162 }
 local TAB_ALPHA  = 0.771
 -- Faint outline around the whole shape (bar + SET tab, and each SET POINT tab
--- while it shows) — Kenny, 2026-09-27. Only used with the "tab" style.
+-- while it shows) — the owner, 2026-09-27. Only used with the "tab" style.
 local OUTLINE       = true
 -- Matched to the cell separators (0.0008 wide at alpha 0.16) so the tab's side
--- lines continue the score cell's separator lines exactly (Kenny, 2026-09-27:
+-- lines continue the score cell's separator lines exactly (the owner, 2026-09-27:
 -- at 3 px / 0.22 they sat a few pixels off and looked like two lines).
 local OUTLINE_ALPHA = 0.16
 local OUTLINE_PX    = 0.0008 * 3840 * 0.70   -- = separator width on the 4K frame (~2.15 px)
@@ -166,13 +166,13 @@ local OVERALL_SIZE = 0.7125 -- 2026-10-26: 5% smaller (0.75 since 2026-10-14, 0.
 -- padding inside its 512px canvas, so the visible ball is meaningfully smaller
 -- than the canvas and the arithmetic (512 x size) overstates it. At 0.11 the
 -- ball measured ~80% of the team name's cap height; 0.14 brings it level.
--- 2026-10-20 (Kenny): 0.168 = the photo ball 20% bigger than the drawn icon
+-- 2026-10-20: 0.168 = the photo ball 20% bigger than the drawn icon
 -- (~64px across on the finished 4K frame; still clears names and the divider).
 local SERVE_SIZE = 0.14    -- repo: drawn icon (0.168 = the author's photo ball)
 
 -- Club colours (from the brief — locked, don't change)
 local GREEN = { 0.439, 0.835, 0.286 }   -- #70D549  home team
--- 2026-09-27: one blue everywhere (Kenny). Was the club blue #0A84FF, which
+-- 2026-09-27: one blue everywhere. Was the club blue #0A84FF, which
 -- was too dark to read as text; sky blue #6BBDFF is now used for the accent
 -- line, tag words and score flash alike.
 local BLUE  = { 0.42,  0.74,  1.00  }   -- #6BBDFF  opponent
@@ -474,7 +474,7 @@ place(plate("AccentRight", BLUE, 1.0,
 -- estimate the name's width, then place its centre so the OUTER edge always
 -- lands NAME_MARGIN in from the end of the bar. Both sides then match, whatever
 -- the opponent is called.
-local NAME_SIZE   = 0.0407  -- Barlow Condensed; 2026-10-14 (Kenny): +10% on top of the bigger board (was 0.037; 0.026 with Gotham Narrow)
+local NAME_SIZE   = 0.0407  -- Barlow Condensed; 2026-10-14: +10% on top of the bigger board (was 0.037; 0.026 with Gotham Narrow)
 local NAME_CHAR_W = 0.01265  -- Barlow Condensed Bold CAPS at 0.0407 (= 0.0115 measured at 0.037, x1.1; kept slightly conservative)
 local NAME_MARGIN = 0.020    -- gap from the end of the bar to the start of the text
 local BAR_L, BAR_R = 0.5 - BAR_WIDTH / 2, 0.5 + BAR_WIDTH / 2
@@ -628,7 +628,7 @@ place(name2)
 -- SETS caption sits at 0.139 with the count at 0.101. The walkthrough's
 -- 0.132 / 0.106 left only a hairline of air between the caption and the
 -- number below it, which read as cramped rather than as a pair.
--- 2026-10-21 (Kenny): "SETS" was too thin to read on a phone. Now Bold, full
+-- 2026-10-21: "SETS" was too thin to read on a phone. Now Bold, full
 -- white, 20% larger (was SemiBold, alpha 0.45, size 0.016, spacing 1.25).
 -- Still clears the set-win box below it (checked on a real frame).
 local SETS_LABEL = { size = 0.0192, alpha = 1.0, style = "Bold", spacing = 1.18 }
@@ -640,7 +640,7 @@ local function setsLabel(name, x, col)
 end
 setsLabel("Team1SetsLabel", 0.406, COL + 9)
 
--- 2026-10-14 (Kenny): rounded box in the team colour behind the SETS number,
+-- 2026-10-14: rounded box in the team colour behind the SETS number,
 -- shown only for a moment when that team wins a set (apply-match.lua keys the
 -- merge's Blend; 0 = hidden). Sized to the number at its 1.18x pop, centred on
 -- the digit glyph (0.0972, a little below the Text+ centre), clear of "SETS".
@@ -686,7 +686,7 @@ end
 -- inside that small canvas; the Merge then drops the whole canvas at frame
 -- centre, which is why the ball appeared near the middle of the picture instead
 -- of on the bar. A Merge's Center IS in frame coordinates, so it goes here.
--- 2026-10-21 (Kenny, option A): the ball sat ~4px (finished 4K) above the centre
+-- 2026-10-21 (the owner, option A): the ball sat ~4px (finished 4K) above the centre
 -- of the team-name capitals; -0.0025 (x 2160 x OVERALL_SIZE 0.75 = 4px) centres it.
 local SERVE_Y_NUDGE = -0.0025
 local function serveAt(mergeName, cx)
@@ -698,7 +698,7 @@ end
 -- ball moves left and the right ball moves right, away from its own divider.
 -- These coordinates are applied BEFORE the MasterSize Transform, so 5 finished
 -- pixels is 5 / (3840 * OVERALL_SIZE) = 0.00186, not 5 / 3840.
--- 2026-09-27 (Kenny): ball sat too close to the SETS divider line. Moved
+-- 2026-09-27: ball sat too close to the SETS divider line. Moved
 -- further out so it's centred between the name limit (0.341) and the divider
 -- (0.379): SERVE_X = 0.3598 (was 0.3631), right side mirrored.
 -- apply-match.lua NAME_MAX_W keeps names clear of it.
@@ -712,7 +712,7 @@ serveAt("Team2ServeMerge", 1 - SERVE_X)
 -- Team 1 logo (only if a logo file exists for this team) -------------------
 -- Same Loader -> Transform -> Merge pattern as the serve balls: Size on the
 -- Transform is relative to the source PNG, position goes on the Merge.
--- 2026-10-21 (Kenny): every logo must LOOK the same size. Size each logo by its
+-- 2026-10-21: every logo must LOOK the same size. Size each logo by its
 -- visible drawing (team-logos\_logo-ink.txt, written by logo_sizes.py before the
 -- build) instead of its canvas, times an optional optical factor from
 -- team-logos\logo-sizes.txt. A logo too wide for its slot is capped at the slot
@@ -856,7 +856,7 @@ local function makeTag(side)
     TAG_TEXT, TAG_H = 0.025, 0.052
     tagY = BAR_TOP + 0.008 + TAG_H / 2
   elseif PILL_STYLE == "tab" then
-    -- Kenny, 2026-09-27: joined-on tags didn't look right — they FLOAT, with
+    -- the owner, 2026-09-27: joined-on tags didn't look right — they FLOAT, with
     -- their top lined up with the top of the SET tab.
     TAG_TEXT, TAG_H = 0.024, TAB_H - 0.008
     tagY = BAR_TOP + 0.008 + TAG_H / 2
@@ -872,7 +872,7 @@ local function makeTag(side)
   if style == "solid" then bgCol, bgA, txtCol = team, 1.0, (side == 1) and BLACK or WHITE
   elseif style == "text" then
     -- The club blue (#0A84FF) is too dark to read as small text on the dark
-    -- pill (Kenny, 2026-09-26), so the opponent's words use a lighter sky blue.
+    -- pill (the owner, 2026-09-26), so the opponent's words use a lighter sky blue.
     txtCol = (side == 1) and GREEN or TAG_TEXT_BLUE
     if pv and pv.rgb and ((pv.side == 2) and 2 or 1) == side then txtCol = pv.rgb end
   elseif style == "deep" then bgCol, bgA = { team[1] * 0.50, team[2] * 0.50, team[3] * 0.50 }, 0.95 end
@@ -928,7 +928,7 @@ elseif PILL_STYLE == "tab" then
   -- Joined to the bar above the grey score cell (0.134 wide), same grey, so
   -- the score box looks like one piece with a header. Small corner radius so
   -- the bottom corners meet the bar cleanly.
-  -- 2026-10-21 (Kenny): "SET n" 10% larger (0.025 -> 0.0275), still well inside the tab.
+  -- 2026-10-21: "SET n" 10% larger (0.025 -> 0.0275), still well inside the tab.
   pillTxt, pillTrack, pillTxtA, pillBold = 0.0275, 1.08, 0.95, true
   -- Width = score cell (0.134) minus one outline width, so the outline drawn
   -- just outside the tab lands exactly on the separators at 0.433 / 0.567.

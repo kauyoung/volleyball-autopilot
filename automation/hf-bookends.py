@@ -1,5 +1,5 @@
 """
-Volleyball Autopilot - HyperFrames intro + FINAL screens (Kenny approved 2026-10-04).
+Volleyball Autopilot - HyperFrames intro + FINAL screens (the owner approved 2026-10-04).
 
 Not run on its own: make-bookends.py "render intro|summary" exec()s this file and
 calls render(kind, p, log, logo_for). It writes the SAME files the classic
@@ -71,7 +71,7 @@ def _format(info):
 
 
 def event_name(folder):
-    """The tournament / event name Kenny gives at the start of the workflow (2026-10-06),
+    """The tournament / event name the owner gives at the start of the workflow (2026-10-06),
     saved by prepare-match.py setup as <match folder>\\event.txt. '' when none."""
     try:
         return open(os.path.join(folder, "event.txt"), encoding="utf-8").read().strip().upper()
@@ -101,7 +101,7 @@ def _mmss(sec):
     return f"{t // 3600}:{t % 3600 // 60:02d}:{t % 60:02d}" if t >= 3600 else f"{t // 60}:{t % 60:02d}"
 
 
-# 2026-10-21 (Kenny): logos must LOOK the same size on the intro / FINAL too. The
+# 2026-10-21: logos must LOOK the same size on the intro / FINAL too. The
 # templates show the whole image ("contain"), so padding in a PNG made a logo smaller.
 # Each logo is copied as a square whose VISIBLE drawing (logo_sizes.ink_box, near-black
 # left out) is LOGO_FILL of the height x its optical factor (team-logos\logo-sizes.txt),
@@ -162,7 +162,7 @@ def build_data(kind, p, logo_for, tdir):
     d = {"season": _season(p["date"]), "team1": team(p["team1"]), "team2": team(p["team2"]),
          "date": _date(p["date"]), "format": fmt, "detail": detail, "clubs": clubs, "overrides": overrides}
     if kind == "summary":
-        # 2026-10-06 (Kenny): the FINAL screen's bottom line is "date \u00b7 event" \u2014 no
+        # 2026-10-06: the FINAL screen's bottom line is "date \u00b7 event" \u2014 no
         # "BEST OF 3 \u00b7 SETS TO 25" (obvious from the table). No event given: a
         # scrimmage still says SCRIMMAGE, a match shows the date alone.
         ev = event_name(os.path.dirname(info["matchFile"]))

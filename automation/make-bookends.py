@@ -1,7 +1,7 @@
 """
-Volleyball Autopilot — intro card + match summary ("bookends"), 2026-09-28 (Kenny approved).
+Volleyball Autopilot — intro card + match summary ("bookends"), 2026-09-28 (approved).
 
-Both play ON TOP of the match video (Kenny records ~15 s before the first serve
+Both play ON TOP of the match video (the owner records ~15 s before the first serve
 and ~30 s after the last point). Each is rendered as a 4K ProRes 4444 clip WITH
 ALPHA that goes on video track 3: a blurred + dimmed copy of the match video
 (its alpha ramps 0 -> 1, so the cut-in is invisible) plus the animated card.
@@ -66,10 +66,10 @@ INTRO_BUILD, INTRO_HOLD, INTRO_EXIT, INTRO_MIN_HOLD = 3.145, 4.2, 1.7, 2.0
 LEAD_IN = float(os.environ.get("BK_LEAD_IN", 60.0))   # video starts this long before the first point
                                                       # (front trim, 2026-10-01; env only for tests)
 SUMMARY_AFTER, SUMMARY_MIN, SUMMARY_MAX = 15.0, 10.0, 12.0
-# Set-break cuts (2026-10-06, Kenny): the video cuts BREAK_AFTER s after each set's last
+# Set-break cuts (2026-10-06): the video cuts BREAK_AFTER s after each set's last
 # point (not the final set) and resumes BREAK_LEAD s before the next set's first point,
 # with the diagonal wipe (make-set-wipe.py) over the join. EVERY set break gets the wipe
-# (Kenny, 2026-10-06): when the break is too short to remove anything, the wipe still
+# (the owner, 2026-10-06): when the break is too short to remove anything, the wipe still
 # plays at BREAK_AFTER s after the last point (nothing cut), moved earlier if needed so it
 # and the scoreboard fade-in finish BREAK_CLEAR s before the first serve; a break shorter
 # than BREAK_TOO_SHORT s (camera stopped between sets) gets no wipe. Env overrides are for
@@ -79,7 +79,7 @@ BREAK_LEAD = float(os.environ.get("BK_BREAK_LEAD", 60.0))
 BREAK_MIN = float(os.environ.get("BK_BREAK_MIN", 1.0))    # less than this to remove -> wipe only
 BREAK_CLEAR, BREAK_TOO_SHORT = 5.0, float(os.environ.get("BK_BREAK_TOO_SHORT", 8.0))
 SET_CUTS = os.environ.get("BK_SET_CUTS", "1") != "0"
-# 2026-10-19 (Kenny): restarts end WHISTLE_LEAD s before the referee's serve whistle (whistle.py),
+# 2026-10-19: restarts end WHISTLE_LEAD s before the referee's serve whistle (whistle.py),
 # for set breaks AND time-outs; a whistle counts only if it is >= WHISTLE_MIN_BEFORE s before the
 # point tap (otherwise it may be the rally-ending whistle). No whistle -> the old rules
 # (set break: BREAK_LEAD s before the first point; time-out: TO_FALLBACK s before the next point).
@@ -91,7 +91,7 @@ WHISTLE_LEAD, WHISTLE_MIN_BEFORE = 5.0, 9.0
 TO_AFTER = 5.0
 TO_FALLBACK = float(os.environ.get("BK_TO_FALLBACK", 40.0))
 TO_MIN = float(os.environ.get("BK_TO_MIN", 20.0))
-TO_END_LEAD = 3.0          # 2026-11-02 (Kenny): resume 3 s before his "Time-out over" tap
+TO_END_LEAD = 3.0          # 2026-11-02: resume 3 s before his "Time-out over" tap
 TO_WH_LO, TO_WH_HI = 30.0, 90.0   # serve whistle only counts 30-90 s after the time-out tap
 TO_DEFAULT = 60.0          # no tap/whistle: time-outs are max 1 min -> resume 60 s after the tap
 TO_FALLBACK_MIN = 10.0     # ...but at least this long before the next point
@@ -189,7 +189,7 @@ def plan():
     except Exception:
         pass
 
-    # Front trim (2026-10-01, Kenny): the video starts LEAD_IN s before the first point;
+    # Front trim (2026-10-01): the video starts LEAD_IN s before the first point;
     # anything earlier (warm-up filler) is cut. Everything below is placed relative to it.
     trim_frame = int(round(max(0.0, P1 - LEAD_IN) * FPS))
     TRIM = trim_frame / FPS
@@ -298,7 +298,7 @@ def plan():
         cuts.append({"kind": "set", "wipe": f"set{nxt}", "how": how, "after_set": k, "next_set": nxt,
                      "out_frame": a, "in_frame": b,
                      "out_s": round(a / FPS, 3), "in_s": round(b / FPS, 3), "cut_s": round((b - a) / FPS, 3)})
-    # time-outs (2026-10-19, Kenny): tap + TO_AFTER s -> WHISTLE_LEAD s before the next serve whistle
+    # time-outs (2026-10-19): tap + TO_AFTER s -> WHISTLE_LEAD s before the next serve whistle
     try:
         mj = json.load(open(info["matchFile"], encoding="utf-8"))
         jo = float(mj.get("offset") or 0.0)
@@ -313,7 +313,7 @@ def plan():
             continue
         P = nxt_pts[0]
         A = T + TO_AFTER
-        # 2026-11-02 (Kenny): his own "Time-out over" tap wins (resume TO_END_LEAD s before it); otherwise a
+        # 2026-11-02: his own "Time-out over" tap wins (resume TO_END_LEAD s before it); otherwise a
         # serve whistle only counts 30-90 s after the tap; otherwise resume TO_DEFAULT s after the tap
         # (time-outs are max 1 min), never later than TO_FALLBACK_MIN s before the next point
         if Te is not None and Te > A + 1.0:
@@ -340,7 +340,7 @@ def plan():
                      "next_set": st_ or None, "tap_s": round(T, 3), "next_point_s": round(P, 3),
                      "out_frame": a, "in_frame": b,
                      "out_s": round(a / FPS, 3), "in_s": round(b / FPS, 3), "cut_s": round((b - a) / FPS, 3)})
-    # camera gaps (2026-10-25, Kenny - SD card stop in the Play Off): the match .json's
+    # camera gaps (2026-10-25, the owner - SD card stop in the Play Off): the match .json's
     # "cameraGaps" puts a wipe-only cut exactly on a camera-clip join: {"clip": i, "wipe": "camera"}
     # = the CAMERA TECHNICAL DIFFICULTY wipe; {"clip": i, "set": n} = move set n's set-break wipe onto that join
     try:
@@ -459,13 +459,13 @@ def initials(name):
 def badge(c, r, name, ring, logo_path=None):
     def fn(im):
         d = ImageDraw.Draw(im)
-        # ring thickness: was a fixed 12 px; 2026-10-02 (Kenny) slightly thinner and
+        # ring thickness: was a fixed 12 px; 2026-10-02 slightly thinner and
         # scaled to the badge size (intro ~8 px, FINAL screen 6 px)
         t = int(round(max(6, r * 0.036)))
         d.ellipse([c[0] - r - t, c[1] - r - t, c[0] + r + t, c[1] + r + t], fill=ring + (255,))
         d.ellipse([c[0] - r, c[1] - r, c[0] + r, c[1] + r], fill=(10, 10, 10, 255))
         if logo_path and os.path.exists(logo_path):
-            # 2026-10-21 (Kenny): sized by the visible drawing (+ optical factor from
+            # 2026-10-21: sized by the visible drawing (+ optical factor from
             # team-logos\logo-sizes.txt) so every logo looks the same size; centred on its ink.
             # Old: whole canvas at 1.9 r.
             lg = Image.open(logo_path).convert("RGBA")
@@ -649,7 +649,7 @@ def render_summary(p):
     date = datetime.date.fromisoformat(p["date"]).strftime("%B %d, %Y").upper().replace(" 0", " ")
     sets, (w1, w2) = st["sets"], st["won"]
     nset = len(sets)
-    # 2026-10-02 (Kenny): with 3 sets "SET 1" sat right against the FINAL tab —
+    # 2026-10-02: with 3 sets "SET 1" sat right against the FINAL tab —
     # 3-set columns moved right (were 2200 + 220c, SETS 2880) and the tab narrowed
     colx = [2330 + 220 * c for c in range(nset)] if nset <= 2 else [2280 + 210 * c for c in range(nset)]
     SETSX = 2880 if nset <= 2 else 2930
@@ -692,13 +692,13 @@ def render_summary(p):
         win_txt, win_col = f"{winner} WIN {max(w1, w2)}{DASH}{min(w1, w2)}", (GREEN if wn == 1 else WHITE)
     winL = Layer(tx((1920, 1010), win_txt, fit(win_txt, 100, 2200), win_col, spacing=6))
     # Longest run / biggest lead: number + the team's short code in its colour
-    # (2026-10-01, Kenny: "PARENTS" was too long) — same letters as the badge circles.
-    # 2026-10-01 (Kenny): our team always "REBELS"; others = 3-letter code
+    # (2026-10-01: "PARENTS" was too long) — same letters as the badge circles.
+    # 2026-10-01: our team always "REBELS"; others = 3-letter code
     def code(team_no):
         if team_no == 0:                                  # 2026-10-26: tie
             return ("EACH", WHITE)
         name = p["team1"] if team_no == 1 else p["team2"]
-        # 2026-10-02 (Kenny): opponent always "OPP" (standard stat-sheet short form)
+        # 2026-10-02: opponent always "OPP" (standard stat-sheet short form)
         if name.strip().lower() == "home team":
             txt = "REBELS"
         elif team_no == 2:
@@ -774,7 +774,7 @@ if __name__ == "__main__":
         # BK_CLASSIC=1 in the environment skips straight to the classic one.
         done = False
         if not os.environ.get("BK_CLASSIC"):
-            for attempt in (1, 2):           # 2026-11-02 (Kenny): one retry before falling back (Nov 1 Unity Apex)
+            for attempt in (1, 2):           # 2026-11-02: one retry before falling back (Nov 1 Unity Apex)
                 try:
                     g = {"__name__": "hf_bookends"}
                     exec(open(os.path.join(WORK, "hf-bookends.py"), encoding="utf-8").read(), g)

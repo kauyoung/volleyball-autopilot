@@ -1,5 +1,5 @@
 """
-Volleyball Autopilot — make every team logo LOOK the same size (2026-10-21, Kenny).
+Volleyball Autopilot — make every team logo LOOK the same size (2026-10-21).
 
 Logos are sized by their visible drawing (the non-transparent part), not by the
 image canvas, so empty padding in a PNG no longer makes a logo smaller. On top,
