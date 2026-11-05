@@ -23,7 +23,7 @@ for a subscription filming/scoring service.
 ## What you get
 
 - **A live, animated scoreboard** on 4K60 footage: score, sets, serve, SET POINT / MATCH POINT tags, score pops and set-change transitions.
-- **A phone scorekeeper** with two big buttons and a 5-second undo. It works offline and can send the match file to Google Drive. **[Try it on your phone](https://kauyoung.github.io/volleyball-autopilot/scorekeeper/volleyball-scorekeeper.html)** (demo copy, nothing is uploaded).
+- **A phone scorekeeper** with two big buttons and an undo bar that stays on screen. It works offline and can send the match file to Google Drive. **[Try it on your phone](https://kauyoung.github.io/volleyball-autopilot/scorekeeper/volleyball-scorekeeper.html)** (demo copy, nothing is uploaded).
 - **Automatic editing**: warm-up trimmed, set breaks and time-outs cut out (restarting at the referee's serve whistle), sound levelled.
 - **Intro and FINAL screens** filled in from the match file: teams, date, set scores, longest run, biggest lead, match time.
 - **One approval per match**: a review sheet of every key moment. Nothing is uploaded until you say OK.
