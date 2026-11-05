@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#F2F2F7">
-<title>Scorekeeper</title>
+<title>Scorekeeper · Volleyball Autopilot</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
   :root {
     /* 2026-09-27: one blue everywhere — the overlay's sky blue #6BBDFF.
@@ -298,9 +301,11 @@
   .team-btn .score, .timer, #moCountNum { font-variant-numeric: tabular-nums; }
   .list-row .r { font-variant-numeric: normal; }
   .appbar { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 2px 0 18px; }
-  .appbar .mark { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
-                  background: linear-gradient(145deg, var(--team1), var(--team1-2)); box-shadow: 0 2px 6px rgba(47,158,68,0.35); }
+  .appbar .mark { width: 34px; height: 34px; display: block; flex: none; filter: drop-shadow(0 2px 6px rgba(11,37,64,0.25)); }
+  .appbar .brand { display: flex; flex-direction: column; line-height: 1.15; text-align: left; }
   .appbar h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.015em; margin: 0; color: var(--ink); }
+  .appbar h1 .ap { color: var(--accent-text); }
+  .appbar .sub { margin: 0; font-size: 12px; font-weight: 600; color: var(--label-2); }
   .card { border-radius: var(--r-lg); border: 1px solid var(--line);
           box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.05); }
   .step-title { font-size: 24px; font-weight: 800; letter-spacing: -0.025em; color: var(--ink); }
@@ -388,8 +393,8 @@
 <div class="wrap">
 
   <header class="appbar">
-    <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9.2"/><path d="M12 2.8c1.2 3.6.6 7.2-1.8 10.2M21 13.6c-3.6.4-7-.8-9.6-3.6M4.4 17.6c1.8-3.4 4.6-5.6 8.4-6.2"/></svg></span>
-    <h1>Volleyball Scorekeeper</h1>
+    <svg class="mark" viewBox="0 0 100 100" width="34" height="34" aria-hidden="true"><rect width="100" height="100" rx="24" fill="#0B2540"/><circle cx="50" cy="48" r="30" fill="none" stroke="#6BBDFF" stroke-width="6"/><g fill="none" stroke="#6BBDFF" stroke-width="5" stroke-linecap="round"><path d="M50 48 Q56 31.5 68 24"/><path d="M50 48 Q56 31.5 68 24" transform="rotate(120 50 48)"/><path d="M50 48 Q56 31.5 68 24" transform="rotate(240 50 48)"/></g><circle cx="74" cy="74" r="17" fill="#3FA33A" stroke="#0B2540" stroke-width="5"/><path d="M69 65.5 L82.5 74 L69 82.5 Z" fill="#FFFFFF"/></svg>
+    <div class="brand"><h1>Volleyball <span class="ap">Autopilot</span></h1><p class="sub">Scorekeeper</p></div>
   </header>
 
   <!-- ============ RESTORE: a match was in progress when the page closed ============ -->

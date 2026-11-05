@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/logo/volleyball-autopilot-logo.svg" width="96" height="96" alt="Volleyball Autopilot logo"></p>
+
 # Volleyball Autopilot
 
 **Tap the score on your phone. Get a finished match video.**
