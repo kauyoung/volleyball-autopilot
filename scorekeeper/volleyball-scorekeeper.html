@@ -3,117 +3,121 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#F2F2F7">
+<meta name="theme-color" content="#F4F5F7">
 <title>Scorekeeper · Volleyball Autopilot</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Scorekeeper">
+<link rel="preload" href="inter-latin.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+  /* One set of styles (2026-11-04 cleanup: the original look and the "polish layer" merged; nothing changes on screen). */
+  @font-face { font-family: "Inter"; font-style: normal; font-weight: 500 800; font-display: swap;
+               src: url("inter-latin.woff2") format("woff2");
+               unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
   :root {
-    /* 2026-09-27: one blue everywhere — the overlay's sky blue #6BBDFF.
-       It's light, so anything ON it uses dark navy text (--on-blue), and
+    /* One blue everywhere: the overlay's sky blue. Anything ON it uses dark navy text;
        small blue text on white uses a deeper shade of the same hue. */
-    --accent: #6BBDFF;
+    --opp: #6BBDFF; --opp-2: #4AA6F2;
     --accent-dim: rgba(107,189,255,0.20);
     --accent-text: #1B6FB5;
     --on-blue: #0B2540;
-    --green: #34C759;
-    --green-dark: #248A3D;
+    --team1: #2F9E44; --team1-2: #237A34;          /* our team: green */
+    --green: #22A447; --green-2: #1B8A3B;
     --green-dim: rgba(52,199,89,0.12);
     --green-text: #177A33;
-    --team1: #3FA33A;          /* our team: green, a touch darker than the overlay's so white text reads */
-    --opp: #6BBDFF;            /* opponent sky blue — same as the video overlay */
-    --amber: #FF9F0A;
     --amber-dim: rgba(255,159,10,0.14);
     --amber-text: #8A5200;
     --red: #FF3B30;
-    --bg: #F2F2F7;
+    --bg: #F4F5F7;
     --surface: #FFFFFF;
-    --fill: #F2F2F7;
-    --separator: rgba(60,60,67,0.10);
-    --label: #000000;
-    --label-2: #3C3C43;
-    --label-3: rgba(60,60,67,0.60);
-    --label-4: rgba(60,60,67,0.35);
-    --r-lg: 22px; --r-md: 16px; --r-sm: 12px;
-    --s1: 8px; --s2: 16px; --s3: 24px; --s4: 32px; --s5: 40px;
+    --line: rgba(15,23,42,0.08);
+    --ink: #0F172A;
+    --label: #0F172A; --label-2: #334155; --label-3: #64748B; --label-4: #94A3B8;
+    --r-lg: 20px; --r-md: 14px; --r-sm: 12px;
+    --s1: 8px; --s2: 16px; --s3: 24px; --s4: 32px;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
   body {
     margin: 0;
-    padding-bottom: 130px !important;   /* room for the UNDO bar */
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+    padding: 12px var(--s2) 130px;   /* bottom: room for the UNDO bar */
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    font-feature-settings: "cv11" 1; letter-spacing: -0.006em;
     background: var(--bg);
     color: var(--label);
     min-height: 100vh;
-    padding: 12px var(--s2) calc(var(--s5) + 60px);
   }
   .wrap { max-width: 460px; margin: 0 auto; }
   [hidden] { display: none !important; }
 
-  header { text-align: center; margin-bottom: 12px; }
-  header h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.024em; margin: 0; }
+  /* App bar: logo + name */
+  .appbar { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 2px 0 18px; }
+  .appbar .brand { display: flex; align-items: center; gap: 8px; }
+  .appbar .mark { width: 28px; height: 28px; display: block; flex: none; }
+  .appbar h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.024em; margin: 0; color: var(--ink); }
+  .appbar h1 .ap { color: var(--accent-text); }
+  .appbar .sub { margin: 0; font-size: 13px; color: var(--label-2); text-align: center; }
 
   .card {
     background: var(--surface);
     border-radius: var(--r-lg);
+    border: 1px solid var(--line);
     padding: var(--s3);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 12px 32px rgba(0,0,0,0.04);
+    box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.05);
   }
   .card + .card { margin-top: var(--s2); }
-  .section-header {
-    font-size: 13px; font-weight: 600; color: var(--label-3);
-    letter-spacing: 0.01em; text-transform: uppercase;
-    margin: var(--s3) 4px var(--s1);
+  .field label, .section-header {
+    font-size: 12px; font-weight: 700; color: var(--label-3);
+    letter-spacing: 0.06em; text-transform: uppercase;
   }
+  .section-header { margin: var(--s3) 4px var(--s1); }
 
   /* Big friendly step headings */
-  .step-title { font-size: 26px; font-weight: 700; letter-spacing: -0.024em; line-height: 1.2; margin: 0 0 var(--s1); }
-  .step-sub   { font-size: 17px; line-height: 1.45; color: var(--label-2); margin: 0 0 var(--s3); }
+  .step-title { font-size: 24px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.2; margin: 0 0 var(--s1); color: var(--ink); }
+  .step-sub   { font-size: 16px; line-height: 1.45; color: var(--label-3); margin: 0 0 var(--s3); }
   .steps { list-style: none; padding: 0; margin: 0 0 var(--s3); }
   .steps li {
     display: flex; gap: 14px; align-items: flex-start;
-    font-size: 18px; line-height: 1.4; font-weight: 500;
-    padding: 12px 0; border-bottom: 0.5px solid var(--separator);
+    font-size: 17px; line-height: 1.4; font-weight: 500; color: var(--label-2);
+    padding: 12px 0; border-bottom: 1px solid var(--line);
   }
   .steps li:last-child { border-bottom: none; }
   .steps .num {
-    flex: 0 0 34px; height: 34px; border-radius: 50%;
-    background: var(--label); color: #fff;
+    flex: 0 0 28px; height: 28px; margin-top: 1px; border-radius: 50%;
+    background: var(--ink); color: #fff;
     display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 17px;
+    font-weight: 700; font-size: 14px;
   }
 
   /* Form */
   .field + .field { margin-top: var(--s3); }
-  .field label {
-    display: block; font-size: 13px; font-weight: 600; color: var(--label-3);
-    letter-spacing: 0.01em; text-transform: uppercase; margin-bottom: var(--s1);
-  }
+  .field label { display: block; margin-bottom: var(--s1); }
   .field input {
     width: 100%; min-height: 54px;
-    background: var(--fill); border: 1.5px solid transparent; border-radius: var(--r-sm);
+    background: #F8FAFC; border: 1px solid var(--line); border-radius: var(--r-sm);
     padding: 12px 16px; color: var(--label);
-    font-size: 19px; font-weight: 500; font-family: inherit; letter-spacing: -0.02em;
+    font-size: 18px; font-weight: 600; font-family: inherit; letter-spacing: -0.02em;
   }
   .field input::placeholder { color: var(--label-4); font-weight: 400; }
-  .field input:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+  .field input:focus { outline: none; border-color: var(--opp-2); box-shadow: 0 0 0 4px rgba(107,189,255,0.25); background: #fff; }
   .field-note { font-size: 14px; line-height: 1.45; color: var(--label-3); margin-top: var(--s1); }
   .field-note.warn { color: var(--amber-text); font-weight: 600; }
-  /* Match format picker — 2x2 grid so the whole setup screen fits on a phone
-     without scrolling (2026-10-02) */
+  /* Match format picker: 2 columns so the whole setup screen fits on a phone */
   .fmt { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s1); }
   .fmt button {
     position: relative; text-align: left; min-height: 60px; padding: 9px 12px; border-radius: var(--r-sm);
-    background: var(--fill); color: var(--label); border: 2px solid transparent;
-    font-size: 17px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2;
+    background: #F8FAFC; color: var(--ink); border: 1px solid var(--line);
+    font-size: 16px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2;
   }
-  .fmt button small { display: block; font-size: 15px; font-weight: 500; color: var(--label-2); margin-top: 2px; }
-  .fmt button.on { border-color: var(--accent); background: var(--accent-dim); }
-  .fmt button.on::after { content: "✓"; position: absolute; right: 10px; top: 8px;
-                          font-size: 20px; color: var(--accent); font-weight: 800; }
-  .fmt-note { font-size: 14px; line-height: 1.4; color: var(--label-2); margin-top: var(--s1); min-height: 2.8em; }
+  .fmt button small { display: block; font-size: 14px; font-weight: 500; color: var(--label-3); margin-top: 2px; }
+  .fmt button.on { border-color: var(--opp-2); background: rgba(107,189,255,0.12); box-shadow: 0 0 0 1px var(--opp-2) inset; }
+  .fmt button.on::after { content: ""; position: absolute; right: 10px; top: 10px; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--opp-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat; }
+  .fmt-note { font-size: 14px; line-height: 1.4; color: var(--label-3); margin-top: var(--s1); min-height: 2.8em; }
   /* compact setup screen */
   #stSetup .card { padding: 18px; }
   #stSetup .step-title { font-size: 22px; margin-bottom: 10px; }
@@ -130,61 +134,64 @@
   button:disabled { cursor: not-allowed; opacity: 0.45; }
   .btn {
     width: 100%; min-height: 60px; border-radius: var(--r-md);
-    font-size: 19px; font-weight: 700; letter-spacing: -0.02em;
+    font-size: 19px; font-weight: 700; letter-spacing: -0.015em;
     transition: transform 120ms cubic-bezier(0.4,0,0.2,1), opacity 180ms ease, background 180ms ease;
   }
   .btn-big { min-height: 76px; font-size: 22px; }
-  .btn-go   { background: var(--green); color: #fff; }
-  .btn-blue { background: var(--accent); color: var(--on-blue); }
-  .btn-dark { background: var(--label); color: #fff; }
+  .btn-go   { background: linear-gradient(180deg, var(--green), var(--green-2)); color: #fff;
+              box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 6px 16px rgba(34,164,71,0.28); }
+  .btn-dark { background: var(--ink); color: #fff; box-shadow: 0 6px 16px rgba(15,23,42,0.18); }
   .btn-plain {
-    background: var(--surface); color: var(--label);
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 8px 24px rgba(0,0,0,0.05);
-    font-weight: 600; font-size: 17px; min-height: 54px;
+    background: var(--surface); color: var(--ink); border: 1px solid var(--line);
+    box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+    font-weight: 700; font-size: 17px; min-height: 54px;
   }
   .btn-plain.danger { color: var(--red); }
-  /* 2026-10-19: one-tap time-out (the video skips the dead time automatically) */
-  .timeout-btn { width: 100%; margin-top: 14px; min-height: 64px !important; display: flex; align-items: center; justify-content: center; gap: 10px;
-    background: var(--surface); color: var(--label); border: 2px dashed rgba(0,0,0,0.18);
-    font-weight: 700; font-size: 18px; min-height: 58px; border-radius: var(--r-md); }
+  /* One-tap time-out (the video skips the dead time automatically); 2nd tap = "Time-out over" */
+  .timeout-btn { width: 100%; margin-top: 14px; min-height: 64px; display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: #fff; color: var(--ink); border: 1.5px solid rgba(15,23,42,0.14); border-radius: var(--r-md);
+    box-shadow: 0 1px 2px rgba(15,23,42,0.04); font-weight: 700; font-size: 17px; }
+  .timeout-btn .ico { flex-shrink: 0; }
+  #timeoutLabel { display: inline-flex; align-items: center; gap: 8px; }
   .timeout-btn .to-sub { display: none; font-size: 13px; font-weight: 600; opacity: 0.8; }
-  .timeout-btn.on { background: #FFB020; color: #1d1400; border: 2px solid #E09400; flex-direction: column; gap: 2px; }
+  .timeout-btn.on { background: linear-gradient(180deg, #FFB020, #F59E0B); color: #1D1400; border: 2px solid #E08E00;
+                    flex-direction: column; gap: 2px; box-shadow: 0 6px 16px rgba(245,158,11,0.3); }
   .timeout-btn.on .to-sub { display: block; }
   .btn.armed { background: var(--amber-dim); color: var(--amber-text); box-shadow: inset 0 0 0 2px currentColor; }
   .btn-link {
-    background: none; color: var(--accent-text); font-size: 16px; font-weight: 600;
+    background: none; color: var(--label-3); font-size: 16px; font-weight: 600;
     padding: 12px; width: 100%;
   }
-  .pulse { animation: goPulse 1.6s ease-in-out infinite; }
-  @keyframes goPulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(52,199,89,0.55); }
-    50%      { box-shadow: 0 0 0 12px rgba(52,199,89,0); }
-  }
+  .pulse { animation: goPulse 1.8s ease-in-out infinite; }
+  @keyframes goPulse { 0%,100% { box-shadow: 0 6px 16px rgba(34,164,71,0.28), 0 0 0 0 rgba(34,164,71,0.45); }
+                       50% { box-shadow: 0 6px 16px rgba(34,164,71,0.28), 0 0 0 10px rgba(34,164,71,0); } }
   @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
   .stack > * + * { margin-top: 12px; }
 
-  /* Status pill */
-  .topline { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--s2); }
-  /* 2026-11-04: the status dot is drawn by the pill itself (::before) in its own reserved space on the
-     left, so no browser or content blocker can collapse it under the text (iPhone + Chrome desktop) */
+  /* Status + match clock (rounded rectangles of the same height) */
+  .topline { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  /* the status dot is drawn by the pill itself (::before) in its own reserved space on the left,
+     so no browser or content blocker can collapse it under the text (iPhone + Chrome desktop) */
   .pill {
     position: relative; display: inline-block; white-space: nowrap;
-    font-size: 15px; font-weight: 700; line-height: 20px; color: var(--label-3);
-    background: var(--surface); padding: 8px 14px 8px 32px; border-radius: 100px;
+    font-size: 14px; font-weight: 700; line-height: 20px; letter-spacing: 0; color: var(--label-3);
+    background: var(--surface); padding: 7px 12px 7px 29px; border-radius: 10px;
   }
   .pill::before {
-    content: ""; position: absolute; left: 13px; top: 50%; width: 10px; height: 10px; margin-top: -5px;
+    content: ""; position: absolute; left: 12px; top: 50%; width: 9px; height: 9px; margin-top: -4.5px;
     border-radius: 50%; background: currentColor;
   }
-  .pill.live { color: var(--green-text); background: var(--green-dim); }
-  .pill.stopped { color: var(--amber-text); background: var(--amber-dim); }
+  .pill.live { color: #157A34; background: rgba(34,164,71,0.10); box-shadow: 0 0 0 1px rgba(34,164,71,0.18) inset; }
+  .pill.stopped { color: var(--amber-text); background: var(--amber-dim); box-shadow: 0 0 0 1px rgba(255,159,10,0.25) inset; }
   .pill.live::before { animation: blink 1.8s ease-in-out infinite; }
   @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-  .timer { font-size: 15px; font-weight: 600; color: var(--label-3); font-variant-numeric: tabular-nums; }
+  .timer { font-size: 14px; font-weight: 600; line-height: 20px; color: var(--label-3); font-variant-numeric: tabular-nums;
+           background: #fff; border: 1px solid var(--line); padding: 7px 12px; border-radius: 10px; }
 
-  .set-head { text-align: center; margin-bottom: var(--s2); }
-  .set-head .t { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; }
-  .set-head .s { font-size: 15px; color: var(--label-3); margin-top: 2px; }
+  /* Working screens line up on the left edge; set over + match over are centred */
+  .set-head { display: flex; justify-content: space-between; align-items: baseline; margin: 2px 2px 14px; }
+  .set-head .t { font-size: 17px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); }
+  .set-head .s { font-size: 15px; font-weight: 600; color: var(--label-2); }
 
   /* Banner */
   .banner {
@@ -192,6 +199,7 @@
     border-radius: var(--r-md); padding: 14px 18px; margin-bottom: var(--s2);
     font-size: 17px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.3;
   }
+  #statusBanner { justify-content: center; text-align: center; margin-bottom: 14px; }
   .banner.info { background: var(--accent-dim); color: var(--accent-text); }
   .banner.warn { background: var(--amber-dim); color: var(--amber-text); }
   .banner.done { background: var(--green-dim); color: var(--green-text); }
@@ -204,22 +212,21 @@
   /* The two giant team buttons */
   .team-btn {
     width: 100%; display: flex; align-items: center; justify-content: space-between;
-    border-radius: var(--r-lg); padding: 18px 22px; color: #fff; text-align: left;
-    min-height: 150px; position: relative; overflow: hidden;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    border-radius: 22px; padding: 18px 22px; color: #fff; text-align: left;
+    min-height: 148px; position: relative; overflow: hidden;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 10px 24px rgba(15,23,42,0.12);
     transition: transform 100ms ease, filter 150ms ease;
   }
   .team-btn + .team-btn { margin-top: 14px; }
-  .team-btn.t1 { background: var(--team1); }
-  .team-btn.t2 { background: var(--opp); color: var(--on-blue); }
-  .team-btn.t2 .sets { background: rgba(255,255,255,0.40); }
+  .team-btn.t1 { background: linear-gradient(160deg, var(--team1) 0%, var(--team1-2) 100%); }
+  .team-btn.t2 { background: linear-gradient(160deg, var(--opp) 0%, var(--opp-2) 100%); color: var(--on-blue); }
   .team-btn .who { min-width: 0; }
-  .team-btn .name { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15;
+  .team-btn .name { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15;
                     overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-  .team-btn .hint { font-size: 15px; font-weight: 600; opacity: 0.85; margin-top: 6px; }
-  .team-btn .sets { font-size: 14px; font-weight: 700; opacity: 0.9; margin-top: 8px;
-                    background: rgba(255,255,255,0.22); display: inline-block; padding: 4px 10px; border-radius: 100px; }
-  .team-btn .score { font-size: 84px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.04em; line-height: 1; margin-left: 12px; }
+  .team-btn .sets { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.9; margin-top: 8px;
+                    background: rgba(255,255,255,0.18); display: inline-block; padding: 4px 10px; border-radius: 8px; }
+  .team-btn.t2 .sets { background: rgba(255,255,255,0.35); }
+  .team-btn .score { font-size: 88px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.05em; line-height: 1; margin-left: 12px; }
   .team-btn.flash::after {
     content: ""; position: absolute; inset: 0; background: rgba(255,255,255,0.55);
     animation: flash 380ms ease-out forwards;
@@ -229,166 +236,69 @@
   @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.25); } 100% { transform: scale(1); } }
   .team-btn:disabled { filter: grayscale(0.7); opacity: 0.55; }
 
-  /* Undo snackbar */
+  /* UNDO bar */
   .snack {
     position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom));
     transform: translateX(-50%) translateY(30px);
     width: min(94vw, 460px);
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    background: #1C1C1E; color: #fff; border-radius: 16px; padding: 12px 12px 12px 18px;
-    font-size: 16px; font-weight: 600; box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+    background: rgba(15,23,42,0.92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    color: #fff; border-radius: 18px; padding: 10px 10px 10px 18px;
+    font-size: 15px; font-weight: 600; box-shadow: 0 12px 32px rgba(15,23,42,0.28);
     opacity: 0; pointer-events: none; transition: opacity 180ms ease, transform 180ms ease; z-index: 60;
   }
   .snack.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
-  .snack button { background: #FFD60A; color: #000; font-weight: 800; font-size: 16px; border-radius: 12px; min-height: 48px; padding: 0 20px; flex-shrink: 0; }
+  .snack button { background: #fff; color: var(--ink); font-weight: 800; font-size: 16px; letter-spacing: 0.02em;
+                  border-radius: 12px; min-height: 46px; padding: 0 20px; flex-shrink: 0; }
 
   /* Message toast */
   .toast {
     position: fixed; left: 50%; top: calc(16px + env(safe-area-inset-top));
     transform: translateX(-50%) translateY(-20px);
     width: min(92vw, 440px); padding: 14px 18px; border-radius: 14px;
-    background: #FFF4E0; color: var(--amber-text); box-shadow: inset 0 0 0 2px currentColor, 0 12px 32px rgba(0,0,0,0.18);
-    font-size: 16px; font-weight: 700; line-height: 1.3; text-align: center;
+    background: #fff; color: var(--ink); border-left: 4px solid #F59E0B;
+    box-shadow: 0 12px 32px rgba(15,23,42,0.16), 0 0 0 1px var(--line);
+    font-size: 16px; font-weight: 600; line-height: 1.3;
     opacity: 0; pointer-events: none; transition: opacity 180ms ease, transform 180ms ease; z-index: 70;
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   /* Result / summary rows */
-  .result-big { text-align: center; font-size: 30px; font-weight: 800; letter-spacing: -0.02em; margin: var(--s1) 0; }
+  .result-big { text-align: center; font-size: 34px; font-weight: 800; letter-spacing: -0.03em; margin: var(--s1) 0; color: var(--ink); }
   .list-row {
     display: flex; justify-content: space-between; align-items: center; gap: var(--s2);
-    padding: 14px 0; border-bottom: 0.5px solid var(--separator); font-size: 16px;
+    padding: 14px 0; border-bottom: 1px solid var(--line); font-size: 16px;
   }
   .list-row:last-child { border-bottom: none; }
   .list-row .l { color: var(--label-3); font-weight: 600; }
-  .list-row .r { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .list-row .r { font-weight: 700; }
   .log { max-height: 220px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .empty-state { text-align: center; padding: var(--s2) 0; color: var(--label-4); font-size: 15px; }
 
-  /* "More" drawer */
+  /* "Something went wrong?" / "Scores didn't send?" drawers (links centred) */
   details.more { margin-top: var(--s4); }
   details.more > summary {
     list-style: none; cursor: pointer; text-align: center;
-    font-size: 16px; font-weight: 600; color: var(--label-3);
-    padding: 14px; border-radius: var(--r-md); background: rgba(118,118,128,0.10);
+    font-size: 15px; font-weight: 600; color: var(--label-3);
+    padding: 12px; border-radius: var(--r-md);
   }
   details.more > summary::-webkit-details-marker { display: none; }
+  details.more > summary::after { content: " ›"; }
   details.more[open] > summary { margin-bottom: var(--s2); }
   .more-note { font-size: 13px; line-height: 1.45; color: var(--label-3); margin: 6px 4px 0; }
-  /* 2026-11-04: helpers for a first-time scorekeeper */
+  #playMore .more-note, #playMore .section-header { text-align: center; }
+  /* helpers for a first-time scorekeeper */
   .note-sm { font-size: 15px; line-height: 1.45; color: var(--label-2); margin: 0 0 var(--s2); }
-  .tap-help { text-align: center; font-size: 16px; font-weight: 700; color: var(--label-2); margin: 0 0 10px; }
-  .question { font-size: 20px; font-weight: 800; text-align: center; margin: var(--s2) 0 12px; }
+  .question { font-size: 19px; font-weight: 800; text-align: center; margin: var(--s2) 0 12px; color: var(--ink); }
   .countdown { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 4px 0 var(--s2);
-               background: var(--green-dim); color: var(--green-text); border-radius: var(--r-md); padding: 14px; text-align: center; }
+               background: var(--green-dim); color: var(--green-text); border: 1px solid rgba(34,164,71,0.18);
+               border-radius: var(--r-md); padding: 14px; text-align: center; }
   .countdown #moCountNum { font-size: 40px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
   .countdown #moCountText { font-size: 16px; font-weight: 700; }
   .countdown.done { background: var(--amber-dim); color: var(--amber-text); }
-  .footnote { font-size: 13px; line-height: 1.5; color: var(--label-3); text-align: center; margin-top: var(--s2); }
-
-  /* ===== 2026-11-04 polish layer (same screens, cleaner look) ===== */
-  :root {
-    --bg: #F4F5F7; --label: #0F172A; --label-2: #334155; --label-3: #64748B; --label-4: #94A3B8;
-    --line: rgba(15,23,42,0.08);
-    --team1: #2F9E44; --team1-2: #237A34;
-    --opp: #6BBDFF;  --opp-2: #4AA6F2;
-    --green: #22A447; --green-2: #1B8A3B;
-    --ink: #0F172A;
-    --r-lg: 20px; --r-md: 14px; --r-sm: 12px;
-  }
-  body { font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-         font-feature-settings: "cv11" 1; letter-spacing: -0.006em; }
-  .team-btn .score, .timer, #moCountNum { font-variant-numeric: tabular-nums; }
-  .list-row .r { font-variant-numeric: normal; }
-  .appbar { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 2px 0 18px; }
-  .appbar .brand { display: flex; align-items: center; gap: 8px; }
-  .appbar .mark { width: 28px; height: 28px; display: block; flex: none; }
-  .appbar h1 { font-size: 21px; font-weight: 700; letter-spacing: -0.024em; margin: 0; color: var(--ink); }
-  .appbar h1 .ap { color: var(--accent-text); }
-  .appbar .sub { margin: 0; font-size: 13px; color: var(--label-2); text-align: center; }
-  #playMore .more-note, #playMore .section-header { text-align: center; }
-  .card { border-radius: var(--r-lg); border: 1px solid var(--line);
-          box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.05); }
-  .step-title { font-size: 24px; font-weight: 800; letter-spacing: -0.025em; color: var(--ink); }
-  .step-sub { font-size: 16px; color: var(--label-3); }
-  .steps li { font-size: 17px; font-weight: 500; color: var(--label-2); border-bottom: 1px solid var(--line); }
-  .steps .num { flex: 0 0 28px; height: 28px; font-size: 14px; background: var(--ink); margin-top: 1px; }
-  .field label, .section-header { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: var(--label-3); }
-  .field input { background: #F8FAFC; border: 1px solid var(--line); border-radius: var(--r-sm); font-size: 18px; font-weight: 600; }
-  .field input:focus { border-color: var(--opp-2); box-shadow: 0 0 0 4px rgba(107,189,255,0.25); background: #fff; }
-  .fmt button { background: #F8FAFC; border: 1px solid var(--line); font-size: 16px; font-weight: 700; color: var(--ink); }
-  .fmt button small { font-size: 14px; color: var(--label-3); font-weight: 500; }
-  .fmt button.on { background: rgba(107,189,255,0.12); border-color: var(--opp-2); box-shadow: 0 0 0 1px var(--opp-2) inset; }
-  .fmt button.on::after { content: ""; width: 18px; height: 18px; border-radius: 50%; right: 10px; top: 10px;
-    background: var(--opp-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/12px no-repeat; }
-  .fmt-note { color: var(--label-3); }
-  .btn { border-radius: var(--r-md); font-weight: 700; letter-spacing: -0.015em; }
-  .btn-go { background: linear-gradient(180deg, var(--green), var(--green-2)); color: #fff;
-            box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 6px 16px rgba(34,164,71,0.28); }
-  .btn-dark { background: var(--ink); box-shadow: 0 6px 16px rgba(15,23,42,0.18); }
-  .btn-plain { border: 1px solid var(--line); box-shadow: 0 1px 2px rgba(15,23,42,0.04); color: var(--ink); }
-  .btn-link { color: var(--label-3); font-weight: 600; }
-  .pulse { animation: goPulse2 1.8s ease-in-out infinite; }
-  @keyframes goPulse2 { 0%,100% { box-shadow: 0 6px 16px rgba(34,164,71,0.28), 0 0 0 0 rgba(34,164,71,0.45); }
-                        50% { box-shadow: 0 6px 16px rgba(34,164,71,0.28), 0 0 0 10px rgba(34,164,71,0); } }
-  .topline { margin-bottom: 14px; }
-  .pill { font-size: 14px; letter-spacing: 0; padding: 7px 14px 7px 30px; }
-  .pill::before { left: 12px; width: 9px; height: 9px; margin-top: -4.5px; }
-  .pill.live { background: rgba(34,164,71,0.10); color: #157A34; box-shadow: 0 0 0 1px rgba(34,164,71,0.18) inset; }
-  .pill.stopped { box-shadow: 0 0 0 1px rgba(255,159,10,0.25) inset; }
-  .timer { font-size: 14px; font-weight: 600; color: var(--label-3); background: #fff; border: 1px solid var(--line);
-           padding: 6px 12px; border-radius: 100px; }
-  .set-head .t { font-size: 17px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); }
-  .set-head .s { font-size: 15px; font-weight: 600; color: var(--label-2); margin-top: 2px; }
-  .tap-help { font-size: 15px; font-weight: 600; color: var(--label-3); margin-bottom: 12px; }
-  .team-btn { border-radius: 22px; min-height: 148px; padding: 18px 22px;
-              box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset, 0 10px 24px rgba(15,23,42,0.12); }
-  .team-btn.t1 { background: linear-gradient(160deg, var(--team1) 0%, var(--team1-2) 100%); }
-  .team-btn.t2 { background: linear-gradient(160deg, var(--opp) 0%, var(--opp-2) 100%); color: #0B2540; }
-  .team-btn .name { font-size: 21px; font-weight: 800; letter-spacing: -0.02em; }
-  .team-btn .sets { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
-                    padding: 4px 10px; background: rgba(255,255,255,0.18); }
-  .team-btn.t2 .sets { background: rgba(255,255,255,0.35); }
-  .team-btn .score { font-size: 88px; font-weight: 800; letter-spacing: -0.05em; }
-  .timeout-btn { border: 1.5px solid rgba(15,23,42,0.14); color: var(--ink); background: #fff; border-radius: var(--r-md);
-                 box-shadow: 0 1px 2px rgba(15,23,42,0.04); font-size: 17px; }
-  .timeout-btn .ico { flex-shrink: 0; }
-  #timeoutLabel { display: inline-flex; align-items: center; gap: 8px; }
-  .timeout-btn.on { background: linear-gradient(180deg, #FFB020, #F59E0B); border-color: #E08E00; color: #1D1400;
-                    box-shadow: 0 6px 16px rgba(245,158,11,0.3); }
-  #statusBanner, .banner { border-radius: var(--r-md); }
-  details.more > summary { background: transparent; color: var(--label-3); font-size: 15px; font-weight: 600; padding: 12px; }
-  details.more > summary::after { content: " ›"; }
-  .result-big { font-size: 34px; font-weight: 800; letter-spacing: -0.03em; color: var(--ink); }
-  .question { font-size: 19px; color: var(--ink); }
-  .countdown { border: 1px solid rgba(34,164,71,0.18); }
-  .snack { background: rgba(15,23,42,0.92); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-           border-radius: 18px; padding: 10px 10px 10px 18px; font-size: 15px; font-weight: 600;
-           box-shadow: 0 12px 32px rgba(15,23,42,0.28); }
-  .snack button { background: #fff; color: var(--ink); border-radius: 12px; font-weight: 800; letter-spacing: 0.02em; min-height: 46px; }
-  .toast { background: #fff; color: var(--ink); box-shadow: 0 12px 32px rgba(15,23,42,0.16), 0 0 0 1px var(--line);
-           border-left: 4px solid #F59E0B; text-align: left; font-weight: 600; }
-  .list-row { border-bottom: 1px solid var(--line); }
-  /* 2026-11-04: alignment. Working screens (setup, ready, scoring, resume, done) line up on the left edge;
-     the two announcement screens (set over, match over) are centred top to bottom. */
-  .set-head { display: flex; justify-content: space-between; align-items: baseline; text-align: left; margin: 2px 2px 14px; }
-  .set-head .s { margin-top: 0; }
-  .tap-help { text-align: left; margin: 0 2px 10px; }
   #stSetBreak .card, #stMatchOver .card { text-align: center; }
-  #stSetBreak .step-title, #stMatchOver .step-title { text-align: center; }
-  #stSetBreak .note-sm { text-align: center; }
   #stMatchOver .steps li { text-align: left; }
-  details.more > summary { text-align: left; padding-left: 4px; }
-  #statusBanner { justify-content: center; text-align: center; margin-bottom: 14px; }
-  /* 2026-11-04: no pill shapes - rounded rectangles like every other element; status and timer match in height */
-  .pill { border-radius: 10px; padding: 7px 12px 7px 29px; line-height: 20px; }
-  .pill::before { left: 12px; }
-  .timer { border-radius: 10px; padding: 7px 12px; line-height: 20px; font-size: 14px; }
-  .team-btn .sets { border-radius: 8px; }
-  details.more > summary { text-align: center; padding-left: 12px; }   /* both help links centred */
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 <div class="wrap">
@@ -485,7 +395,7 @@
       <span class="score" id="t2Score">0</span>
     </button>
     <button class="btn timeout-btn" id="timeoutBtn" type="button">
-      <span id="timeoutLabel"><svg class="ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.2" fill="currentColor"/></svg> Time-out</span>
+      <span id="timeoutLabel"><svg class="ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.2" fill="currentColor"/></svg> <span id="timeoutText">Time-out</span></span>
       <span class="to-sub" id="timeoutSub">Tap again when play starts</span>
     </button>
     <button class="btn btn-plain" id="timeUpBtn" hidden style="margin-top:var(--s2)">Time's up, end the scrimmage</button>
@@ -500,7 +410,6 @@
         <button class="btn btn-plain" id="forceEndBtn">End this set now (point cap or time limit)</button>
         <button class="btn btn-plain danger" id="stopBtn">End the match early (forfeit or out of time)</button>
       </div>
-      <input type="hidden" id="offsetInput" value="0">
       <div class="section-header" id="setHistoryTitle" hidden>Finished sets</div>
       <div class="card" id="setHistoryPanel" hidden></div>
       <div class="section-header">Every point so far</div>
@@ -634,6 +543,8 @@ let timeUp = false;       // scrimmage: "Time's up" tapped — waiting for FINIS
 let timeUpForced = 0;     // the set "Time's up" ended mid-set (so Undo can take it back)
 function isLastSet(setNo) { return fmt.mode !== 'open' && setNo >= fmt.sets; }
 const el = id => document.getElementById(id);
+// Team names are typed by the scorekeeper: always put them on screen as text, never as HTML.
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 async function requestWakeLock() {
   try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
@@ -658,7 +569,7 @@ function noteFocus(v, extra) {
   focusLog.push(entry);
   try { localStorage.setItem('vbFocusLog', JSON.stringify(focusLog)); } catch (e) {}
   // also the first 3 min after START (in case START was tapped before pressing record)
-  if (running && startTime && !otherCam && now - startTime < 180000) { startFocus.push(entry); saveCheckpoint(); }
+  if (running && startTime && now - startTime < 180000) { startFocus.push(entry); saveCheckpoint(); }
 }
 noteFocus('show', { load: true });
 document.addEventListener('visibilitychange', () => noteFocus(document.visibilityState === 'visible' ? 'show' : 'hide'));
@@ -678,31 +589,19 @@ function currentElapsed() {
   const pausedNow = paused && pauseStartedAt ? (Date.now() - pauseStartedAt) : 0;
   return (Date.now() - startTime - pausedTotal - pausedNow) / 1000;
 }
-function updateTimerDisplay() { el('timeDisplay').textContent = formatTime(currentElapsed()); }
+let shownTime = '';
+function updateTimerDisplay() {
+  const t = formatTime(currentElapsed());
+  if (t !== shownTime) { shownTime = t; el('timeDisplay').textContent = t; }
+}
 
 function teamNames() {
   return [el('team1Name').value.trim() || 'Our Team', el('team2Name').value.trim() || 'Other team'];
 }
 function setTarget(setNo) { return (fmt.mode === 'best' && setNo >= 3) ? fmt.decider : fmt.pts; }
-// Final result from the finished sets (+ the set being played, if it's decided).
-// 2-sets-only formats: a 1–1 match is won on total points (equal = tie).
-function matchResult(extraSet) {
-  const sets = setHistory.slice();
-  if (extraSet && !sets.some(h => h.set === extraSet.set)) sets.push(extraSet);
-  let s1 = 0, s2 = 0, p1 = 0, p2 = 0;
-  for (const h of sets) {
-    p1 += h.t1; p2 += h.t2;
-    if (h.t1 > h.t2) s1++; else if (h.t2 > h.t1) s2++;
-  }
-  let winner = s1 > s2 ? 1 : (s2 > s1 ? 2 : 0), by = winner ? 'sets' : 'tie';
-  if (!winner && fmt.mode !== 'best' && p1 !== p2) { winner = p1 > p2 ? 1 : 2; by = 'points'; }
-  return { sets1: s1, sets2: s2, points1: p1, points2: p2, winner, decidedBy: by };
-}
 // Would winning a set now (with setsAfter sets) end the match?
 function winsMatch(setsAfter, setNo) { return fmt.mode === 'best' ? setsAfter >= 2 : isLastSet(setNo); }   // 'open': never
-function setWord(setsAfter, setNo) {
-  return (fmt.mode === 'best' && setsAfter >= 2) ? 'Match' : 'Set';
-}
+function setWord(setsAfter) { return (fmt.mode === 'best' && setsAfter >= 2) ? 'Match' : 'Set'; }
 
 // ===========================================================================
 // SCREENS — exactly one is visible, chosen from the state
@@ -751,11 +650,10 @@ function render() {
   if (stage === 'resume') {
     const betweenSets = t1Score === 0 && t2Score === 0 && setHistory.some(h => h.set === currentSet - 1);
     el('resumeTitle').textContent = betweenSets ? `Next: set ${currentSet}` : `The camera stopped during set ${currentSet}`;
-
   }
   if (stage === 'matchover') {
-    // sets after this (last) set — works for ties (2 sets both played, time limits)
-    const r = matchResult({ set: currentSet, t1: t1Score, t2: t2Score });
+    // the same result the match file will carry (works for ties: 2 sets both played, time limits)
+    const r = buildMatchData().result;
     const a = r.sets1, b = r.sets2;
     el('moHead').textContent = timeUp ? "Time's up!" : '';
     el('moHead').hidden = !timeUp;
@@ -790,7 +688,7 @@ function refreshBanner() {
   const s = evaluateSet();
   if (s.state === 'point' || s.state === 'deuce') {
     banner.className = 'banner ' + (s.state === 'point' ? 'warn' : 'info');
-    banner.innerHTML = `<span>${s.text}</span>`;
+    banner.replaceChildren(Object.assign(document.createElement('span'), { textContent: s.text }));
     banner.hidden = false;
   } else {
     banner.hidden = true;
@@ -816,7 +714,7 @@ function refreshSetHistory() {
   title.hidden = false; panel.hidden = false;
   panel.innerHTML = setHistory.map(s => {
     const w = s.winner === 1 ? n1 : (s.winner === 2 ? n2 : 'Tied');
-    return `<div class="list-row"><span class="l">Set ${s.set}, ${w}</span><span class="r">${s.t1}-${s.t2}</span></div>`;
+    return `<div class="list-row"><span class="l">Set ${s.set}, ${esc(w)}</span><span class="r">${s.t1}-${s.t2}</span></div>`;
   }).join('');
 }
 
@@ -873,7 +771,6 @@ el('setupNext').addEventListener('click', () => {
   render();
 });
 el('readyBack').addEventListener('click', () => { namesConfirmed = false; render(); });
-const otherCam = false;   // 2026-11-04: no "someone else runs the camera" option
 
 // ===========================================================================
 // SAVE / RESTORE
@@ -891,7 +788,7 @@ function clearCheckpoint() { try { localStorage.removeItem('vbScorekeeperCheckpo
 
 function startTimerAndLock() {
   clearInterval(timerInterval);
-  timerInterval = setInterval(updateTimerDisplay, 200);
+  timerInterval = setInterval(updateTimerDisplay, 250);
   updateTimerDisplay();
   if (!paused) requestWakeLock();
 }
@@ -905,7 +802,7 @@ function checkForSavedMatch() {
   const n2 = (data.team2Name || 'Other team').trim() || 'Other team';
   const n1 = (data.team1Name || 'Our Team').trim() || 'Our Team';
   el('restoreInfo').innerHTML =
-    `<b>${n1} vs ${n2}</b><br>Set ${data.currentSet}, ${data.t1Score}-${data.t2Score}` +
+    `<b>${esc(n1)} vs ${esc(n2)}</b><br>Set ${data.currentSet}, ${data.t1Score}-${data.t2Score}` +
     `${data.paused ? ' (camera stopped)' : ''}<br>Started ${mins} min ago`;
 }
 
@@ -941,17 +838,29 @@ el('restoreYes').addEventListener('click', () => {
   render();
 });
 
+// ---- "Tap twice to confirm" for anything that can't easily be taken back ----
+// 1st tap: the button turns amber and says what a 2nd tap will do; no 2nd tap within
+// `ms` -> it goes back to normal. opts.check(): run first, false = do nothing.
+// opts.needed(): false = no confirmation needed, act on the 1st tap.
+function confirmTap(id, armedText, onConfirm, opts = {}) {
+  const b = el(id), label = b.textContent;
+  let timer = null;
+  const reset = () => { clearTimeout(timer); timer = null; b.classList.remove('armed'); b.textContent = label; };
+  b.addEventListener('click', () => {
+    if (opts.check && !opts.check()) return;
+    if (!timer && (!opts.needed || opts.needed())) {
+      b.classList.add('armed');
+      b.textContent = typeof armedText === 'function' ? armedText() : armedText;
+      timer = setTimeout(reset, opts.ms || 4000);
+      return;
+    }
+    reset();
+    onConfirm();
+  });
+}
+
 // Throwing a match away is permanent, so it takes two taps.
-let discardArmed = null;
-el('restoreNo').addEventListener('click', () => {
-  const b = el('restoreNo');
-  if (!discardArmed) {
-    b.classList.add('armed');
-    b.textContent = 'Tap again to delete it. This can\'t be undone.';
-    discardArmed = setTimeout(() => { discardArmed = null; b.classList.remove('armed'); b.textContent = 'No, delete it and start over'; }, 4000);
-    return;
-  }
-  clearTimeout(discardArmed); discardArmed = null;
+confirmTap('restoreNo', 'Tap again to delete it. This can\'t be undone.', () => {
   restoreData = null;
   clearCheckpoint();
   render();
@@ -970,7 +879,7 @@ function logEvent() {
 
 el('startBtn').addEventListener('click', () => {
   startTime = Date.now();
-  startFocus = otherCam ? [] : focusLog.filter(x => x.w <= startTime && startTime - x.w < 30 * 60000);   // 2026-11-03
+  startFocus = focusLog.filter(x => x.w <= startTime && startTime - x.w < 30 * 60000);   // 2026-11-03
   running = true;
   paused = false; pausedTotal = 0; pauseStartedAt = null;
   recordings = [{ start: startTime, end: null }];
@@ -999,12 +908,12 @@ function evaluateSet() {
     if (hi === lo) return { state: 'deuce', text: `Tied ${hi}-${hi}. A team has to win by 2.` };
     const wouldWin = (hi + 1 >= target) && ((hi + 1) - lo >= 2);
     if (wouldWin) {
-      return { state: 'point', text: `${setWord(setsIfWon, currentSet)} point for ${leaderName}` };
+      return { state: 'point', text: `${setWord(setsIfWon)} point for ${leaderName}` };
     }
     return { state: 'deuce', text: `${leaderName} is up by 1. They need to win by 2.` };
   }
   if (hi > 0 && (hi + 1 >= target) && ((hi + 1) - lo >= 2)) {
-    return { state: 'point', text: `${setWord(setsIfWon, currentSet)} point for ${leaderName}` };
+    return { state: 'point', text: `${setWord(setsIfWon)} point for ${leaderName}` };
   }
   return { state: 'none' };
 }
@@ -1041,16 +950,13 @@ function addPoint(team) {
 el('t1Plus').addEventListener('click', () => addPoint(1));
 el('t2Plus').addEventListener('click', () => addPoint(2));
 
-// ---- Quick undo snackbar: shown for 5 s after every point ----
-let snackTimer = null;
+// ---- UNDO bar: stays at the bottom the whole time there is something to undo, ----
+// and always says what UNDO will take back.
 let snackUndoFn = null;
-// 2026-11-04: the UNDO bar stays at the bottom the whole time there is something to undo
-// (no more 5 s timeout); it always says what UNDO will take back.
 function showSnack(text, onUndo) {
   snackUndoFn = onUndo || null;
   el('snackText').textContent = text;
   el('snack').classList.add('show');
-  clearTimeout(snackTimer);
 }
 function lastPointText() {
   const last = events[events.length - 1], prev = events[events.length - 2];
@@ -1114,14 +1020,15 @@ el('timeoutBtn').addEventListener('click', () => {
 function refreshTimeoutBtn() {
   const b = el('timeoutBtn');
   b.classList.toggle('on', timeoutOpen);
-  let label = '<svg class="ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.2" fill="currentColor"/></svg> Time-out';
+  let label = 'Time-out';
   if (timeoutOpen) {
     const last = timeouts[timeouts.length - 1];
     const sec = last ? Math.max(0, Math.floor((Date.now() - last.w) / 1000)) : 0;
-    label = `<svg class="ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.2" fill="currentColor"/></svg> Time-out ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+    label = `Time-out ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
     if (sec >= 60 && !timeoutBuzzed) { timeoutBuzzed = true; buzz([200, 120, 200]); }
   } else { stopTimeoutTimer(); }
-  el('timeoutLabel').innerHTML = label;
+  const tt = el('timeoutText');
+  if (tt.textContent !== label) tt.textContent = label;
   b.disabled = !running || paused;
 }
 
@@ -1162,7 +1069,6 @@ function undoLast() {
   showToast(`Undone. The score is now ${t1Score}-${t2Score}.`);
   render();
 }
-
 
 // Remove that team's most recent point in THIS set, shifting later scores down,
 // so the export never contains a score going backwards.
@@ -1296,35 +1202,14 @@ function callTimeUp() {
   buzz(40);
   render();
 }
-let timeUpArmed = null;
-el('timeUpBtn').addEventListener('click', () => {
-  const b = el('timeUpBtn');
-  const label = "Time's up, end the scrimmage";
-  if (!timeUpArmed) {
-    b.classList.add('armed');
-    b.textContent = (t1Score || t2Score) ? `Tap again to end set ${currentSet} at ${t1Score}-${t2Score}` : 'Tap again to end the scrimmage';
-    timeUpArmed = setTimeout(() => { timeUpArmed = null; b.classList.remove('armed'); b.textContent = label; }, 4000);
-    return;
-  }
-  clearTimeout(timeUpArmed); timeUpArmed = null;
-  b.classList.remove('armed'); b.textContent = label;
-  callTimeUp();
-});
+confirmTap('timeUpBtn',
+  () => (t1Score || t2Score) ? `Tap again to end set ${currentSet} at ${t1Score}-${t2Score}` : 'Tap again to end the scrimmage',
+  callTimeUp);
 el('breakTimeUp').addEventListener('click', callTimeUp);
 
 // Mid-set camera stop (rare). Two taps, because a stray pause shifts every
 // later timestamp.
-let pauseArmed = null;
-el('pauseBtn').addEventListener('click', () => {
-  const b = el('pauseBtn');
-  if (!pauseArmed) {
-    b.classList.add('armed');
-    b.textContent = 'Tap again if the camera really stopped';
-    pauseArmed = setTimeout(() => { pauseArmed = null; b.classList.remove('armed'); b.textContent = 'The camera stopped recording (battery, full card)'; }, 4000);
-    return;
-  }
-  clearTimeout(pauseArmed); pauseArmed = null;
-  b.classList.remove('armed'); b.textContent = 'The camera stopped recording (battery, full card)';
+confirmTap('pauseBtn', 'Tap again if the camera really stopped', () => {
   el('playMore').open = false;
   pauseCamera();
   render();
@@ -1333,38 +1218,19 @@ el('pauseBtn').addEventListener('click', () => {
 // End the current set at the current score (point cap or time limit on the
 // schedule). Two taps. The set then counts as won by whoever leads (a tie counts
 // for nobody), and the app moves on exactly as if the set had been won normally.
-let forceArmed = null;
-el('forceEndBtn').addEventListener('click', () => {
-  const b = el('forceEndBtn');
-  const label = 'End this set now (point cap or time limit)';
-  if (!running || paused || (t1Score === 0 && t2Score === 0)) { showToast('Score at least one point first.'); return; }
-  if (!forceArmed) {
-    b.classList.add('armed');
-    b.textContent = `Tap again to end set ${currentSet} at ${t1Score}-${t2Score}`;
-    forceArmed = setTimeout(() => { forceArmed = null; b.classList.remove('armed'); b.textContent = label; }, 4000);
-    return;
-  }
-  clearTimeout(forceArmed); forceArmed = null;
-  b.classList.remove('armed'); b.textContent = label;
+confirmTap('forceEndBtn', () => `Tap again to end set ${currentSet} at ${t1Score}-${t2Score}`, () => {
   el('playMore').open = false;
   if (!forcedSets.includes(currentSet)) forcedSets.push(currentSet);
   saveCheckpoint();
   buzz(30);
   render();
-});
+}, { check: () => {
+  if (!running || paused || (t1Score === 0 && t2Score === 0)) { showToast('Score at least one point first.'); return false; }
+  return true;
+} });
 
 // Ending early (forfeit, out of time). Two taps.
-let stopArmed = null;
-el('stopBtn').addEventListener('click', () => {
-  const b = el('stopBtn');
-  if (!stopArmed) {
-    b.classList.add('armed');
-    b.textContent = 'Tap again to end the match now';
-    stopArmed = setTimeout(() => { stopArmed = null; b.classList.remove('armed'); b.textContent = 'End the match early (forfeit or out of time)'; }, 4000);
-    return;
-  }
-  clearTimeout(stopArmed); stopArmed = null;
-  b.classList.remove('armed'); b.textContent = 'End the match early (forfeit or out of time)';
+confirmTap('stopBtn', 'Tap again to end the match now', () => {
   el('playMore').open = false;
   endMatch();
 });
@@ -1373,31 +1239,21 @@ el('stopBtn').addEventListener('click', () => {
 // DONE SCREEN / NEW MATCH
 // ===========================================================================
 function renderDone() {
-  const [n1, n2] = teamNames();
-  const r = matchResult();
+  const [n1, n2] = teamNames().map(esc);
+  const r = buildMatchData().result;
+  const win = r.winner === 1 ? n1 : n2, lose = r.winner === 1 ? n2 : n1;
   el('doneSummary').innerHTML = r.decidedBy === 'points'
-    ? `<b>${r.winner === 1 ? n1 : n2}</b> won on total points (${Math.max(r.points1, r.points2)}-${Math.min(r.points1, r.points2)}) against ${r.winner === 1 ? n2 : n1}. Sets ${r.sets1}-${r.sets2}.`
-    : t1Sets === t2Sets
-    ? `<b>${n1} vs ${n2}</b>, sets ${t1Sets}-${t2Sets}.`
-    : `<b>${t1Sets > t2Sets ? n1 : n2}</b> won ${Math.max(t1Sets, t2Sets)}-${Math.min(t1Sets, t2Sets)} against ${t1Sets > t2Sets ? n2 : n1}.`;
+    ? `<b>${win}</b> won on total points (${Math.max(r.points1, r.points2)}-${Math.min(r.points1, r.points2)}) against ${lose}. Sets ${r.sets1}-${r.sets2}.`
+    : !r.winner
+    ? `<b>${n1} vs ${n2}</b>, sets ${r.sets1}-${r.sets2}.`
+    : `<b>${win}</b> won ${Math.max(r.sets1, r.sets2)}-${Math.min(r.sets1, r.sets2)} against ${lose}.`;
   el('doneSets').innerHTML = setHistory.map(s =>
     `<div class="list-row"><span class="l">Set ${s.set}</span><span class="r">${s.t1}-${s.t2}</span></div>`
   ).join('');
   refreshDriveStatus();
 }
 
-let newArmed = null;
-el('newMatchBtn').addEventListener('click', () => {
-  const b = el('newMatchBtn');
-  const unsent = DRIVE_URL && loadPending().length > 0;
-  if (unsent && !newArmed) {
-    b.classList.add('armed');
-    b.textContent = 'Not uploaded to Google Drive yet. Tap again to start anyway.';
-    newArmed = setTimeout(() => { newArmed = null; b.classList.remove('armed'); b.textContent = 'Start a new match'; }, 5000);
-    return;
-  }
-  clearTimeout(newArmed); newArmed = null;
-  b.classList.remove('armed'); b.textContent = 'Start a new match';
+confirmTap('newMatchBtn', 'Not uploaded to Google Drive yet. Tap again to start anyway.', () => {
   startTime = null; running = false; paused = false; startFocus = [];
   pausedTotal = 0; pauseStartedAt = null;
   events = []; setHistory = []; recordings = []; forcedSets = [];
@@ -1408,47 +1264,44 @@ el('newMatchBtn').addEventListener('click', () => {
   clearCheckpoint();
   namesConfirmed = false;
   el('team2Name').value = '';
-  el('offsetInput').value = 0;
   el('driveStatus').hidden = true;
   refreshLog(); refreshSetHistory();
   render();
-});
+}, { needed: () => !!DRIVE_URL && loadPending().length > 0, ms: 5000 });
 
 // ===========================================================================
 // MATCH FILE (read by apply-match.lua). Same format + (2026-09-28) extra
 // startedAt / endedAt / recordings clock times for picking clips off the card.
 // ===========================================================================
 function buildMatchData() {
-  const offset = parseFloat(el('offsetInput').value) || 0;
   const [n1, n2] = teamNames();
-  const targetFor = setTarget;
   // last event of each set (a set ended with "End this set now" counts as decided there)
   const lastIdx = {};
   events.forEach((e, i) => { lastIdx[e.set] = i; });
   const isDecidedAt = (e, i) => {
     const hi = Math.max(e.team1, e.team2), lo = Math.min(e.team1, e.team2);
     if (forcedSets.includes(e.set) && i === lastIdx[e.set] && hi > lo) return true;
-    return hi >= targetFor(e.set) && hi - lo >= 2;
+    return hi >= setTarget(e.set) && hi - lo >= 2;
   };
-  const isDecided = (e) => isDecidedAt(e, events.indexOf(e));
+  const decided = events.map(isDecidedAt);
   const wonBy = {};
-  for (const e of events) if (isDecided(e)) wonBy[e.set] = e.team1 > e.team2 ? 1 : 2;
-  const setsAt = (e) => {
+  events.forEach((e, i) => { if (decided[i]) wonBy[e.set] = e.team1 > e.team2 ? 1 : 2; });
+  const setsAt = (e, i) => {
     let a = 0, b = 0;
     for (const k in wonBy) if (Number(k) < e.set) (wonBy[k] === 1 ? a++ : b++);
-    if (isDecided(e)) (e.team1 > e.team2 ? a++ : b++);
+    if (decided[i]) (e.team1 > e.team2 ? a++ : b++);
     return [a, b];
   };
   const out = [];
   for (let i = 0; i < events.length; i++) {
     const e = events[i], prev = events[i - 1];
-    const [s1, s2] = setsAt(e);
+    const [s1, s2] = setsAt(e, i);
     let serve;
     if (!prev || prev.set !== e.set) serve = 0;                 // first point of a set: unknown
     else if (e.team1 > prev.team1) serve = 1;                   // rally scoring: winner serves
     else if (e.team2 > prev.team2) serve = 2;
     else serve = out.length ? out[out.length - 1].serve : 0;
-    out.push({ t: Math.round(Math.max(0, e.t + offset) * 1000) / 1000, set: e.set,
+    out.push({ t: Math.round(Math.max(0, e.t) * 1000) / 1000, set: e.set,
                score1: e.team1, score2: e.team2, sets1: s1, sets2: s2, serve,
                // 2026-10-26: real clock time of the tap - lines points up with the camera files even after a camera stop
                ...(e.w ? { at: localIso(e.w), wms: e.w } : {}) });
@@ -1477,7 +1330,7 @@ function buildMatchData() {
            endedAt: lastEnd ? localIso(lastEnd) : null,
            recordings: recs, events: out,
            // 2026-10-19: time-out taps (video pipeline cuts from tap + 5 s to just before the next serve)
-           timeouts: timeouts.map(x => ({ t: Math.round(Math.max(0, x.t + offset) * 1000) / 1000, set: x.set,
+           timeouts: timeouts.map(x => ({ t: Math.round(Math.max(0, x.t) * 1000) / 1000, set: x.set,
                                           ...(x.w ? { at: localIso(x.w), wms: x.w } : {}),
                                           // 2026-11-02: "Time-out over" tap (video restarts 3 s before it)
                                           ...(x.endW ? { endAt: localIso(x.endW), endW: x.endW } : {}) })),
@@ -1630,6 +1483,8 @@ function showToast(msg) {
 checkForSavedMatch();
 render();
 if (loadPending().length > 0) flushDriveUploads(false);
+// Offline copy of this page (sw.js), so it reopens with no signal in the gym.
+if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
 </html>
