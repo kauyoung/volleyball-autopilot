@@ -189,19 +189,23 @@ to find every line that needs a personal value.
    follow the screens — either live at the game (press record on the camera,
    then START) or later during editing (play the assembled timeline back at
    1x speed and tap along). Tap the big team button when a team wins a
-   rally; a 5-second UNDO bar catches mis-taps. When a set is won the app
-   switches to a set-over screen: stop the camera and tap **I stopped the
-   camera** (or **Camera is still recording** if you keep rolling), then tap
-   **Camera is recording again** when play resumes. Mid-set camera stops,
-   removing a point and ending early are under **More options**. When the
-   match is won, tap **FINISH MATCH** — the file is sent to Google Drive
-   automatically if you set that up, and **Export match file** is always
-   there as a backup.
+   rally; the UNDO bar at the bottom always says what it will take back.
+   **Time-out** marks a time-out (tap it again when play restarts) so the
+   video can skip the dead time. When a set is won the app switches to a
+   set-over screen: stop the camera and tap **I stopped the camera** (or
+   **I left it recording, start set 2** if you keep rolling), then tap
+   **The camera is recording again** when play resumes. Mid-set camera
+   stops, taking a point away and ending early are under **Something went
+   wrong?**. When the match is won, a 30-second countdown says when to stop
+   the camera; tap **FINISH MATCH** — the file is sent to Google Drive
+   automatically if you set that up, and **Save the match file** (under
+   **Scores didn't send?**) is always there as a backup. Once opened, the
+   page keeps a copy on the phone, so it reopens even with no signal.
 
    <p>
-   <img src="docs/scorekeeper-setup.png" width="260" alt="Scorekeeper setup screen: our team, opponent, and the match format (sets to 25 or 15, best of 3, 2 sets, scrimmage)">
+   <img src="docs/scorekeeper-setup.png" width="260" alt="Scorekeeper setup screen: our team, other team, and how many sets (sets to 25 or 15, best 2 of 3, 2 sets only, scrimmage)">
    &nbsp;
-   <img src="docs/scorekeeper-live.png" width="260" alt="Scorekeeper during a set: one big button per team showing the score, recording timer, Time-out and More options">
+   <img src="docs/scorekeeper-live.png" width="260" alt="Scorekeeper during a set: recording status and match clock, one big button per team with the score and sets won, Time-out, Something went wrong? and the UNDO bar">
    </p>
 6. **Build and apply the scoreboard**: with the Fusion Composition clip
    selected and the Fusion page open, run `run-overlay.lua` from the
@@ -311,7 +315,7 @@ Turn it off with `AUTO_ALIGN_SETS = false`.
   it on V2 and stretching it to fit has to be done by hand (see step 4 of the manual workflow).
 - **An accidental mid-set "camera stopped" in the scorekeeper app can't be
   undone** — the excluded time is baked into every timestamp logged after
-  it. It's tucked under More options behind a two-tap confirm, and
+  it. It's tucked under Something went wrong? behind a two-tap confirm, and
   automatic set alignment corrects mistimed taps at set breaks.
 - **Team names are width-estimated for truncation.** Positioning is exact
   (edge-anchored), but the "too long, add ..." check uses an average
