@@ -298,6 +298,97 @@
   .countdown.done { background: var(--amber-dim); color: var(--amber-text); }
   #stSetBreak .card, #stMatchOver .card { text-align: center; }
   #stMatchOver .steps li { text-align: left; }
+
+  /* ===== Phone turned sideways (2026-11-05): everything that matters fits on one screen =====
+     Only for short, wide screens (a phone in landscape); tablets and portrait phones are unchanged. */
+  @media (orientation: landscape) and (max-height: 540px) {
+    body { padding: 6px max(14px, env(safe-area-inset-right)) 76px max(14px, env(safe-area-inset-left)); }
+    .wrap { max-width: 860px; }
+    .appbar { flex-direction: row; gap: 10px; margin: 0 0 8px; }
+    .appbar .sub::before { content: "· "; }
+    /* scoring, set over, camera stopped, match over: every pixel for the buttons */
+    body:has(#stPlay:not([hidden])) .appbar, body:has(#stSetBreak:not([hidden])) .appbar,
+    body:has(#stResume:not([hidden])) .appbar, body:has(#stMatchOver:not([hidden])) .appbar { display: none; }
+    .card { padding: 16px 20px; }
+    .btn-big { min-height: 58px; font-size: 20px; }
+    .step-title { font-size: 22px; }
+    .steps { margin-bottom: 10px; }
+    .steps li { font-size: 15px; padding: 8px 0; }
+
+    /* --- scoring --- */
+    #stPlay:not([hidden]) {
+      display: grid; grid-template-columns: 1fr 1fr 132px; grid-template-rows: auto 1fr auto auto;
+      column-gap: 10px; row-gap: 8px; align-items: stretch;
+    }
+    #stPlay .topline { grid-row: 1; grid-column: 1 / -1; margin: 0; }
+    #stPlay .set-head { grid-row: 1; grid-column: 1 / -1; justify-self: center; align-self: center; gap: 12px; margin: 0; }
+    #stPlay .set-head .t { font-size: 16px; }
+    #stPlay .set-head .s { font-size: 14px; }
+    #statusBanner { grid-row: 1; grid-column: 1 / -1; justify-self: center; align-self: center; margin: 0;
+                    padding: 7px 14px; font-size: 15px; max-width: calc(100% - 300px); z-index: 1; }
+    #stPlay:has(#statusBanner:not([hidden])) .set-head { visibility: hidden; }
+    #stPlay .team-btn { grid-row: 2 / 4; height: max(110px, calc(100vh - 124px)); height: max(110px, calc(100dvh - 124px));
+                        min-height: 0; padding: 14px 18px; border-radius: 20px; }
+    #t1Plus { grid-column: 1; }
+    #t2Plus { grid-column: 2; }
+    .team-btn + .team-btn { margin-top: 0; }
+    .team-btn .score { font-size: 80px; }
+    #stPlay .timeout-btn { grid-row: 2; grid-column: 3; margin: 0; min-height: 0; height: auto; padding: 8px;
+                           flex-direction: column; gap: 6px; font-size: 16px; text-align: center; }
+    #stPlay .timeout-btn #timeoutLabel { flex-direction: column; gap: 6px; }
+    #stPlay .timeout-btn.on .to-sub { font-size: 12px; line-height: 1.3; }
+    #timeUpBtn { grid-row: 3; grid-column: 3; margin: 0 !important; min-height: 0; padding: 8px; font-size: 14px; line-height: 1.25; }
+    #playMore { grid-row: 4; grid-column: 1 / -1; margin-top: 8px; }
+    #playMore .stack { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    #playMore .stack > * + * { margin-top: 0; }
+    #playMore .more-note { grid-column: 1 / -1; margin-top: -4px; }
+
+    /* --- set-up: names on the left, number of sets on the right --- */
+    #stSetup .card { display: grid; grid-template-columns: 1fr 1.15fr; grid-template-rows: auto auto 1fr; column-gap: 22px; align-items: start; }
+    #stSetup .step-title { grid-column: 1 / -1; }
+    #stSetup .field + .field { margin-top: 12px; }
+    #stSetup .field:nth-of-type(1), #stSetup .field:nth-of-type(2) { grid-column: 1; }
+    #stSetup .field:nth-of-type(3) { grid-column: 2; grid-row: 2 / span 2; margin-top: 0; }
+    #stSetup .fmt button { min-height: 54px; }
+    #stSetup .fmt-note { min-height: 0; }
+    #stSetup .setup-go { position: static; }   /* not pinned: on a short screen it would cover the form */
+    #stSetup .setup-go .btn { min-height: 56px; }
+
+    /* --- start recording / camera stopped: steps on the left, the big button on the right --- */
+    #stReady:not([hidden]), #stResume:not([hidden]) { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; align-items: center; }
+    #stReady > .stack, #stResume > .stack { margin-top: 0 !important; }
+
+    /* --- set over / match over: the result on the left, what to do on the right --- */
+    #stSetBreak .card, #stMatchOver .card { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; align-items: center; }
+    #stSetBreak .card > * { grid-column: 1; }
+    #stSetBreak .card > .question, #stSetBreak .card > .note-sm, #stSetBreak .card > .stack { grid-column: 2; }
+    #stSetBreak .card > :nth-child(1) { grid-row: 1; } #stSetBreak .card > :nth-child(2) { grid-row: 2; } #stSetBreak .card > :nth-child(3) { grid-row: 3; }
+    #stSetBreak .card > .question { grid-row: 1; margin-top: 0; } #stSetBreak .card > .note-sm { grid-row: 2; } #stSetBreak .card > .stack { grid-row: 3; }
+    #stMatchOver .card > * { grid-column: 1; }
+    #stMatchOver .card > .steps, #stMatchOver .card > #finishBtn { grid-column: 2; }
+    #stMatchOver .card > .steps { grid-row: 1 / span 3; margin: 0; }
+    #stMatchOver .card > #finishBtn { grid-row: 4; }
+    .result-big { font-size: 30px; margin: 2px 0; }
+    #stSetBreak .step-sub { margin-bottom: 0; }
+    #stSetBreak .question { font-size: 17px; margin-bottom: 4px; }
+    #stSetBreak .note-sm { font-size: 14px; margin-bottom: 8px; }
+    #stSetBreak .stack > * + * { margin-top: 8px; }
+    #stSetBreak .btn-plain { min-height: 46px; }
+    .countdown { padding: 8px; margin-bottom: 0; }
+    .countdown #moCountNum { font-size: 30px; }
+    .countdown #moCountText { font-size: 14px; }
+    #stMatchOver .card > #finishBtn { margin-top: 8px; }
+
+    /* --- all done --- */
+    #stDone:not([hidden]) { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; align-items: start; }
+    #stDone > .card { grid-column: 1; grid-row: 1 / span 4; }
+    #stDone > :not(.card) { grid-column: 2; margin-top: 0 !important; }
+    #stDone > details.more { margin-top: 4px !important; }
+
+    /* UNDO bar: smaller, so it doesn't cover the buttons */
+    .snack { width: min(64vw, 520px); bottom: calc(8px + env(safe-area-inset-bottom)); padding: 6px 6px 6px 16px; font-size: 14px; }
+    .snack button { min-height: 40px; font-size: 15px; }
+  }
 </style>
 </head>
 <body>
@@ -358,7 +449,7 @@
       <p class="step-sub" id="readyTeams"></p>
       <ol class="steps">
         <li><span class="num">1</span><span>Start <b>recording</b> on the camera.</span></li>
-        <li><span class="num">2</span><span>Then tap <b>START</b> below.</span></li>
+        <li><span class="num">2</span><span>Then tap <b>START</b>.</span></li>
       </ol>
       <p class="note-sm">It's fine to start a few minutes before the first serve. The extra gets trimmed off.</p>
     </div>
@@ -440,7 +531,7 @@
       <h2 class="step-title" id="resumeTitle">Next: Set 2</h2>
       <ol class="steps" id="resumeSteps">
         <li><span class="num">1</span><span>Start <b>recording</b> on the camera again.</span></li>
-        <li><span class="num">2</span><span>Then tap the green button below.</span></li>
+        <li><span class="num">2</span><span>Then tap the green button.</span></li>
       </ol>
     </div>
     <div class="stack" style="margin-top: var(--s3);">
