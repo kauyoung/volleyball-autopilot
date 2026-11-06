@@ -207,6 +207,10 @@ to find every line that needs a personal value.
    &nbsp;
    <img src="docs/scorekeeper-live.png" width="260" alt="Scorekeeper during a set: recording status and match clock, one big button per team with the score and sets won, Time-out, Something went wrong? and the UNDO bar">
    </p>
+   Turn the phone sideways and the two team buttons sit side by side, with
+   Time-out on the right:
+
+   <img src="docs/scorekeeper-sideways.png" width="540" alt="Scorekeeper with the phone sideways: status, set and clock on one row, the two team buttons side by side and Time-out on the right">
 6. **Build and apply the scoreboard**: with the Fusion Composition clip
    selected and the Fusion page open, run `run-overlay.lua` from the
    Console.
