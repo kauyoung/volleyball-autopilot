@@ -127,6 +127,8 @@
   #stSetup .field-note { font-size: 13px; margin-top: 6px; }
   #stSetup .setup-go { position: sticky; bottom: calc(10px + env(safe-area-inset-bottom)); margin-top: 12px; }
   #stSetup .setup-go .btn { min-height: 62px; box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+  /* big buttons standing on their own (not inside a box) are as round as the boxes */
+  #stSetup .setup-go .btn, #stReady > .stack .btn, #stResume > .stack .btn, #stDone > .stack .btn { border-radius: var(--r-lg); }
 
   /* Buttons */
   button { font-family: inherit; -webkit-appearance: none; appearance: none; border: none; cursor: pointer; }
