@@ -140,6 +140,21 @@ def _norm_logo(src, logos_dir):
     return name
 
 
+def intro_name2(p):
+    """2026-11-09 (the owner): the intro shows the opponent's age group ("Lakeview Thunder 15U") when the match
+    folder has youtube-age.txt (--age) and the name doesn't already end with it. The scoreboard keeps the short name."""
+    name = p["team2"]
+    try:
+        age = open(os.path.join(p["folder"], "youtube-age.txt"), encoding="utf-8").read().strip()
+    except Exception:
+        return name
+    if not age:
+        return name
+    import re as _re
+    base = _re.sub(r"\s+\d{1,2}\s*[uU]$", "", name.rstrip())   # name already carries an age group -> --age wins
+    return f"{base} {age}"
+
+
 def build_data(kind, p, logo_for, tdir):
     info = json.load(open(os.path.join(WORK, "youtube-info.json"), encoding="utf-8"))
     fmt, detail = _format(info)
@@ -161,6 +176,8 @@ def build_data(kind, p, logo_for, tdir):
 
     d = {"season": _season(p["date"]), "team1": team(p["team1"]), "team2": team(p["team2"]),
          "date": _date(p["date"]), "format": fmt, "detail": detail, "clubs": clubs, "overrides": overrides}
+    if kind == "intro":
+        d["team2"]["name"] = intro_name2(p)          # 2026-11-09: logo still looked up by the plain name
     if kind == "summary":
         # 2026-10-06: the FINAL screen's bottom line is "date \u00b7 event" \u2014 no
         # "BEST OF 3 \u00b7 SETS TO 25" (obvious from the table). No event given: a

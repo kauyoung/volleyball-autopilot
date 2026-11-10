@@ -201,7 +201,7 @@ def main(folder, measure=False, hint=None):
         else:
             lines.append(f"SYNC CHECK: set {s} OK ({resid:+.1f} s, match {corr:.2f})")
     how = str(cur.get("offsetHow") or "camera clock")
-    if how == "camera clock" and not (0.0 <= off <= 10.0) and not cur.get("clockConfirmed"):
+    if how == "camera clock" and not (-2.0 <= off <= 10.0) and not cur.get("clockConfirmed"):   # 2026-11-09: same window as camera-time.py (START up to 2 s before record = normal)
         # 2026-11-03: an unusual record->START wait is fine if the owner really waited - but a clock off by ~one rally
         # (~20 s) can fool the video check, so it is confirmed with the owner (holds the tournament upload until then)
         when = f"{off:g} s after pressing record" if off > 0 else f"{-off:g} s BEFORE recording started"

@@ -103,6 +103,11 @@ def phone_check(fb, rec_cam, start):
         if x["v"] == "hide":
             hid = w
         elif x["v"] == "show":
+            if x.get("load"):
+                # 2026-11-09 (Nov 8): Safari reloaded the page - that is not the owner coming back
+                # from Mimo, and what happened before it is unknown. Start over as if the page just opened.
+                spans, hid, first_show = [], None, w
+                continue
             if hid is not None:
                 spans.append((hid, w)); hid = None
             elif first_show is None:
@@ -131,7 +136,9 @@ def phone_check(fb, rec_cam, start):
     rough = start - max(a, b - 2.0)
     if not (-60.0 <= rough <= 120.0):
         return None
-    if 0.0 <= start - rec_cam <= 10.0:
+    if -2.0 <= start - rec_cam <= 10.0:
+        # 2026-11-09: -2..0 s too - the file name is cut to whole seconds, and since Nov 8 the owner may tap START
+        # first and press the camera's own record button a moment later (page never leaves the front).
         # 2026-11-04: the camera reports the usual 0-10 s record->START gap. The phone's last app switch can be
         # something else (a text message, record pressed on the camera itself) - trust the camera clock; the
         # video check still catches any small error (+-8 s is reliable)
@@ -339,7 +346,7 @@ def main(folder, dry=False):
     if TCJ:
         lines.append(f"FLAG: the camera's timecode jumped after a restart ({', '.join(TCJ)}) - later clips placed by their "
                      f"file-name times instead (within ~1 s); the sync check will confirm")
-    if offset < 0 and not CONFIRMED:
+    if offset < -2.0 and not CONFIRMED:             # 2026-11-09: START up to 2 s before record = normal
         lines.append(f"FLAG: the camera clock says START was tapped {-offset:g} s BEFORE recording started - right? "
                      f"(if not, the camera clock is off; points in those first seconds show at the very start)")
     if CONFIRMED:

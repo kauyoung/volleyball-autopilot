@@ -588,13 +588,28 @@ def out_bytes(fr):
 
 
 # ------------------------------------------------------------------- INTRO
+def intro_name2(p):
+    """2026-11-09 (the owner): the intro shows the opponent's age group ("Lakeview Thunder 15U") when the match
+    folder has youtube-age.txt (--age) and the name doesn't already end with it. The scoreboard keeps the short name."""
+    name = p["team2"]
+    try:
+        age = open(os.path.join(p["folder"], "youtube-age.txt"), encoding="utf-8").read().strip()
+    except Exception:
+        return name
+    if not age:
+        return name
+    import re as _re
+    base = _re.sub(r"\s+\d{1,2}\s*[uU]$", "", name.rstrip())   # name already carries an age group -> --age wins
+    return f"{base} {age}"
+
+
 def render_intro(p):
     it = p["intro"]
     out = os.path.join(p["folder"], "intro-overlay.mov")
     if not it["enabled"]:
         if os.path.exists(out): os.remove(out)
         log("INTRO SKIPPED"); return
-    t1, t2 = p["team1"].upper(), p["team2"].upper()
+    t1, t2 = p["team1"].upper(), intro_name2(p).upper()      # 2026-11-09: + age group (youtube-age.txt)
     date = datetime.date.fromisoformat(p["date"]).strftime("%B %d, %Y").upper().replace(" 0", " ")
     card = Layer(rr((920, 300, 2920, 1860), (0, 0, 0, 200), r=56, width=4))
     # 2026-10-02: when the opponent has a logo too, both badges sit side by side

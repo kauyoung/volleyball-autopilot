@@ -40,6 +40,16 @@ WORK = r"C:\Users\YOURNAME\scoreboard-pipeline"
 LOG = os.environ.get("FIX_AUDIO_LOG") or os.path.join(WORK, "fix-audio-log.txt")   # override: tests only
 OUT_DIR = os.environ.get("FIX_AUDIO_OUT")                                           # override: tests only
 WAV_NAME = "match-audio-normalized.wav"
+# 2026-11-09 (the owner, "do 1-3", after an audio-engineer review):
+#  * DEFAULT_MIC_DB: with the DJI Mic the camera file has 2 audio streams (a:0 wireless mic, a:1 camera mic);
+#    the camera mic stays the main sound and the wireless mic goes under it at this level unless the match
+#    folder's audio-mix.txt says otherwise ("camera+mic -4").
+#  * HPF: rumble filter (gym fans, floor thumps, wall vibration) on every mic, ~24 dB/octave below 90 Hz.
+#  * No time alignment between the two mics: measured on Nov 8, the delay between them changes with where on
+#    the court each sound comes from (-20..+75 ms), so there is no single right value; keeping the wireless mic
+#    a few dB under the camera mic keeps the echo effect small instead.
+DEFAULT_MIC_DB = -2.0
+HPF = "highpass=f=90,highpass=f=90"
 FPS_NUM, FPS_DEN = 60000, 1001   # DJI "60 fps" = 59.94
 
 
@@ -67,6 +77,12 @@ def video_frames(f):
     return int(s["nb_frames"]), s["r_frame_rate"]
 
 
+def audio_streams(f):
+    r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries", "stream=index",
+                        "-of", "csv=p=0", f], capture_output=True, text=True)
+    return len([l for l in r.stdout.split() if l.strip()])
+
+
 def make(folder, fade_end=None, fade_start=0.0):
     """fade_start (seconds): where the exported video starts (front trim, 2026-10-01) —
     the 1 s fade-in begins there."""
@@ -79,6 +95,15 @@ def make(folder, fade_end=None, fade_start=0.0):
         log("ERROR: no DJI_ files in " + folder)
         return 1
     ins, parts, total = [], [], 0
+    mix = None                                   # audio-mix.txt in the match folder: "camera+mic -8" = camera mic + wireless mic at -8 dB
+    try:
+        t = open(os.path.join(folder, "audio-mix.txt"), encoding="utf-8").read().strip().lower()
+        m_ = re.match(r"camera\+mic\s*(-?[\d.]+)", t)
+        if m_:
+            mix = float(m_.group(1))
+            log(f"audio mix: camera mic + wireless mic at {mix:g} dB (audio-mix.txt)")
+    except FileNotFoundError:
+        pass
     for i, f in enumerate(clips):
         n, rate = video_frames(f)
         if rate != f"{FPS_NUM}/{FPS_DEN}":
@@ -86,7 +111,20 @@ def make(folder, fade_end=None, fade_start=0.0):
         dur = n * FPS_DEN / FPS_NUM
         total += n
         ins += ["-i", f]
-        parts.append(f"[{i}:a:0]apad,atrim=0:{dur:.6f},asetpts=PTS-STARTPTS[a{i}]")
+        na = audio_streams(f)
+        if mix is None and na >= 2:
+            # 2026-11-09 (the owner, "do 1-3"): DJI Mic track present and no audio-mix.txt -> his standard mix
+            mix = DEFAULT_MIC_DB
+            log(f"audio mix: wireless mic track found, no audio-mix.txt - standard mix (camera mic + wireless mic at {mix:g} dB)")
+        if mix is not None and na >= 2:
+            # 2026-11-08 (the owner, "go with C"): DJI Mic in the file -> a:0 = wireless mic, a:1 = camera mic.
+            # Camera mic stays the main sound; the wireless mic is mixed under it at mix dB.
+            parts.append(f"[{i}:a:1]aformat=sample_fmts=fltp:channel_layouts=stereo,{HPF}[k{i}];"
+                         f"[{i}:a:0]aformat=sample_fmts=fltp:channel_layouts=stereo,{HPF},volume={mix}dB[w{i}];"
+                         f"[k{i}][w{i}]amix=inputs=2:normalize=0:duration=first,"
+                         f"apad,atrim=0:{dur:.6f},asetpts=PTS-STARTPTS[a{i}]")
+        else:
+            parts.append(f"[{i}:a:0]{HPF},apad,atrim=0:{dur:.6f},asetpts=PTS-STARTPTS[a{i}]")
         log(f"  {os.path.basename(f)}: {n} frames = {dur:.6f} s")
     joined = ";".join(parts) + ";" + "".join(f"[a{i}]" for i in range(len(clips))) \
         + f"concat=n={len(clips)}:v=0:a=1"
@@ -260,6 +298,15 @@ def swap(resolve):
             and len(v1_after) == len(v1) and tl.GetEndFrame() - st == N)
     if a1:
         log(f"A1: {a1[0].GetName()}, start offset {a1[0].GetStart() - st}, {a1[0].GetDuration()} frames")
+    # 2026-11-09 (the owner, Nov 8): with the DJI Mic the camera files carry a 2nd audio stream, which
+    # Resolve puts on its own track (A2). The WAV on A1 already holds the mix, so any other track of camera
+    # audio would play the camera mic twice -> switch those tracks off (nothing is deleted).
+    for k in range(2, tl.GetTrackCount("audio") + 1):
+        its = tl.GetItemListInTrack("audio", k) or []
+        if its and all(re.match(r"DJI_", it.GetName() or "") for it in its):
+            off = tl.SetTrackEnable("audio", k, False)
+            log(f"A{k}: {len(its)} camera audio clip(s) (2nd camera track) - switched off" + ("" if off else " FAILED ***"))
+            good = good and bool(off)
     log("AUDIO SWAPPED OK" if good else "*** AUDIO SWAP PROBLEM — check A1 by hand ***")
     return good
 

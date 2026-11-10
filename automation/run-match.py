@@ -180,6 +180,9 @@ def apply_picture(r, choice):
     return f"{label}, {anchor} edge kept — applied to {ok} camera clips (ZoomX now {chk}, Tilt {tilt:.0f})" + (f"; {cf}" if cf else "")
 
 
+UPDATE_TITLES = ("Software Update", "DaVinci Resolve Update", "Update Available")
+
+
 def resolve_popups():
     """2026-11-02: a Resolve pop-up ("Message" window, e.g. Audio Output after a monitor/speaker change)
     blocks every scripting call - and it can open off-screen where a 2nd monitor used to be. Finds them,
@@ -198,13 +201,62 @@ def resolve_popups():
                 n = u.GetWindowTextLengthW(h); b = ctypes.create_unicode_buffer(n + 1); u.GetWindowTextW(h, b, n + 1)
                 if b.value == "Message":
                     found.append(h)
+                elif b.value in UPDATE_TITLES:
+                    upd.append(h)
             return True
+        upd = []
         u.EnumWindows(Enum(cb), 0)
+        for h in upd:                                # 2026-11-09 (the owner): Resolve's update prompt is closed, never installed
+            u.PostMessageW(h, 0x0010, 0, 0)          # WM_CLOSE (Nov 8: it blocked "create project" at 23:14)
+        if upd:
+            time.sleep(2)
+            try:
+                st("Resolve's Software Update window was closed (nothing installed)")
+            except Exception:
+                pass
         for h in found:
             u.SetWindowPos(h, 0, 200, 600, 0, 0, 0x0001 | 0x0004)
         return len(found)
     except Exception:
         return 0
+
+
+def drop_empty_last_sets(folder):
+    import glob
+    js = glob.glob(os.path.join(folder, "*.json"))
+    if len(js) != 1:
+        return None
+    paths = [js[0]] + [o for o in glob.glob(os.path.join(folder, "*.original.txt"))]
+    dropped = None
+    for pth in paths:
+        try:
+            d = json.load(open(pth, encoding="utf-8"))
+        except Exception:
+            continue
+        ev = d.get("events") or []
+        sets = sorted({int(e.get("set", 0)) for e in ev})
+        gone = []
+        while len(sets) > 1:
+            last = sets[-1]
+            pts = [e for e in ev if int(e.get("set", 0)) == last]
+            if any(e.get("score1") or e.get("score2") for e in pts):
+                break
+            gone.append(last)
+            ev = [e for e in ev if int(e.get("set", 0)) != last]
+            sets.pop()
+        if not gone:
+            continue
+        d["events"] = ev
+        d["timeouts"] = [t for t in (d.get("timeouts") or []) if int(t.get("set", 0)) not in gone]
+        if ev and ev[-1].get("at"):
+            d["endedAt"] = ev[-1]["at"]
+        d["droppedEmptySets"] = sorted(set(d.get("droppedEmptySets", [])) | set(gone))
+        json.dump(d, open(pth, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        dropped = sorted(gone)
+    if dropped:
+        w = ", ".join(str(n) for n in dropped)
+        return f"format: set {w} had no points (started by mistake) - left out of the video; the Google Drive file is untouched"
+    return None
 
 
 def summary(extra=()):
@@ -262,6 +314,7 @@ def phase(r, name, a, folder):
     global SRC
     if SRC is None:
         SRC = open(W + r"\prepare-match.py", encoding="utf-8").read()
+    resolve_popups()                                 # 2026-11-09: an update prompt can appear mid-run
     g = {"resolve": r, "PM_PHASE": name, "PM_FOLDER": folder, "__name__": "pm"}
     if a.event: g["PM_EVENT"] = a.event
     if a.tavo: g["PM_TAVO"] = True
@@ -576,6 +629,14 @@ def main():
     if a.offset is None and not results.get("offset_suggestion"):
         announce_offset(folder)                      # --folder runs / copies too fast for the loop above
     resolve_offset(a, folder)
+
+    # 1b2. 2026-11-09 (the owner, Nov 8): a set started by mistake at the end (no point scored, only the
+    # 0-0 "start set" tap) is dropped from this folder's .json copy (and its .original.txt) - never the Drive file
+    if not a.export_only:
+        msg = drop_empty_last_sets(folder)
+        if msg:
+            st(msg)
+            results["empty_sets"] = msg
 
     # 1c. 2026-10-26: camera stops (in or between sets) -> points placed on the camera timeline from
     # clock times, gaps + CAMERA TECHNICAL DIFFICULTY wipes written into the folder's .json copy

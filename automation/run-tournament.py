@@ -57,7 +57,7 @@ PIC_PENDING = W + r"\picture-pending.txt"
 PIC_ASKED = W + r"\picture-asked.txt"
 ROOT = r"E:\Volleyball Matches"
 YT_GB_H, TAVO_GB_H = 29.0, 13.5         # same as prepare-match.py (2026-10-26: 60M preset, 4K H.265 TAVO)
-COPY_S_PER_GB = 12.5
+COPY_S_PER_GB = 7.5      # 2026-11-09: Nov 8 copied 70.5 GB in 8 min 28 s, verified (138 MB/s, SanDisk Extreme); was 12.5
 NOWIN = 0x08000000
 UTF8 = dict(os.environ, PYTHONIOENCODING="utf-8")
 T_START = time.time()
@@ -645,7 +645,8 @@ def pump_uploads(a):
                 save(); write_summary()
             UPQ.append(m)                              # stays queued: waits for the check / the owner's sync-ok
             continue
-        args = [PY, W + r"\yt-upload.py", "upload", "--channel", "main", "--video", m["export_file"],
+        args = [PY, W + r"\yt-upload.py", "upload", "--channel", "main", "--expect-channel", "Home Team",
+                "--video", m["export_file"],
                 "--text", m["text"], "--thumb", m["thumbnail"], "--playlist", PLAYLIST]
         UPCUR.update({"m": m, "proc": subprocess.Popen(args, cwd=W, env=UTF8, creationflags=NOWIN)})
         st(f"match {m['n']} uploading \u2026")
