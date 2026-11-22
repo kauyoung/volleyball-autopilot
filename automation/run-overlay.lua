@@ -1,6 +1,6 @@
 --[[
 ================================================================================
- Volleyball Autopilot scoreboard — build + apply, one command
+ Home Team scoreboard — build + apply, one command
 ================================================================================
 
  Runs build-scoreboard.lua then apply-match.lua back to back, so putting the

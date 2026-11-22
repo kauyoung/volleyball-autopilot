@@ -1,6 +1,6 @@
 --[[
 ================================================================================
- Volleyball Autopilot scoreboard — apply match data
+ Home Team scoreboard — apply match data
 ================================================================================
 
  Reads a match JSON file and writes keyframes onto the scoreboard nodes built by
@@ -1056,7 +1056,7 @@ local NAME_CHAR_W  = 0.01265  -- Barlow Condensed Bold CAPS at NAME_SIZE 0.0407 
 local NAMES_UPPERCASE = true
 local NAME_MARGIN  = 0.020    -- gap from the end of the bar to the text
 -- Keep BAR_WIDTH in step with build-scoreboard.lua (0.75 until 2026-09-25).
-local BAR_WIDTH    = 0.875   -- 2026-10-21: was 0.85; keep in step with build-scoreboard.lua
+local BAR_WIDTH    = 0.95    -- 2026-11-18 (option B): was 0.875 (0.85 before 2026-10-21); keep in step with build-scoreboard.lua
 local BAR_L, BAR_R = 0.5 - BAR_WIDTH / 2, 0.5 + BAR_WIDTH / 2
 -- Keep these in step with build-scoreboard.lua. Names are edge-anchored now
 -- (2026-09-25), so these only correct the font's side bearings: 40px from
@@ -1088,24 +1088,31 @@ end
 
 -- Trim from the end and append "..." until it fits. Any trailing space is
 -- stripped first, so we get "Riverside Rap..." rather than "Riverside Rap ...".
+-- 2026-11-18: a name only a little too long (e.g. "LAKEVIEW THUNDER"
+-- next to a logo) is shown whole in smaller text instead of losing words.
+-- Down to NAME_MIN_SCALE of NAME_SIZE; longer names still drop words / get "...".
+local NAME_SIZE      = 0.0407  -- keep in step with build-scoreboard.lua
+local NAME_MIN_SCALE = 0.85
 local function fitName(str, maxW)
   maxW = maxW or NAME_MAX_W
-  if nameWidth(str) <= maxW then return str, false end
+  local w = nameWidth(str)
+  if w <= maxW then return str, false, 1 end
+  if w * NAME_MIN_SCALE <= maxW * 0.99 then return str, false, (maxW * 0.99) / w end
   -- 2026-10-02: first try dropping whole words from the end (age group /
-  -- division), e.g. "THUNDERCATS POLAR 14U" next to a logo -> "THUNDERCATS".
+  -- division), e.g. "NORTHSIDE POLAR 14U" next to a logo -> "NORTHSIDE".
   -- Not reported as a cut; the full name still shows on the intro/summary.
   local words = {}
   for w in str:gmatch("%S+") do words[#words + 1] = w end
   for n = #words - 1, 1, -1 do
     local t = table.concat(words, " ", 1, n)
-    if nameWidth(t) <= maxW then return t, false end
+    if nameWidth(t) <= maxW then return t, false, 1 end
   end
   local s = str
   while #s > 1 do
     s = s:sub(1, #s - 1):gsub("%s+$", "")
-    if nameWidth(s .. ELLIPSIS) <= maxW then return s .. ELLIPSIS, true end
+    if nameWidth(s .. ELLIPSIS) <= maxW then return s .. ELLIPSIS, true, 1 end
   end
-  return ELLIPSIS, true
+  return ELLIPSIS, true, 1
 end
 
 -- Outer-edge anchor point. The Text+ node is anchored left (Team1) or right
@@ -1139,8 +1146,12 @@ local function setName(nodeName, raw, side)
     end)
   end
 
-  local shown, wasCut = fitName(raw, NAME_MAX_W - shift)
+  local shown, wasCut, scale = fitName(raw, NAME_MAX_W - shift)
   pcall(function() node.StyledText[0] = shown end)
+  pcall(function() node.Size[0] = NAME_SIZE * (scale or 1) end)
+  if scale and scale < 1 then
+    print(string.format("  %s: %q shown at %d%% text size to fit", nodeName, shown, math.floor(scale * 100 + 0.5)))
+  end
   pcall(function() node.HorizontalLeftCenterRight[0] = (side == "left") and -1 or 1 end)
   -- Keep the vertical position the builder gave the name (it may be in strip
   -- units since 2026-09-27); only the horizontal anchor is recalculated here.

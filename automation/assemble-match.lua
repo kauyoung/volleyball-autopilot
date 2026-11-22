@@ -1,6 +1,6 @@
 --[[
 ================================================================================
- Volleyball Autopilot scoreboard — assemble match footage
+ Home Team scoreboard — assemble match footage
 ================================================================================
 
  Imports every clip from a folder and lays them end to end on a new timeline,
@@ -37,7 +37,7 @@
 -- Keep one folder per match inside CLIP_ROOT, named by date:
 --
 --   E:\Volleyball Matches\
---       2026-08-09 vs Durham Attack\
+--       2026-08-09 vs Westfield\
 --           DJI_0001.MP4
 --           DJI_0002.MP4
 --       2026-08-16 vs Riverside\
@@ -53,7 +53,7 @@
 local CLIP_ROOT   = [[E:\Volleyball Matches]]
 -- prepare-match.py passes the exact folder (2026-09-28): the "newest folder"
 -- fallback below can't see folder dates in Resolve's Lua and picks by NAME, so
--- "Thundercats 14U" would beat "2026-10-03 1415 vs Durham".
+-- "Northside 14U" would beat "2026-10-03 1415 vs Westfield".
 local CLIP_FOLDER = rawget(_G, "MATCH_CLIP_FOLDER") or ""
 
 -- Where this script (and its siblings build-scoreboard.lua / apply-match.lua /
@@ -83,7 +83,7 @@ local FRAME_RATE_FALLBACK = "59.94"
 local TIMELINE_W  = "3840"
 local TIMELINE_H  = "2160"
 
--- Named after the MATCH date (2026-09-27): taken from the first camera
+-- Named after the MATCH date (2026-09-27, the owner): taken from the first camera
 -- file's name (DJI_YYYYMMDDhhmmss_...), else a date at the start of the match
 -- folder's name, else today. Filled in below once the clips are found.
 local TIMELINE_NAME = "Match " .. os.date("%Y-%m-%d")

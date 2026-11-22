@@ -34,7 +34,7 @@ writes run-summary.txt (flags, event, TAVO, files, finish time) for Claude to re
                  otherwise run-summary.txt gets a FLAG line with the suggested --offset.
   --folder       skip the card copy and use this match folder (re-runs, tests)
   --hold-export  stop after finish (picture check first); export later by phase
-  --project / --export-name   test names (Thundercats folder only, "zz ...")
+  --project / --export-name   test names (Northside folder only, "zz ...")
 
 Talks to Resolve through Resolve Studio's own external scripting (Resolve must be
 open and started by the owner, not by the Claude app — checked). Never starts Resolve.
@@ -42,12 +42,15 @@ open and started by the owner, not by the Claude app — checked). Never starts 
 Status: run-match-status.txt (one line per step). The last line is one of
   RUN READY FOR APPROVAL ...   (approval images ready; export end ESTIMATED — 2026-10-19: sent before the export starts)
   EXPORT RUNNING ...           (export started; measured finish time)
+  RUN DONE — EXPORT OK ...     (2026-11-11: the run now waits for the export, checks it and - after the owner's OK in
+                               upload-approved.txt - uploads it by itself; only with --auto-finish)
   RUN READY FOR PICTURE CHECK  (--hold-export)
   RUN STOPPED: <reason>        (nothing after the failed step was done)
 Full phase results: run-match-result.json. Phase logs still go to prepare-log.txt.
 """
 import re
 import argparse, json, os, subprocess, sys, time, traceback
+sys.path.insert(0, r"C:\Users\YOURNAME\scoreboard-pipeline")
 
 W = r"C:\Users\YOURNAME\scoreboard-pipeline"
 PY = r"C:\Python314\python.exe"
@@ -72,6 +75,8 @@ OFF_SUGGEST = W + r"\offset-suggestion.txt"
 
 
 def st(msg, first=False):
+    if first:                                        # 2026-11-09 (review finding 18): an old file can't pass for today's
+        msg += time.strftime("  [run date %Y-%m-%d]")
     with open(STATUS, "w" if first else "a", encoding="utf-8") as f:
         f.write(time.strftime("%H:%M:%S ") + msg + "\n")
 
@@ -113,7 +118,7 @@ CLIP_FIX_FOLDER = None
 
 
 def apply_clip_fix(r):
-    """2026-11-02 (Nov 1 Niagara: camera restarted with the wrong profile): the match folder's
+    """2026-11-02 (Nov 1 Bayside: camera restarted with the wrong profile): the match folder's
     clip-fix.txt {"clips": ["_0010_", ...], "zoom": z, "pan": px, "tilt": px, "slope": s, "power": p}
     re-frames / brightens ONLY those camera clips (make-tavo.py reads the same file). Returns a log line."""
     pf = os.path.join(CLIP_FIX_FOLDER or "", "clip-fix.txt")
@@ -194,6 +199,7 @@ def resolve_popups():
                            creationflags=0x08000000)
         pids = {int(x.split('","')[1]) for x in r.stdout.strip().splitlines() if x.startswith('"Resolve.exe"')}
         found = []
+        other = []
         Enum = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
         def cb(h, l):
             pid = wt.DWORD(); u.GetWindowThreadProcessId(h, ctypes.byref(pid))
@@ -203,10 +209,12 @@ def resolve_popups():
                     found.append(h)
                 elif b.value in UPDATE_TITLES:
                     upd.append(h)
+                elif b.value.strip() and (u.GetWindow(h, 4) or not b.value.startswith("DaVinci Resolve")):
+                    other.append((h, b.value.strip()))        # 2026-11-09 (review finding 16): any other dialog
             return True
         upd = []
         u.EnumWindows(Enum(cb), 0)
-        for h in upd:                                # 2026-11-09 (the owner): Resolve's update prompt is closed, never installed
+        for h in upd:                                # 2026-11-09: Resolve's update prompt is closed, never installed
             u.PostMessageW(h, 0x0010, 0, 0)          # WM_CLOSE (Nov 8: it blocked "create project" at 23:14)
         if upd:
             time.sleep(2)
@@ -216,9 +224,25 @@ def resolve_popups():
                 pass
         for h in found:
             u.SetWindowPos(h, 0, 200, 600, 0, 0, 0x0001 | 0x0004)
+        # 2026-11-09 (review finding 16): a window we don't know (not the main window, not "Message", not an update
+        # prompt) is moved onto the main screen and reported once by title - it may block scripting. The run does not
+        # stop for it (some Resolve windows are harmless); if a later step fails, the stop reason names it.
+        OPEN_WINDOWS[:] = sorted({t for _, t in other})
+        for h, t in other:
+            u.SetWindowPos(h, 0, 200, 600, 0, 0, 0x0001 | 0x0004)
+            if t not in SAID_WINDOWS:
+                SAID_WINDOWS.add(t)
+                try:
+                    st(f"Resolve has a window open: '{t}' (moved onto the main screen) - it can block Resolve; "
+                       f"close it if the run stops")
+                except Exception:
+                    pass
         return len(found)
     except Exception:
         return 0
+
+
+OPEN_WINDOWS, SAID_WINDOWS = [], set()
 
 
 def drop_empty_last_sets(folder):
@@ -259,6 +283,51 @@ def drop_empty_last_sets(folder):
     return None
 
 
+def detect_age(folder):
+    """2026-11-09 (review finding 19): "Lakeview Lightning 15u" -> "15U" (the opponent's name ends with an age group).
+    None when it doesn't, or when the folder's .json can't be read."""
+    import glob as _g, re as _re
+    js = _g.glob(os.path.join(folder, "*.json"))
+    if len(js) != 1:
+        return None
+    try:
+        t2 = str(json.load(open(js[0], encoding="utf-8")).get("team2") or "").strip()
+    except Exception:
+        return None
+    m_ = _re.search(r"\s(\d{1,2})\s?[uU]$", t2)
+    return f"{m_.group(1)}U" if m_ else None
+
+
+def apply_age(folder, age):
+    """youtube-age.txt for YouTube + the intro; the age is dropped from the scoreboard name (folder copies only)"""
+    open(os.path.join(folder, "youtube-age.txt"), "w", encoding="utf-8").write(age.strip())
+    # 2026-11-02: the age goes on YouTube only - drop it from the scoreboard name if the
+    # scorekeeper name ends with it ("Eastview Apex 15u" -> "Eastview Apex"); folder copies only
+    import glob as _g, re as _re
+    num_ = _re.sub(r"\D", "", age)
+    for jp_ in _g.glob(os.path.join(folder, "*.json")) + _g.glob(os.path.join(folder, "*.original.txt")):
+        try:
+            d_ = json.load(open(jp_, encoding="utf-8"))
+            t2_ = str(d_.get("team2") or "")
+            new_ = _re.sub(r"\s" + num_ + r"\s?[uU]$", "", t2_.rstrip()) if num_ else t2_   # "15u", "15U", "15 U"
+            if new_ != t2_ and new_.strip():
+                d_["team2"] = new_.rstrip()
+                json.dump(d_, open(jp_, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        except Exception:
+            pass
+
+
+BG_MARKS = (("audio", "fix-audio-log.txt", ("AUDIO READY",)), ("intro", "bookends-log.txt", ("INTRO READY", "INTRO SKIPPED")),
+            ("summary", "bookends-log.txt", ("SUMMARY READY",)), ("wipes", r"set-wipe\set-wipe-log.txt", ("WIPE READY",)))
+
+
+def bg_mark(seen, t0):
+    """2026-11-09 (review finding 22): when each background job was first seen ready, s after setup"""
+    for k, f, keys in BG_MARKS:
+        if k not in seen and any(x in _rd(os.path.join(W, f)) for x in keys):
+            seen[k] = round(time.time() - t0)
+
+
 def summary(extra=()):
     keys = ("project:", "FLAG", "***", "event:", "set breaks", "time-out", "TAVO", "missing", "ERROR")
     lines = []
@@ -274,17 +343,184 @@ def summary(extra=()):
     ctf = [l for l in results.get("camera_time", []) if l.startswith("FLAG") or "points placed" in l]   # 2026-11-03: camera-clock flags + gap
     ctf += [l for l in results.get("picture_joins", []) if l.startswith("FLAG")]                       # 2026-11-03: picture changed after a restart
     with open(SUMMARY, "w", encoding="utf-8") as f:
-        f.write("\n".join(list(extra) + results.get("offset_lines", []) + ctf + sc + lines) + "\n")
+        f.write("\n".join([time.strftime("written %Y-%m-%d %H:%M")]   # 2026-11-09 (review finding 18)
+                          + list(extra) + results.get("offset_lines", []) + ctf + sc + lines) + "\n")
+
+
+
+def start_archive(say):
+    """2026-11-22 (FIXES-TODO #11): copy the match folders to the external drive (J:) right after the last export,
+    instead of by hand. Only when J:\\Volleyball Matches is there; archive-matches.py copies + verifies, never deletes.
+    Claude tells the owner "safe to format the card" only when archive-log.txt ends ARCHIVE OK."""
+    try:
+        if not os.path.isdir(r"J:\Volleyball Matches"):
+            say("archive not started - external drive J: not plugged in (run archive-matches.py later)")
+            return
+        subprocess.Popen([PY, W + r"\archive-matches.py", "J:"], cwd=W, stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=0x00000008 | 0x08000000)
+        say("archive to J: started in the background (archive-log.txt; ARCHIVE OK = safe to format the card)")
+    except Exception as e:
+        say(f"archive NOT started: {e!r:.200}")
+
+
+def apply_format(folder, a):
+    """2026-11-22 (#8/#9): --two-sets / --winner N on the match folder's copy only (fix-format.py)"""
+    args = [PY, W + r"\fix-format.py", folder] + (["--two-sets"] if a.two_sets else []) + (["--winner", a.winner] if a.winner else [])
+    r_ = subprocess.run(args, capture_output=True, text=True, creationflags=0x08000000)
+    out = ((r_.stdout or r_.stderr).strip().splitlines() or ["no output"])[-1]
+    if "skipped" in out or r_.returncode:
+        stop("format correction failed: " + out)
+    return "format: " + out
 
 
 def stop(reason):
+    try:                                             # 2026-11-09: name any Resolve window that may be the cause
+        resolve_popups()
+        if OPEN_WINDOWS:
+            reason += " (Resolve window open: " + ", ".join(f"'{t}'" for t in OPEN_WINDOWS) + ")"
+    except Exception:
+        pass
+    try:                                             # 2026-11-22 (#6): name the cause + the exact rerun command
+        import alert as _al
+        cause = _al.resolve_cause(json.dumps(results, default=str)[-6000:])
+        if cause and cause not in reason:
+            reason = cause + " - " + reason
+        if CLIP_FIX_FOLDER and "rerun:" not in reason:
+            keep, skip = [], False
+            for x in sys.argv[1:]:
+                if skip:
+                    skip = False; continue
+                if x in ("--folder", "--team"):
+                    skip = True; continue
+                if x in ("--recent", "--latest", "--rebuild"):
+                    continue
+                keep.append(f'"{x}"' if " " in x else x)
+            reason += f' - rerun: run-match.py --folder "{CLIP_FIX_FOLDER}" --rebuild ' + " ".join(keep)
+    except Exception:
+        _al = None
     save()
     try:
         summary(["RUN STOPPED: " + reason])
     except Exception:
         pass
     st("RUN STOPPED: " + reason)
+    try:                                             # 2026-11-22 (#1): sound + PC pop-up + phone push
+        _al.alert("Volleyball run STOPPED", reason[:300])
+    except Exception:
+        pass
     sys.exit(1)
+
+
+CUR = {"r": None}
+RECOVER = {"n": 0}
+RECOVER_MAX = 2          # crash recoveries per run
+RECOVER_WAIT = 30 * 60   # how long to wait for the owner to reopen Resolve
+
+
+class RProxy:
+    """2026-11-22 (#2): every holder of 'r' talks to the CURRENT Resolve connection, so after a crash + reopen the
+    run carries on with the new one (the old object returns None for everything)."""
+    def __getattr__(self, k):
+        return getattr(CUR["r"], k)
+
+
+def _scriptapp():
+    try:
+        import DaVinciResolveScript as d
+        r = d.scriptapp("Resolve")
+        return r if r and r.GetProjectManager() else None
+    except Exception:
+        return None
+
+
+def resolve_died(tb=""):
+    try:
+        import preflight as _pf
+        running, _m, _p = _pf.resolve_info()
+    except Exception:
+        running = True
+    return (not running) or "'NoneType' object" in tb or "NoneType" in tb
+
+
+def recover(name, a):
+    """2026-11-22 (FIXES-TODO #2, Nov 21 match 1): Resolve crashed mid-run -> alert the owner, wait for him to reopen it,
+    reconnect, reopen the match project, check its timelines + camera clips, save, and carry on. None = can't."""
+    if RECOVER["n"] >= RECOVER_MAX:
+        return None
+    RECOVER["n"] += 1
+    t_crash = time.strftime("%H:%M")
+    st(f"RESOLVE CRASHED during {name} at {t_crash} — waiting up to {RECOVER_WAIT // 60} min for the owner to reopen it; "
+       "the run carries on by itself")
+    try:
+        import alert as _al
+        os.environ["VB_ALERT_FORCE"] = "1"
+        _al.alert("Resolve crashed - please reopen it", f"Resolve crashed at {t_crash} during {name}. Reopen DaVinci Resolve "
+                  "from the Start menu (don't open a project); the volleyball run carries on by itself.",
+                  key="recover " + t_crash)
+        os.environ.pop("VB_ALERT_FORCE", None)
+    except Exception:
+        pass
+    t0, r2 = time.time(), None
+    try:
+        import preflight as _pf
+    except Exception:
+        _pf = None
+    while time.time() - t0 < RECOVER_WAIT:
+        time.sleep(15)
+        try:
+            running, mins, parent = _pf.resolve_info() if _pf else (True, None, "")
+        except Exception:
+            running, parent = True, ""
+        if not running:
+            continue
+        if "claude" in (parent or ""):
+            st("Resolve was reopened by the Claude app - the owner: close it and reopen it from the Start menu")
+            continue
+        r2 = _scriptapp()
+        if r2:
+            time.sleep(20)                        # let it finish starting up
+            r2 = _scriptapp() or r2
+            break
+    if not r2:
+        st(f"recovery: Resolve not back after {RECOVER_WAIT // 60} min")
+        return None
+    CUR["r"] = r2
+    if name == "setup":                           # half-built project: rebuild as the next free vN
+        a.rebuild = True
+        st("recovery: Resolve is back - setup runs again as a new project version")
+        return r2
+    try:
+        proj = json.load(open(W + r"\prepare-state.json", encoding="utf-8"))["project"]
+    except Exception:
+        st("recovery: no prepare-state.json - can't tell which project to reopen"); return None
+    pm = r2.GetProjectManager()
+    p = None
+    for _ in range(3):
+        cur = pm.GetCurrentProject()
+        p = cur if cur and cur.GetName() == proj else pm.LoadProject(proj)
+        if p:
+            break
+        time.sleep(10)
+    if not p:
+        st(f"recovery: couldn't reopen project '{proj}'"); return None
+    tl = next((x for x in (p.GetTimelineByIndex(i) for i in range(1, p.GetTimelineCount() + 1))
+               if x.GetName().startswith("Match ")), None)
+    if not tl:
+        st(f"recovery: project '{proj}' has no Match timeline"); return None
+    try:
+        src = open(W + r"\prepare-match.py", encoding="utf-8").read()
+        g = {"resolve": r2, "__name__": "pmrecover", "json": json, "os": os}
+        exec(src[src.index("def v1_problems"):src.index("\ndef export():")], g)
+        bad = g["v1_problems"](tl, CLIP_FIX_FOLDER or os.path.dirname(json.load(open(W + r"\prepare-state.json", encoding="utf-8"))["json"]))
+    except Exception as e:
+        bad = []
+        results["recover_check_error"] = repr(e)[:300]
+    if bad:
+        st("recovery: camera clips changed after the crash - " + "; ".join(bad[:2])); return None
+    r2.OpenPage("edit")
+    pm.SaveProject()
+    st(f"recovered: reopened '{proj}', timelines + camera clips checked, saved — carrying on with {name}")
+    return r2
 
 
 def connect():
@@ -306,7 +542,8 @@ def connect():
     results["resolve_parent"] = parent
     if "claude" in parent:
         stop("Resolve was started by the Claude app — the owner: save, close and reopen Resolve from the Start menu")
-    return r
+    CUR["r"] = r
+    return RProxy()
 
 
 SRC = None
@@ -326,7 +563,14 @@ def phase(r, name, a, folder):
     except SystemExit:
         pass
     except Exception:
-        results[name + "_error"] = traceback.format_exc()[-1500:]
+        tb = traceback.format_exc()
+        results[name + "_error"] = tb[-1500:]
+        # 2026-11-22 (#2): Resolve crashed -> wait for it, reopen the project, check it, run the phase again.
+        # Not for export / export_status (a crashed render can't be resumed) - those still stop with the cause + rerun command.
+        if name in ("setup", "finish", "sb_prepare") and resolve_died(tb):
+            save()
+            if recover(name, a):
+                return phase(RProxy(), name, a, folder)
         stop(f"{name} crashed — see run-match-result.json")
     res = g.get("result") or {}
     results.setdefault(name, []).append(res)
@@ -483,6 +727,196 @@ def next_free_project(r, name):
     return f"{base} v{n}", n
 
 
+# ---------------------------------------------------------------- auto-finish (2026-11-11, the owner "do #2")
+# A single match now finishes like a tournament match: the run stays alive after EXPORT RUNNING, waits for
+# the export, runs the export check (which also takes the scoreboard pictures off again) and - once Claude
+# has written upload-approved.txt after the owner's OK - uploads it (Unlisted, Home Team channel + season
+# playlist). Same gates as run-tournament.py: no upload without the OK, none while sync-check.txt is
+# missing / skipped / has a FLAG (unless the OK says "sync-ok"), channel checked before any bytes are sent.
+# Last status line: "RUN DONE — EXPORT OK ...". Only with --auto-finish; without it the run ends at EXPORT RUNNING as before.
+UP_APPROVED = W + r"\upload-approved.txt"
+UP_STATUS = W + r"\yt-upload-status.txt"
+OWNER = W + r"\run-match-owner.txt"
+PLAYLIST = "Home Team 14U \u2013 2026-2027 Season"
+PLAYLIST_ID = "YOUR_PLAYLIST_ID"
+AUTO_TEAM = "Home Team"
+ME = f"{os.getpid()} {T_START:.0f}"
+
+
+def claim_run():
+    try:
+        with open(OWNER, "w", encoding="utf-8") as f:
+            f.write(ME)
+    except Exception:
+        pass
+
+
+def still_mine():
+    """False once a newer run-match (re-run, test) or a tournament has started: this run then goes quiet
+    instead of writing into the newer run's status file."""
+    try:
+        if open(OWNER, encoding="utf-8").read().strip() != ME:
+            return False
+        ts = W + r"\tournament-status.txt"
+        return not (os.path.exists(ts) and os.path.getmtime(ts) > T_START + 5)
+    except Exception:
+        return True
+
+
+def upload_ok_text():
+    """upload-approved.txt written after this run started: 'ok' / 'yes' / 'all' / '1' (+ 'sync-ok') -> its text"""
+    try:
+        if os.path.exists(UP_APPROVED) and os.path.getmtime(UP_APPROVED) >= T_START - 5:
+            txt = open(UP_APPROVED, encoding="utf-8").read().strip().lower()
+            if re.search(r"\b(all|ok|yes|1)\b", txt.replace("sync-ok", " ")) or txt == "sync-ok":
+                return txt
+    except Exception:
+        pass
+    return None
+
+
+def sync_gate(folder, force, since):
+    """same rule as run-tournament.py sync_gate: "ok", "wait" or "held: <reason>" """
+    if force:
+        return "ok"
+    p = os.path.join(folder or "", "sync-check.txt")
+    if not os.path.exists(p):
+        return "wait" if time.time() - since < 30 * 60 else "held: the score-timing check never finished"
+    txt = open(p, encoding="utf-8", errors="replace").read()
+    if "skipped" in txt:
+        return "held: the score-timing check was skipped (" + txt.strip().splitlines()[0][12:80] + ")"
+    flags = [l for l in txt.splitlines() if l.startswith("FLAG")]
+    return ("held: " + flags[0][6:140]) if flags else "ok"
+
+
+def upload_files(export_file):
+    """YouTube text + thumbnail for this export: from this run's results, else beside the export"""
+    base = re.sub(r" - YouTube( v\d+)?\.mp4$", "", export_file)
+    text = results.get("youtube_text") or base + " - YouTube text.txt"
+    thumb = results.get("thumbnail") or ""
+    if not os.path.exists(str(thumb)):
+        thumb = base + " - thumbnail.jpg"
+    return text, thumb
+
+
+def auto_finish(r, a, folder, res):
+    f = res.get("file")
+    test = ((a.project or "").lower().startswith("zz") or (a.export_name or "").lower().startswith("zz")
+            or os.environ.get("HOME_TEST") == "1")
+    try:
+        project = r.GetProjectManager().GetCurrentProject().GetName()
+    except Exception:
+        project = None
+    # 1. wait for the export (the measured finish time is re-said when it moves by more than 10 min)
+    said, t0, s = results.get("eta_iso"), time.time(), {}
+    while time.time() - t0 < 8 * 3600:
+        time.sleep(30 if s.get("joining") else 60)
+        if not still_mine():
+            return
+        try:
+            cur = r.GetProjectManager().GetCurrentProject()
+            if project and cur and cur.GetName() != project:
+                st(f"auto-finish ended: project '{cur.GetName()}' is open instead of '{project}' — "
+                   "check the export and upload by hand (run sheet: Upload)")
+                return
+        except Exception:
+            pass
+        s = phase(r, "export_status", a, folder)
+        if len(results.get("export_status", [])) > 4:
+            results["export_status"] = results["export_status"][-4:]
+        if s.get("done") or not s.get("rendering"):
+            break
+        try:
+            if s.get("eta_iso") and said and not s.get("joining") and abs(
+                    time.mktime(time.strptime(said[:19], "%Y-%m-%dT%H:%M:%S")) -
+                    time.mktime(time.strptime(s["eta_iso"][:19], "%Y-%m-%dT%H:%M:%S"))) > 600:
+                said = s["eta_iso"]
+                st(f"finish time now ~{s.get('eta')} ({said}, {s.get('percent')}%)")
+        except Exception:
+            pass
+    if not still_mine():
+        return
+    if not s.get("ok"):
+        stop("export stopped or its check failed — " + last(s)[:200])
+    f = s.get("file") or f
+    results["export_ok"] = f
+    save()
+    st(f"EXPORT OK: {f}")
+    if not test:
+        start_archive(st)                            # 2026-11-22 (#11)
+    # 2. upload after the owner's OK
+    if test:
+        st("RUN DONE — EXPORT OK; upload skipped (test run)")
+        return
+    if (a.team or AUTO_TEAM) != AUTO_TEAM:
+        st(f"RUN DONE — EXPORT OK; not uploaded by the run (team '{a.team}' — Claude asks the owner where it goes)")
+        return
+    text, thumb = upload_files(f)
+    if not (os.path.exists(text) and os.path.exists(thumb)):
+        st("RUN DONE — EXPORT OK; not uploaded by the run (YouTube text or thumbnail not found beside the export)")
+        return
+    t_up, waiting_said, held_said = time.time(), False, None
+    auto_said = None
+    while True:
+        if not still_mine():
+            return
+        ok = upload_ok_text()
+        if not ok:                                   # 2026-11-22: auto-upload when nothing is flagged
+            try:
+                import auto_upload as _au
+                if _au.enabled() and not _au.held(T_START):
+                    summ_ = [l for l in _rd(SUMMARY).splitlines() if l.startswith("FLAG") or "***" in l]
+                    c_, why_ = _au.clean(folder, summ_)
+                    if c_ == "ok":
+                        ok = "auto"
+                        st("auto-upload: nothing flagged and the score-timing check is OK - uploading without waiting for an OK")
+                    elif c_ == "no" and auto_said != why_:
+                        auto_said = why_
+                        st(f"auto-upload not used ({why_}) - waits for the owner's OK")
+                elif _au.enabled() and _au.held(T_START) and auto_said != "hold":
+                    auto_said = "hold"
+                    st("auto-upload not used (the owner said hold) - waits for his OK")
+            except Exception as e:
+                results["auto_upload_error"] = repr(e)[:200]
+        g = sync_gate(folder, bool(ok and "sync-ok" in ok), t_up) if ok else None
+        if g == "ok":
+            break
+        if time.time() - t_up > 3 * 3600:
+            st("RUN DONE — EXPORT OK; upload NOT done (" + ("no OK in 3 h" if not ok else g) + ")")
+            return
+        if not ok and not waiting_said:
+            waiting_said = True
+            st("export done — upload waits for the owner's OK (upload-approved.txt)")
+        if ok and g.startswith("held") and held_said != g:
+            held_said = g
+            st(f"UPLOAD HELD - {g[6:]} - needs the owner's OK (upload-approved.txt 'ok sync-ok')")
+        time.sleep(30)
+    text, thumb = upload_files(f)                       # a thumbnail re-picked meanwhile keeps the same name
+    st("uploading …")
+    args = [PY, W + r"\yt-upload.py", "upload", "--channel", "main", "--expect-channel", AUTO_TEAM,
+            "--video", f, "--text", text, "--thumb", thumb, "--playlist", PLAYLIST, "--playlist-id", PLAYLIST_ID]
+    try:
+        subprocess.run(args, cwd=W, env=dict(os.environ, PYTHONIOENCODING="utf-8"), creationflags=NOWIN,
+                       timeout=4 * 3600)
+    except Exception as e:
+        results["upload_error"] = repr(e)
+    whole = _rd(UP_STATUS)
+    tail = whole.strip().splitlines()
+    okl = [l for l in tail if "UPLOAD OK" in l]
+    if okl and os.path.basename(f) in whole:
+        line = okl[-1].split("UPLOAD OK ", 1)[1]
+        results["upload"] = line.split()[0]
+        for l in tail:
+            if "NOT set" in l or "NOT found" in l:
+                st("upload note: " + l[9:])
+        save()
+        st("RUN DONE — EXPORT OK, UPLOAD OK " + line[:200])
+    else:
+        results["upload"] = "FAILED"
+        save()
+        st("RUN DONE — EXPORT OK, but UPLOAD FAILED: " + (tail[-1][9:240] if tail else "no status"))
+
+
 def export_tail(r, a, folder):
     # 6. export
     res = export_waiting(r, a, folder, st)
@@ -514,12 +948,15 @@ def export_tail(r, a, folder):
              "event: " + (a.event or "none") + "   TAVO: " + ("on" if a.tavo else "off"),
              "picture: " + str(results.get("picture", "check skipped"))])
     st(f"EXPORT RUNNING — done ~{eta} ({eta_iso}, {how}); file {res.get('file')}")
+    if a.auto_finish:
+        auto_finish(r, a, folder, res)
 
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--recent", action="store_true")
+    ap.add_argument("--team", default="Home Team")      # 2026-11-09: copy-card picks only this team's newest file
     ap.add_argument("--folder"); ap.add_argument("--event"); ap.add_argument("--tavo", action="store_true")
     ap.add_argument("--hold-export", action="store_true")
     ap.add_argument("--ask-event", action="store_true")
@@ -533,31 +970,27 @@ def main():
     ap.add_argument("--export-only", action="store_true")  # with --folder + --project: no setup/finish, just (picture +) export
     ap.add_argument("--age")                               # 2026-11-02: "15U" -> YouTube title/description only (youtube-age.txt)
     ap.add_argument("--youtube-name")                      # 2026-11-02: full opponent name for YouTube only (youtube-name.txt)
+    ap.add_argument("--auto-finish", action="store_true")   # 2026-11-11: wait for the export, check it, upload after the owner's OK
     ap.add_argument("--two-sets", action="store_true")     # 2026-11-02: scorekeeper was set to best of 3 by mistake -> 2 sets total
+    ap.add_argument("--crash-test", action="store_true")    # 2026-11-22: zz tests only - wait for the owner to close Resolve before finish
+    ap.add_argument("--other-scorer", action="store_true")  # 2026-11-22 (#13): someone else scored on their own phone
+    ap.add_argument("--winner", choices=["1", "2"])          # 2026-11-22 (#8): count team N the winners, last set (time ran out) not counted
     a = ap.parse_args()
     FORMAT_MSG = None
     global CLIP_FIX_FOLDER
     CLIP_FIX_FOLDER = a.folder
+    AGE_MSG = None
     if a.folder and os.path.isdir(a.folder):
+        if not a.age and not a.export_only:
+            a.age = detect_age(a.folder)
+            if a.age:
+                AGE_MSG = f"age: {a.age} taken from the opponent's name (YouTube title + intro; not on the scoreboard)"
         if a.age:
-            open(os.path.join(a.folder, "youtube-age.txt"), "w", encoding="utf-8").write(a.age.strip())
-            # 2026-11-02: the age goes on YouTube only - drop it from the scoreboard name if the
-            # scorekeeper name ends with it ("Unity Apex 15u" -> "Unity Apex"); folder copies only
-            import glob as _g
-            for jp_ in _g.glob(os.path.join(a.folder, "*.json")) + _g.glob(os.path.join(a.folder, "*.original.txt")):
-                try:
-                    d_ = json.load(open(jp_, encoding="utf-8"))
-                    t2_ = str(d_.get("team2") or "")
-                    if t2_.upper().endswith(" " + a.age.strip().upper()):
-                        d_["team2"] = t2_[: -len(a.age.strip())].rstrip()
-                        json.dump(d_, open(jp_, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-                except Exception:
-                    pass
+            apply_age(a.folder, a.age)
         if a.youtube_name:
             open(os.path.join(a.folder, "youtube-name.txt"), "w", encoding="utf-8").write(a.youtube_name.strip())
-        if a.two_sets:
-            r_ = subprocess.run([PY, W + r"\fix-format.py", a.folder, "--two-sets"], capture_output=True, text=True, creationflags=0x08000000)
-            FORMAT_MSG = "format: " + ((r_.stdout or r_.stderr).strip().splitlines() or ["no output"])[-1]
+        if a.two_sets or a.winner:
+            FORMAT_MSG = apply_format(a.folder, a)
     if a.export_only and not (a.folder and a.project):
         stop("--export-only needs --folder and --project")
     if a.picture:                                    # 2026-10-26: TAVO (made during setup) gets the same brightening, never the zoom
@@ -567,16 +1000,19 @@ def main():
         except Exception:
             pass
     st("RUN STARTED " + " ".join(sys.argv[1:]), first=True)
+    claim_run()                                      # 2026-11-11: an older run still waiting on its export goes quiet
     if resolve_popups():
         stop("a Resolve pop-up is waiting (moved onto the main screen) - it blocks every Resolve command; "
              "read it, close it, then run again")
     if FORMAT_MSG:
         st(FORMAT_MSG)
+    if AGE_MSG:
+        st(AGE_MSG)
     # tests ("zz" project) never write the YouTube text / thumbnail into the match folder
-    # (2026-10-08: a test overwrote the Thundercats folder's own thumbnail.jpg)
+    # (2026-10-08: a test overwrote the Northside folder's own thumbnail.jpg)
     # 2026-10-14 test guard: a zz (test) project runs only on a zz folder, and a test run
-    # (AUTOPILOT_TEST=1, set by zz-test.py) only as a zz project — never on a real match folder
-    test = (a.project or "").lower().startswith("zz") or os.environ.get("AUTOPILOT_TEST") == "1"
+    # (HOME_TEST=1, set by zz-test.py) only as a zz project — never on a real match folder
+    test = (a.project or "").lower().startswith("zz") or os.environ.get("HOME_TEST") == "1"
     if test and not (a.folder and os.path.basename(a.folder.rstrip("\\")).lower().startswith("zz")
                      and (a.project or "").lower().startswith("zz")):
         stop("test runs need a zz project AND a zz folder (--project \"zz …\" --folder \"…\\zz …\")")
@@ -584,6 +1020,17 @@ def main():
         os.environ.setdefault("PREP_OUT", OC + r"\zz-test-out")
         os.makedirs(os.environ["PREP_OUT"], exist_ok=True)
     results["args"] = vars(a)
+    if not a.export_only and os.environ.get("VB_ALERT_PARENT") != "1":   # 2026-11-22 (#16): everything missing, in one go
+        try:
+            import preflight as _pf
+            _mi, _wa, _ln = _pf.check(tournament=False, need_card=not a.folder)
+            st(_ln)
+            if _mi:
+                stop("pre-flight: " + "; ".join(_mi))
+        except SystemExit:
+            raise
+        except Exception as e:
+            st(f"pre-flight check failed to run ({e!r:.120}) - carrying on")
     try:
         os.remove(OFF_SUGGEST)                   # never leave an older run's suggestion behind
     except OSError:
@@ -593,7 +1040,7 @@ def main():
     folder = a.folder
     if not folder:
         st("copying the card …")
-        cp = subprocess.Popen([PY, W + r"\copy-card.py", "--recent" if a.recent else "--latest"],
+        cp = subprocess.Popen([PY, W + r"\copy-card.py", "--recent" if a.recent else "--latest", "--team", a.team],
                               cwd=W, env=UTF8, creationflags=NOWIN)
         src_list = W + r"\copy-sources.txt"
         pic_done = a.no_picture_check or bool(a.picture)
@@ -619,6 +1066,14 @@ def main():
             stop("card copy: " + tail[9:])
         folder = tail.split(" — ")[-1].strip()
         st("copy ok: " + folder)
+        CLIP_FIX_FOLDER = folder                     # 2026-11-22: was only set for --folder runs (clip-fix + sync line in the summary)
+        if a.two_sets or a.winner:                   # 2026-11-22 (#9): was silently skipped when the run copied the card itself
+            st(apply_format(folder, a))
+        if not a.age:                                # 2026-11-09 (review finding 19): age from the opponent's name
+            a.age = detect_age(folder)
+            if a.age:
+                apply_age(folder, a.age)
+                st(f"age: {a.age} taken from the opponent's name (YouTube title + intro; not on the scoreboard)")
     elif not a.no_picture_check and not a.export_only and not a.picture:   # 2026-10-26: no check when the choice is given
         import glob
         clips = sorted(glob.glob(os.path.join(folder, "DJI_*.MP4")))
@@ -629,8 +1084,17 @@ def main():
     if a.offset is None and not results.get("offset_suggestion"):
         announce_offset(folder)                      # --folder runs / copies too fast for the loop above
     resolve_offset(a, folder)
+    if a.other_scorer and not a.export_only:          # 2026-11-22 (#13): folder copy only, never the Drive original
+        import glob as _g
+        for jp_ in _g.glob(os.path.join(folder, "*.json")) + _g.glob(os.path.join(folder, "*.original.txt")):
+            try:
+                d_ = json.load(open(jp_, encoding="utf-8")); d_["otherScorer"] = True
+                json.dump(d_, open(jp_, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+            except Exception as e:
+                results["other_scorer_error"] = repr(e)[:200]
+        st("scorer: someone else's phone - phone check off, sync check allows their tap timing")
 
-    # 1b2. 2026-11-09 (the owner, Nov 8): a set started by mistake at the end (no point scored, only the
+    # 1b2. 2026-11-09 (Nov 8 Lakeview): a set started by mistake at the end (no point scored, only the
     # 0-0 "start set" tap) is dropped from this folder's .json copy (and its .original.txt) - never the Drive file
     if not a.export_only:
         msg = drop_empty_last_sets(folder)
@@ -747,9 +1211,27 @@ def main():
     # 4. finish - 2026-10-27 (review row 3): starts as soon as the background work is ready
     # (checked every 3 s) instead of after a fixed 200 s + 45 s re-checks; finish() still checks itself
     t_bg = time.time()
+    bg_seen = {}
     while not background_ready() and time.time() - t_bg < 20 * 60:
+        bg_mark(bg_seen, t_bg)
         time.sleep(3)
+    bg_mark(bg_seen, t_bg)
     results["background_wait_s"] = round(time.time() - t_bg)
+    results["background_ready_s"] = bg_seen
+    st("background ready after setup: " + (", ".join(f"{k} {v} s" for k, v in bg_seen.items()) or "all ready already")
+       + f" (waited {results['background_wait_s']} s)")
+    if a.crash_test and test:                        # 2026-11-22: real crash-recovery test (zz only)
+        st("CRASH TEST: close Resolve now (waiting up to 15 min) - then reopen it from the Start menu")
+        t_ct = time.time()
+        while time.time() - t_ct < 15 * 60:
+            try:
+                wl = open(W + r"\resolve-watch.txt", encoding="utf-8").read()
+            except Exception:
+                wl = ""
+            if "GONE" in wl or "FROZEN" in wl or "SLOW" in wl:     # quitting Resolve hangs ~1 min first
+                st("CRASH TEST: Resolve is closed - going into finish (recovery should start)")
+                break
+            time.sleep(5)
     for i in range(60):
         res = phase(r, "finish", a, folder)
         if not res.get("waiting"):
@@ -798,6 +1280,7 @@ def main():
             if src and os.path.exists(src):
                 shutil.copy2(src, appr); kit.append(appr + "\\" + os.path.basename(src))
         results["approval_kit"] = kit
+        results["youtube_text"] = res.get("youtube_text")
         results["thumb_pick"] = [l for l in tr.stdout.splitlines() if l.startswith("THUMBNAIL")]
     except Exception as e:
         results["kit_error"] = repr(e)

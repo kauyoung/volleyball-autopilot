@@ -1,16 +1,17 @@
 """
-Volleyball Autopilot — one-command end-to-end test on the permanent fixture (2026-10-14).
+Home Team — one-command end-to-end test on the permanent fixture (2026-10-14).
 
     python zz-test.py                      # one zz match through run-match.py, export included
     python zz-test.py --tournament         # two zz matches through run-tournament.py --test
     python zz-test.py -- --offset 6        # anything after "--" goes to run-match.py
     python zz-test.py --no-export          # stop after setup/finish (run-match --hold-export; single match)
     python zz-test.py --keep-state         # don't put the real status/summary files back
+    python zz-test.py --keep-projects      # 2026-11-22: leave the zz Resolve project(s) (experiments; delete after)
     python zz-test.py --timeout 152        # 2026-10-19: add a time-out tap at 152 s to the zz copy's match file
                                            # (later points moved 30 s; min cut 8 s, fallback 15 s for the short fixture)
-    python zz-test.py --team2 "Lakeview Thunder 14U" # 2026-10-21: opponent name in the zz copy only (name fit / logo checks)
+    python zz-test.py --team2 "Lakeview Thunder" # 2026-10-21: opponent name in the zz copy only (name fit / logo checks)
 
-Safety (the owner, 2026-10-14 — two earlier tests overwrote real files):
+Safety (2026-10-14 — two earlier tests overwrote real files):
   * refuses to start while a real run is busy or Resolve is rendering;
   * snapshots every state file in the scripts folder (status/summary/result/log .txt/.json,
     approval kits) and PUTS THEM BACK afterwards; the test's own copies go to
@@ -178,7 +179,9 @@ def tidy_after():
         pm = d.scriptapp("Resolve").GetProjectManager()
         cur = pm.GetCurrentProject()
         is_zz = lambda n: n.lower().startswith(("zz test 2", "zz tournament"))
-        if cur and cur.IsRenderingInProgress():
+        if "--keep-projects" in sys.argv:              # 2026-11-22: leave them for an experiment (delete by hand after)
+            notes.append("test project(s) kept (--keep-projects)")
+        elif cur and cur.IsRenderingInProgress():
             notes.append("test project(s) kept (Resolve is rendering)")
         else:
             if cur and is_zz(cur.GetName()):
@@ -306,7 +309,7 @@ def main():
     fails = []
     try:
         old_test_folders()
-        env = dict(os.environ, PYTHONIOENCODING="utf-8", AUTOPILOT_TEST="1", PREP_OUT=OUT)
+        env = dict(os.environ, PYTHONIOENCODING="utf-8", HOME_TEST="1", PREP_OUT=OUT)
         to_t = float(args[args.index("--timeout") + 1]) if "--timeout" in args else None
         if to_t is not None:
             env["BK_TO_MIN"], env["BK_TO_FALLBACK"] = "8", "15"

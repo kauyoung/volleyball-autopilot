@@ -1,5 +1,5 @@
 """
-Volleyball Autopilot — fix the match audio BEFORE the export (2026-09-27).
+Home Team — fix the match audio BEFORE the export (2026-09-27, the owner approved).
 
 Replaces the old after-export step (export a 22 GB "-master" file, then re-read
 and re-write all 22 GB just to raise the volume). Now the camera audio alone is
@@ -40,7 +40,7 @@ WORK = r"C:\Users\YOURNAME\scoreboard-pipeline"
 LOG = os.environ.get("FIX_AUDIO_LOG") or os.path.join(WORK, "fix-audio-log.txt")   # override: tests only
 OUT_DIR = os.environ.get("FIX_AUDIO_OUT")                                           # override: tests only
 WAV_NAME = "match-audio-normalized.wav"
-# 2026-11-09 (the owner, "do 1-3", after an audio-engineer review):
+# 2026-11-09 ("do 1-3", after an audio-engineer review):
 #  * DEFAULT_MIC_DB: with the DJI Mic the camera file has 2 audio streams (a:0 wireless mic, a:1 camera mic);
 #    the camera mic stays the main sound and the wireless mic goes under it at this level unless the match
 #    folder's audio-mix.txt says otherwise ("camera+mic -4").
@@ -113,11 +113,11 @@ def make(folder, fade_end=None, fade_start=0.0):
         ins += ["-i", f]
         na = audio_streams(f)
         if mix is None and na >= 2:
-            # 2026-11-09 (the owner, "do 1-3"): DJI Mic track present and no audio-mix.txt -> his standard mix
+            # 2026-11-09 ("do 1-3"): DJI Mic track present and no audio-mix.txt -> his standard mix
             mix = DEFAULT_MIC_DB
             log(f"audio mix: wireless mic track found, no audio-mix.txt - standard mix (camera mic + wireless mic at {mix:g} dB)")
         if mix is not None and na >= 2:
-            # 2026-11-08 (the owner, "go with C"): DJI Mic in the file -> a:0 = wireless mic, a:1 = camera mic.
+            # 2026-11-08 ("go with C"): DJI Mic in the file -> a:0 = wireless mic, a:1 = camera mic.
             # Camera mic stays the main sound; the wireless mic is mixed under it at mix dB.
             parts.append(f"[{i}:a:1]aformat=sample_fmts=fltp:channel_layouts=stereo,{HPF}[k{i}];"
                          f"[{i}:a:0]aformat=sample_fmts=fltp:channel_layouts=stereo,{HPF},volume={mix}dB[w{i}];"
@@ -136,7 +136,7 @@ def make(folder, fade_end=None, fade_start=0.0):
     tmpdir = tempfile.gettempdir()
     if shutil.disk_usage(tmpdir).free < need + 5e9:
         tmpdir = OUT_DIR or folder
-    jw = os.path.join(tmpdir, f"_autopilot-joined-audio-{os.getpid()}.wav")
+    jw = os.path.join(tmpdir, f"_team-joined-audio-{os.getpid()}.wav")
     t0 = _t.time()
     r0 = subprocess.run(["ffmpeg", "-y", "-v", "error", "-nostats"] + ins +
                         ["-filter_complex", joined + "[j]", "-map", "[j]", "-c:a", "pcm_f32le", "-rf64", "auto", jw],
@@ -156,7 +156,7 @@ def make(folder, fade_end=None, fade_start=0.0):
 
 def _make_rest(folder, fade_end, fade_start, ins, joined, total):
     # Two passes (2026-09-27): one-pass loudnorm undershot (-16.6 instead of -14
-    # on the Thundercats audio). Pass 1 measures the whole match, pass 2 uses
+    # on the Northside audio). Pass 1 measures the whole match, pass 2 uses
     # those measurements so it lands on target.
     TARGET = "I=-14:TP=-1.5:LRA=11"
     r1 = subprocess.run(["ffmpeg", "-y", "-v", "info", "-nostats"] + ins +
@@ -174,7 +174,7 @@ def _make_rest(folder, fade_end, fade_start, ins, joined, total):
               f":offset={m['target_offset']}:print_format=summary")
     out = os.path.join(OUT_DIR or folder, WAV_NAME)
     # Fades: 1 s fade-in at the start and a 3 s fade-out ending where the video
-    # ends (the owner, 2026-09-28; was 1 s out only). The fade-out also stops the
+    # ends (2026-09-28; was 1 s out only). The fade-out also stops the
     # ~1 dB AAC peak spike Resolve's encoder made when the sound stopped abruptly.
     # If the camera stopped before the export end (held last frame), the fade
     # ends with the footage and the held part is silent.
@@ -184,7 +184,7 @@ def _make_rest(folder, fade_end, fade_start, ins, joined, total):
     # stays silent while "SET n" is on the dark panel, and comes back over UP s as the
     # panel moves off (no hard audio jump at the join).
     DIP, UP, dips = 0.6, 0.9, ""
-    # Set-break ambience (2026-10-14): instead of silence under the "SET n" wipe, the set's
+    # Set-break ambience (2026-10-14, the owner): instead of silence under the "SET n" wipe, the set's
     # own sound carries on, ducked to AMB_GAIN (0.25 = -12 dB): it eases down over the wipe-in, the
     # break sound that follows the cut point carries on under the wipe-out, and the new set's sound
     # comes in over NEW_IN s once the panel has gone. AMBIENT = False brings back the old silent dip.
@@ -298,7 +298,7 @@ def swap(resolve):
             and len(v1_after) == len(v1) and tl.GetEndFrame() - st == N)
     if a1:
         log(f"A1: {a1[0].GetName()}, start offset {a1[0].GetStart() - st}, {a1[0].GetDuration()} frames")
-    # 2026-11-09 (the owner, Nov 8): with the DJI Mic the camera files carry a 2nd audio stream, which
+    # 2026-11-09 (Nov 8 Lakeview): with the DJI Mic the camera files carry a 2nd audio stream, which
     # Resolve puts on its own track (A2). The WAV on A1 already holds the mix, so any other track of camera
     # audio would play the camera mic twice -> switch those tracks off (nothing is deleted).
     for k in range(2, tl.GetTrackCount("audio") + 1):

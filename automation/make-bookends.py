@@ -1,5 +1,5 @@
 """
-Volleyball Autopilot — intro card + match summary ("bookends"), 2026-09-28 (approved).
+Home Team — intro card + match summary ("bookends"), 2026-09-28 (the owner approved).
 
 Both play ON TOP of the match video (the owner records ~15 s before the first serve
 and ~30 s after the last point). Each is rendered as a 4K ProRes 4444 clip WITH
@@ -66,10 +66,10 @@ INTRO_BUILD, INTRO_HOLD, INTRO_EXIT, INTRO_MIN_HOLD = 3.145, 4.2, 1.7, 2.0
 LEAD_IN = float(os.environ.get("BK_LEAD_IN", 60.0))   # video starts this long before the first point
                                                       # (front trim, 2026-10-01; env only for tests)
 SUMMARY_AFTER, SUMMARY_MIN, SUMMARY_MAX = 15.0, 10.0, 12.0
-# Set-break cuts (2026-10-06): the video cuts BREAK_AFTER s after each set's last
+# Set-break cuts (2026-10-06, the owner): the video cuts BREAK_AFTER s after each set's last
 # point (not the final set) and resumes BREAK_LEAD s before the next set's first point,
 # with the diagonal wipe (make-set-wipe.py) over the join. EVERY set break gets the wipe
-# (the owner, 2026-10-06): when the break is too short to remove anything, the wipe still
+# (2026-10-06): when the break is too short to remove anything, the wipe still
 # plays at BREAK_AFTER s after the last point (nothing cut), moved earlier if needed so it
 # and the scoreboard fade-in finish BREAK_CLEAR s before the first serve; a break shorter
 # than BREAK_TOO_SHORT s (camera stopped between sets) gets no wipe. Env overrides are for
@@ -189,7 +189,7 @@ def plan():
     except Exception:
         pass
 
-    # Front trim (2026-10-01): the video starts LEAD_IN s before the first point;
+    # Front trim (2026-10-01, the owner): the video starts LEAD_IN s before the first point;
     # anything earlier (warm-up filler) is cut. Everything below is placed relative to it.
     trim_frame = int(round(max(0.0, P1 - LEAD_IN) * FPS))
     TRIM = trim_frame / FPS
@@ -298,7 +298,7 @@ def plan():
         cuts.append({"kind": "set", "wipe": f"set{nxt}", "how": how, "after_set": k, "next_set": nxt,
                      "out_frame": a, "in_frame": b,
                      "out_s": round(a / FPS, 3), "in_s": round(b / FPS, 3), "cut_s": round((b - a) / FPS, 3)})
-    # time-outs (2026-10-19): tap + TO_AFTER s -> WHISTLE_LEAD s before the next serve whistle
+    # time-outs (2026-10-19, the owner): tap + TO_AFTER s -> WHISTLE_LEAD s before the next serve whistle
     try:
         mj = json.load(open(info["matchFile"], encoding="utf-8"))
         jo = float(mj.get("offset") or 0.0)
@@ -490,7 +490,7 @@ def badge(c, r, name, ring, logo_path=None):
 _SKIP = {"THE", "TEAM", "CLUB", "VC", "VBC"}
 _AWKWARD = {"TIT", "ASS", "SEX", "FAT", "POO", "PEE", "DIE", "FAG", "GAY", "NUT", "CUM", "FUK", "FUC", "WTF", "KKK", "NAZ", "PIS", "SUK"}
 def team_code(name):
-    """3-letter code for a team: first 3 letters of its first real word (Thundercats
+    """3-letter code for a team: first 3 letters of its first real word (Northside
     Polar -> THU); an awkward result uses the first letter + next consonants instead
     (Titans -> TTN)."""
     words = [w for w in re.split(r"[^A-Za-z0-9]+", name.upper()) if w and w[0].isalpha()]
@@ -511,7 +511,7 @@ def _slug(x):
 
 def logo_for(name):
     """team-logos\\<club>.png for any name that STARTS with the club's words
-    ("thundercats.png" -> "Thundercats Polar 14U"); team-logos\\aliases.txt
+    ("northside.png" -> "Northside Polar 14U"); team-logos\\aliases.txt
     ("tvc = toronto-volleyball-club") for nicknames. 2026-10-02 — same rules as
     build-scoreboard.lua logoFor(). Returns a path that may not exist."""
     s = re.sub(r"^the-", "", _slug(name))
@@ -589,7 +589,7 @@ def out_bytes(fr):
 
 # ------------------------------------------------------------------- INTRO
 def intro_name2(p):
-    """2026-11-09 (the owner): the intro shows the opponent's age group ("Lakeview Thunder 15U") when the match
+    """2026-11-09: the intro shows the opponent's age group ("Lakeview Lightning 15U") when the match
     folder has youtube-age.txt (--age) and the name doesn't already end with it. The scoreboard keeps the short name."""
     name = p["team2"]
     try:
@@ -707,15 +707,15 @@ def render_summary(p):
         win_txt, win_col = f"{winner} WIN {max(w1, w2)}{DASH}{min(w1, w2)}", (GREEN if wn == 1 else WHITE)
     winL = Layer(tx((1920, 1010), win_txt, fit(win_txt, 100, 2200), win_col, spacing=6))
     # Longest run / biggest lead: number + the team's short code in its colour
-    # (2026-10-01: "PARENTS" was too long) — same letters as the badge circles.
-    # 2026-10-01: our team always "REBELS"; others = 3-letter code
+    # (2026-10-01, the owner: "PARENTS" was too long) — same letters as the badge circles.
+    # 2026-10-01: our team always "HOME"; others = 3-letter code
     def code(team_no):
         if team_no == 0:                                  # 2026-10-26: tie
             return ("EACH", WHITE)
         name = p["team1"] if team_no == 1 else p["team2"]
         # 2026-10-02: opponent always "OPP" (standard stat-sheet short form)
         if name.strip().lower() == "home team":
-            txt = "REBELS"
+            txt = "HOME"
         elif team_no == 2:
             txt = "OPP"
         else:
@@ -789,7 +789,7 @@ if __name__ == "__main__":
         # BK_CLASSIC=1 in the environment skips straight to the classic one.
         done = False
         if not os.environ.get("BK_CLASSIC"):
-            for attempt in (1, 2):           # 2026-11-02: one retry before falling back (Nov 1 Unity Apex)
+            for attempt in (1, 2):           # 2026-11-02: one retry before falling back (Nov 1 Eastview Apex)
                 try:
                     g = {"__name__": "hf_bookends"}
                     exec(open(os.path.join(WORK, "hf-bookends.py"), encoding="utf-8").read(), g)

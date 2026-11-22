@@ -1,12 +1,12 @@
 """
-Volleyball Autopilot - automatic score-timing check per set (2026-11-02: "there has to be a way for you to
+Home Team - automatic score-timing check per set (2026-11-02, the owner: "there has to be a way for you to
 check the time sync"; 2026-11-03: any record->START gap, wide search, cache).
 
     C:\\Python314\\python.exe sync-check.py "<match folder>"                   -> sync-check.txt (verdict)
     C:\\Python314\\python.exe sync-check.py --measure [--hint S] "<folder>"    -> one "MEASURE {json}" line
 
 Averages how much the picture moves around every score tap of a set (players rally, then stop) and
-compares that pattern with sync-template.json (Nov 1 Georgetown, timing approved by the owner). The shift
+compares that pattern with sync-template.json (Nov 1 Greenfield, timing approved by the owner). The shift
 that lines them up = the offset (s the camera started before START) that set needs.
 - verdict mode searches +-8 s around the offset camera-time applied (so a 20 s or 90 s record->START gap
   is checked just as well as 4 s) and writes  SYNC CHECK: set n OK (+0.2 s ...)  or  FLAG: set n ...
@@ -21,6 +21,8 @@ W = r"C:\Users\YOURNAME\scoreboard-pipeline"
 FF = r"C:\ffmpeg\bin\ffmpeg.exe"; FP = r"C:\ffmpeg\bin\ffprobe.exe"
 FPS = 10.0; WIN = (-12.0, 8.0); NW = 0x08000000
 LIMIT = 1.5      # s: |residual| above this -> FLAG
+LIMIT_OTHER = 6.0  # 2026-11-22 (#13): someone else scored on their own phone - their taps run a few s off the owner's
+                   # (Nov 21, another parent: matches 2 + 3 checked by eye = fine at -2.0 to -5.2 s); clock itself is network time
 MARGIN = 0.04   # 2026-11-03: the pooled best match must beat the runner-up (> 3 s away) by this much to count as clear
 MAXLAG = 40      # x 0.2 s = +-8 s per search window
 CACHE = os.path.join(W, "_sync-cache")
@@ -84,6 +86,7 @@ def main(folder, measure=False, hint=None):
         return done("SYNC CHECK: skipped (no single .json)")
     cur = json.load(open(js[0], encoding="utf-8"))
     src = json.load(open(orig[0], encoding="utf-8")) if orig else cur
+    other = bool(cur.get("otherScorer") or src.get("otherScorer"))      # 2026-11-22 (#13)
     off = float(cur.get("offsetApplied") or 0.0)
     tpl = json.load(open(os.path.join(W, "sync-template.json"), encoding="utf-8"))
     ref = np.array(tpl["curve"], np.float32); T0 = float(tpl["offset"])
@@ -193,7 +196,10 @@ def main(folder, measure=False, hint=None):
         resid = off - need                             # + = scores late, - = scores early
         if corr < 0.6 or edge:
             lines.append(f"SYNC CHECK: set {s} - pattern unclear (match {corr:.2f}), not judged")
-        elif abs(resid) > LIMIT:
+        elif other and abs(resid) <= LIMIT_OTHER:
+            lines.append(f"SYNC CHECK: set {s} OK ({resid:+.1f} s, match {corr:.2f}; someone else scored - "
+                         f"their taps run {abs(resid):.0f} s {'later' if resid > 0 else 'earlier'} than the owner's, within {LIMIT_OTHER:g} s)")
+        elif abs(resid) > (LIMIT_OTHER if other else LIMIT):
             # 2026-11-03: no confident "x s late" any more - rallies repeat every ~20 s, so a wrong clock can line up
             # with a false match; only "close to the applied timing" is reliable
             lines.append(f"FLAG: set {s} score timing doesn't line up with the video (nearest match {need:.1f} s, "
@@ -201,7 +207,9 @@ def main(folder, measure=False, hint=None):
         else:
             lines.append(f"SYNC CHECK: set {s} OK ({resid:+.1f} s, match {corr:.2f})")
     how = str(cur.get("offsetHow") or "camera clock")
-    if how == "camera clock" and not (-2.0 <= off <= 10.0) and not cur.get("clockConfirmed"):   # 2026-11-09: same window as camera-time.py (START up to 2 s before record = normal)
+    if other:
+        lines.append(f"SYNC CHECK: someone else scored on their phone - record->START gap ({off:g} s) is between two people, not checked")
+    elif how == "camera clock" and not (-2.0 <= off <= 10.0) and not cur.get("clockConfirmed"):   # 2026-11-09: same window as camera-time.py (START up to 2 s before record = normal)
         # 2026-11-03: an unusual record->START wait is fine if the owner really waited - but a clock off by ~one rally
         # (~20 s) can fool the video check, so it is confirmed with the owner (holds the tournament upload until then)
         when = f"{off:g} s after pressing record" if off > 0 else f"{-off:g} s BEFORE recording started"

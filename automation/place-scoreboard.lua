@@ -1,6 +1,6 @@
 --[[
 ================================================================================
- Volleyball Autopilot scoreboard — place the scoreboard clip (no mouse needed)
+ Home Team scoreboard — place the scoreboard clip (no mouse needed)
 ================================================================================
 
  Replaces the old on-screen step (drag "Abstract Mesh" onto V2, Ctrl+D to set
@@ -15,7 +15,7 @@
       AppendToTimeline (which does accept a track number and a start position).
  The scoreboard's Fusion comp lives inside the "Scoreboard" timeline's V1 clip
  — run-overlay.lua is pointed at that comp (see _overlay_check/_runner_template.lua).
- Verified on the Thundercats footage: identical frames to the dragged version,
+ Verified on the Northside footage: identical frames to the dragged version,
  same export speed.
 
  Run with the MATCH timeline current (right after assemble-match.lua):

@@ -1,5 +1,5 @@
 """
-Volleyball Autopilot — review sheet (2026-09-28).
+Home Team — review sheet (2026-09-28, the owner approved).
 
 One image showing ~12-17 key moments of the finished scoreboard, each with its
 video time and what the scoreboard SHOULD read there, so the owner can check a

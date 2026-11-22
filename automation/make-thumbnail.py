@@ -1,4 +1,4 @@
-# Volleyball Autopilot YouTube thumbnail (layout approved by the owner 2026-10-05/06).
+# Home Team YouTube thumbnail (layout approved by the owner 2026-10-05/06).
 #   PY make-thumbnail.py <match.json> <frame.jpg> <out.jpg> [fonts-dir]
 # One left edge; "VS" centred between the names with a rule each side; our badge only;
 # one tile (event name, else SCRIMMAGE, else none). Safe margins: 120 px left/right, >= 84 px
@@ -50,6 +50,14 @@ def fit_name(d, text, font, maxw, big, small, mn):
 def main(match, frame, out, fdir=None):
     m=json.load(open(match,encoding="utf-8"))
     t1=(m.get("team1") or "Home Team").upper(); t2=(m.get("team2") or "Opponent").upper()
+    # 2026-11-21: the thumbnail shows the age like the YouTube title - the match folder's
+    # youtube-name.txt (full name) or the name + youtube-age.txt when it doesn't already end with it
+    def _opt(n):
+        try: return open(os.path.join(os.path.dirname(os.path.abspath(match)), n), encoding="utf-8").read().strip()
+        except Exception: return ""
+    _full, _age = _opt("youtube-name.txt"), _opt("youtube-age.txt")
+    if _full: t2 = _full.upper()
+    elif _age and not t2.endswith(_age.upper()): t2 = f"{t2} {_age.upper()}"
     try: date=datetime.date.fromisoformat(m["date"]).strftime("%b %d, %Y").upper()
     except Exception: date=""
     FD=fonts_dir(fdir); NB=os.path.join(FD,"Gotham Narrow Bold.otf"); MED=os.path.join(FD,"Gotham Medium.otf")
@@ -72,7 +80,7 @@ def main(match, frame, out, fdir=None):
     cx=W-MX-BADGE_R-6
     maxw1=cx-BADGE_R-6-40-L          # our name stops before the badge
     maxw2=W-MX-L                     # opponent row has the full width
-    # The tile at the bottom = the tournament / event name (2026-10-06: "FINAL" makes no
+    # The tile at the bottom = the tournament / event name (2026-10-06, the owner: "FINAL" makes no
     # sense on a thumbnail) - <match folder>\event.txt. No event: SCRIMMAGE for a scrimmage,
     # otherwise no tile at all.
     try: event=open(os.path.join(os.path.dirname(os.path.abspath(match)),"event.txt"),encoding="utf-8").read().strip().upper()

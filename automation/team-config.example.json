@@ -1,0 +1,17 @@
+{
+ "team_name": "Riverside Rapids",
+ "age_group": "14U",
+ "short_code": "RAPIDS",
+ "team_colour": "#70D549",
+ "opponent_colour": "#6BBDFF",
+ "logo_file": "C:\\Users\\YOURNAME\\Pictures\\riverside-rapids-logo.png",
+ "work_folder": "C:\\Users\\YOURNAME\\scoreboard-pipeline",
+ "footage_drive": "E",
+ "archive_drive": "",
+ "google_my_drive": "G:\\My Drive",
+ "youtube_channel_name": "Riverside Rapids Volleyball",
+ "youtube_playlist_title": "Riverside Rapids 14U \u2013 2026-2027 Season",
+ "youtube_playlist_id": "",
+ "python": "",
+ "ffmpeg_bin": ""
+}

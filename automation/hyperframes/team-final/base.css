@@ -1,0 +1,34 @@
+@font-face { font-family: "Barlow Condensed"; font-weight: 600; src: url("fonts/barlow-condensed-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 700; src: url("fonts/barlow-condensed-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 800; src: url("fonts/barlow-condensed-latin-800-normal.woff2") format("woff2"); }
+:root { --team: #70d549; --opp: #6bbdff; --ink: #060907; --paper: #f2f4f1;
+  --muted: rgba(242,244,241,0.56); --soft: rgba(242,244,241,0.84); --hair: rgba(242,244,241,0.16); }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 3840px; height: 2160px; overflow: hidden; background: transparent; }
+#root { position: relative; width: 3840px; height: 2160px; overflow: hidden; background: transparent;
+  font-family: "Barlow Condensed", sans-serif; color: var(--paper); font-variant-numeric: tabular-nums; }
+.clip { position: absolute; left: 0; top: 0; }
+/* laid out at 1920x1080, drawn at 4K (fast capture, no upscale) */
+#scene { width: 1920px; height: 1080px; zoom: 2; overflow: hidden; }
+html.preview, html.preview body, html.preview #root { width: 1920px; height: 1080px; }
+html.preview #scene { zoom: 1; }
+#plate { position: absolute; inset: 0; display: none; }
+html.preview #plate { display: block; }
+
+/* the 14-degree panel: #panel clips, #stage inside it is counter-moved so it stays put on screen */
+#panel, #edges { position: absolute; left: -190px; top: 0; width: 2300px; height: 1080px; }
+#panel { overflow: hidden; }
+#panel .fill { position: absolute; inset: 0; }
+#stage { position: absolute; left: 190px; top: 0; width: 1920px; height: 1080px; }
+.edge { position: absolute; top: 0; bottom: 0; width: 14px; }
+.edge.lead { left: 100%; transform-origin: 0 50%; background: var(--team); }
+.edge.trail { right: 100%; transform-origin: 100% 50%; background: var(--opp); }
+.edge.b { opacity: 0; }
+/* faint 14-degree hairlines printed on the panel */
+#lines { position: absolute; inset: 0; opacity: 0.05;
+  background: repeating-linear-gradient(104deg, transparent 0 238px, #f2f4f1 238px 240px); }
+.mask { overflow: hidden; }
+.mask > span { display: block; }
+#measure, #measure2 { position: absolute; left: -9999px; top: 0; font-family: "Barlow Condensed", sans-serif; text-transform: uppercase; white-space: nowrap; visibility: hidden; }
+#measure { font-weight: 800; letter-spacing: 0.015em; }
+#measure2 { font-weight: 700; letter-spacing: 0.08em; padding-left: 0.08em; }

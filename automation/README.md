@@ -6,8 +6,8 @@ runs end to end for each match: from "the card is in the PC" to a finished, appr
 4K60 video uploaded Unlisted to YouTube. One short approval message per match; no
 editing by hand.
 
-Copy every file in this folder into one working folder (the scripts call each
-other by path) and search for `YOURNAME` to set your own paths. Python 3.12+ with
+Set up with `team-setup.py` (see the main README): it writes a working copy with your team, paths and
+colours. (By hand: copy every file into one working folder and search for `YOURNAME`.) Python 3.12+ with
 Pillow and NumPy, ffmpeg/ffprobe on PATH, an NVIDIA GPU (NVENC), Resolve Studio
 with external scripting set to Local.
 
@@ -88,3 +88,27 @@ A second tournament exposed a few weak spots; each one is now handled automatica
 - **Time-outs**: a second tap in the scorekeeper means "Time-out over" and the video restarts 3 s before it (else the serve whistle, else 60 s). A camera stop during a time-out is covered by the time-out cut; a mid-set stop shorter than 20 s is a plain cut.
 - **Format and name corrections**: `--two-sets` (a 2-set match scored as best of 3 by mistake), `--age 15U` (age group in YouTube titles only).
 - **Robustness**: a hidden Resolve dialog (often off-screen after a monitor change) blocks all scripting - the run now stops and says so; the intro/FINAL renderer retries once; an edited cut list is always the one exported; the camera card copies in the background so match 1 starts as soon as its clips are in.
+
+## Reliability and setup (November 22, 2026)
+
+After a five-match tournament day with a Resolve crash, a silent stop and a broken export:
+
+- **Pre-flight** (`preflight.py`): before anything starts, one line lists everything missing - Resolve open (and
+  not started by the assistant), camera card, footage-drive space, the Drive folder, the archive drive.
+- **Stops are never silent** (`alert.py`): a loud beep and a Windows pop-up (optional phone push via ntfy) on any
+  stop or when Resolve crashes or freezes mid-run; every stop names its cause and ends with the exact rerun command.
+- **Crash recovery**: if Resolve dies during setup or finish, the run waits for it to be reopened, reopens the
+  project, checks it, saves and carries on.
+- **Camera-clip guard**: the finish step and the export both check that every camera clip still covers its span
+  (a Resolve glitch once cut every clip to one frame, rendering black parts).
+- **Strip scoreboard pictures**: only a full-width strip around the board is drawn (~35 % faster), verified
+  pixel-identical against the live scoreboard; Resolve scales a smaller picture's Tilt by its own height, so the
+  strip height is always a divisor of 2160.
+- **Safer review stills**: rendered in batches of 10 with a save in between.
+- **Resume**: copied clips keep a `.sha1`, are never re-copied or replaced; `--resume` makes any missing kit item.
+- **Scoring corrections**: `--winner N` (time ran out in the last set), `--other-scorer` (someone else scored on
+  their phone: wider timing tolerance), `--two-sets` also on a normal single-match run.
+- **Uploads**: `yt-upload.py` (YouTube Data API, always Unlisted) with `update` to change a title/thumbnail; an
+  upload thread that never stalls; optional **auto-upload** when nothing is flagged (`auto-upload.txt`, "hold" via
+  `upload-hold.txt`); the archive to the external drive starts by itself.
+- **Setup**: `team-setup.py` + `team-config.example.json`, and the Claude run sheet in `skill/volleyball-autopilot/`.

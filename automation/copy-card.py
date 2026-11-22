@@ -1,5 +1,5 @@
 """
-Volleyball Autopilot — copy the camera's SD card into a new match folder (2026-09-28).
+Home Team — copy the camera's SD card into a new match folder (2026-09-28).
 
 the owner plugs the DJI card in; Claude runs this on his PC in the background:
 
@@ -26,7 +26,8 @@ the owner plugs the DJI card in; Claude runs this on his PC in the background:
 
   * copies each clip while hashing it (SHA-1), then re-reads the copy and
     checks the hash — a bad card read can't give a silently broken file.
-    .part files are renamed only when verified; a re-run resumes.
+    .part files are renamed only when verified; a re-run resumes. Each clip keeps its .sha1 beside it
+    (2026-11-22); a clip already in the folder at the right size is skipped and never replaced.
   * never deletes anything from the card (the owner formats it in the camera)
 
 Progress + result go to copy-card-log.txt; the last line is "COPY OK ...",
@@ -51,6 +52,32 @@ CHUNK = 8 * 1024 * 1024
 GAP_MIN = 20          # recordings further apart than this = a different match
 CLOCK_TOL_MIN = 5     # camera clock vs phone clock allowance
 DRIVE_DIR = "F:\\My Drive\\Volleyball Matches \u2013 Scorekeeper"   # Google Drive for desktop
+TEAM_DEFAULT = "Home Team"   # 2026-11-09: a match file with no "team1" is a Home file (prepare-match's default)
+
+
+def team_matches(team1, want):
+    """2026-11-09 (review finding 21): the other team's Lakeview files share this Drive folder, so --latest must only
+    pick a file of the team the run is for. "Home Team" matches "Home Team" and "Home Team 14U";
+    want "any" matches everything."""
+    if not want or want.strip().lower() == "any":
+        return True
+    t = " ".join((team1 or TEAM_DEFAULT).lower().split())
+    w = " ".join(want.lower().split())
+    return t == w or t.startswith(w + " ")
+
+
+def newest_for_team(files, want):
+    """files newest first -> (newest file of that team or None, [(file, team1) newer files of other teams])"""
+    skipped = []
+    for j in files:
+        try:
+            t1 = json.load(open(j, encoding="utf-8")).get("team1")
+        except Exception:
+            continue
+        if team_matches(t1, want):
+            return j, skipped
+        skipped.append((j, t1))
+    return None, skipped
 
 
 def log(msg, mode="a"):
@@ -128,6 +155,7 @@ def main():
     ap.add_argument("--match"); ap.add_argument("--group", type=int)
     ap.add_argument("--dest-root", default=r"E:\Volleyball Matches"); ap.add_argument("--list", action="store_true")
     ap.add_argument("--latest", action="store_true"); ap.add_argument("--recent", action="store_true")
+    ap.add_argument("--team", default=TEAM_DEFAULT)   # 2026-11-09: only that team's newest file ("any" = no filter)
     a = ap.parse_args()
     log("copy-card " + time.strftime("%Y-%m-%d %H:%M"), "w")
     if a.latest or a.recent:
@@ -139,8 +167,14 @@ def main():
             for j in js[:8]:
                 log(f"  {time.strftime('%Y-%m-%d %H:%M', time.localtime(os.path.getmtime(j)))}  {os.path.basename(j)}")
             return 0
-        a.match = js[0]
-        log("match file (newest on Drive): " + os.path.basename(a.match))
+        a.match, skipped = newest_for_team(js, a.team)
+        for j, t1 in skipped[:3]:
+            log(f"skipped a newer file of another team ({t1}): {os.path.basename(j)}")
+        if not a.match:
+            log(f"*** COPY FAILED: no scorekeeper file for team '{a.team}' in {DRIVE_DIR}"
+                + (f" (newest is {skipped[0][1]}'s)" if skipped else ""))
+            return 1
+        log(f"match file (newest {a.team} file on Drive): " + os.path.basename(a.match))
 
     sources = [a.source] if a.source else find_sources()
     if not sources:
@@ -250,11 +284,18 @@ def main():
         fname = os.path.basename(f)
         out = os.path.join(dest, fname)
         size = os.path.getsize(f)
-        if os.path.exists(out) and os.path.getsize(out) == size and os.path.exists(out + ".sha1"):
-            if open(out + ".sha1").read().strip() == sha1_of(out):
-                log(f"  {fname}: already copied and verified — skipped")
+        # 2026-11-22 (FIXES-TODO #4, Nov 21 resume): a clip only ever gets its final name after its hash was
+        # verified, so an existing clip of the right size is a finished copy - skipped WITHOUT re-hashing (a 41 GB
+        # re-hash took minutes) and NEVER replaced (Resolve may have it open: the Nov 21 rename failed for that).
+        if os.path.exists(out):
+            if os.path.getsize(out) == size:
+                how = "verified (.sha1)" if os.path.exists(out + ".sha1") else "same size (older copy without .sha1)"
+                log(f"  {fname}: already copied, {how} — skipped")
                 done += size; verified += 1
                 continue
+            log(f"*** COPY FAILED: {fname} is already in {dest} but a different size than on the card "
+                f"({os.path.getsize(out) / 1e9:.2f} vs {size / 1e9:.2f} GB) — left alone; ask the owner")
+            return 1
         part = out + ".part"
         h = hashlib.sha1()
         with open(f, "rb") as fi, open(part, "wb") as fo:
@@ -275,8 +316,8 @@ def main():
         verified += 1
         el = time.time() - t0
         log(f"  {fname}: {size / 1e9:.2f} GB copied + verified  ({done / total * 100:.0f}% · {done / 1e6 / max(el, 0.1):.0f} MB/s)")
-    for s in glob.glob(os.path.join(dest, "*.sha1")):
-        os.remove(s)
+    # 2026-11-22 (#4): the .sha1 files STAY beside the clips (they used to be deleted here, so a resume
+    # couldn't tell copied clips from missing ones)
     log(f"COPY OK: {verified} clips, {total / 1e9:.1f} GB, every file verified — {dest}")
     return 0
 

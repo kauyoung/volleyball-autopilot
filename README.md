@@ -28,9 +28,26 @@ for a subscription filming/scoring service.
 - **A phone scorekeeper** with two big buttons and an undo bar that stays on screen. It works offline and can send the match file to Google Drive. **[Try it on your phone](https://kauyoung.github.io/volleyball-autopilot/scorekeeper/volleyball-scorekeeper.html)** (demo copy, nothing is uploaded).
 - **Automatic editing**: warm-up trimmed, set breaks and time-outs cut out (restarting at the referee's serve whistle), sound levelled.
 - **Intro and FINAL screens** filled in from the match file: teams, date, set scores, longest run, biggest lead, match time.
-- **One approval per match**: a review sheet of every key moment. Nothing is uploaded until you say OK.
+- **One approval per match**: a review sheet of every key moment. Nothing flagged? It can upload by itself (auto-upload, off by default); anything flagged waits for your OK.
 - **YouTube-ready output**: one 4K60 10-bit H.265 file, exported about 2.4x faster than with a live Fusion scoreboard, with the title, chapters and thumbnail prepared and the video saved as Unlisted.
 - **A manual path for the free edition of Resolve**: Lua scripts you run from Resolve's Console.
+
+## Set it up for your team (with Claude)
+
+The hands-off pipeline in `automation/` is run by an AI assistant. If you use **Claude** (desktop app on a
+Windows PC with **DaVinci Resolve Studio**), setup is a conversation:
+
+1. Add the run sheet to Claude: upload `skill/volleyball-autopilot/SKILL.md` as a skill.
+2. Say **"set up volleyball autopilot"**. Claude asks for your team name, age group, colours, logo, folders
+   and YouTube channel, writes `team-config.json`, runs `automation/team-setup.py`, and walks you through the
+   one-time installs (Python, ffmpeg, a font, Node.js, YouTube sign-in) one at a time.
+3. A practice run on a short clip of yours must end with `ZZ TEST PASSED`. After that, each match day is
+   "start the volleyball workflow".
+
+Without Claude: copy `automation/team-config.example.json` to `team-config.json`, fill it in and run
+`python automation/team-setup.py --config team-config.json`. It writes a working copy into the folder you
+chose (this repo stays unchanged, so you can re-run it after a `git pull` or a new season) and lists anything
+still missing. Your team's details live only in that config, never in the scripts.
 
 ## Why this exists
 
@@ -280,6 +297,7 @@ Turn it off with `AUTO_ALIGN_SETS = false`.
 
 ```
 ├── automation/          The full hands-off workflow (Resolve Studio + an AI assistant) — see automation/README.md
+├── skill/               The Claude run sheet (first-run setup interview + match days)
 ├── resolve-scripts/     Lua scripts run from DaVinci Resolve's Console (manual workflow)
 ├── footage-conversion/  Windows HEVC→H.264 converter (.bat + .ps1)
 ├── scorekeeper/         The scorekeeping web app + optional Google Drive receiver

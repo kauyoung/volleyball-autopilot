@@ -1,5 +1,5 @@
 """
-Camera timeline from clock times (2026-10-26: "how do we fix this when the camera
+Camera timeline from clock times (2026-10-26, the owner: "how do we fix this when the camera
 unexpectedly stops?").
 
     C:\\Python314\\python.exe camera-time.py "<match folder>" [--dry-run]
@@ -104,7 +104,7 @@ def phone_check(fb, rec_cam, start):
             hid = w
         elif x["v"] == "show":
             if x.get("load"):
-                # 2026-11-09 (Nov 8): Safari reloaded the page - that is not the owner coming back
+                # 2026-11-09 (Nov 8 Lakeview): Safari reloaded the page - that is not the owner coming back
                 # from Mimo, and what happened before it is unknown. Start over as if the page just opened.
                 spans, hid, first_show = [], None, w
                 continue
@@ -192,14 +192,18 @@ def main(folder, dry=False):
     # 2026-11-02: the camera clock is synced to his phone by the DJI Mimo app, and he presses
     # record in Mimo first, waits for the beep, then taps START - so the camera really starts a few
     # seconds before START. Clip 1 is placed by the CAMERA clock (file-name time + 0.5 s, the name is
-    # cut to whole seconds) instead of at START. Verified on Nov 1: Georgetown 4.7 s (the owner approved 5),
-    # Niagara 2.9 s (motion check 3.0-3.4). A fresh --offset (run-match writes "offset") still wins.
+    # cut to whole seconds) instead of at START. Verified on Nov 1: Greenfield 4.7 s (the owner approved 5),
+    # Bayside 2.9 s (motion check 3.0-3.4). A fresh --offset (run-match writes "offset") still wins.
     manual = cur.get("offset")
     if manual not in (None, 0, 0.0, "0"):
         offset, how = float(manual), "set by hand"
     else:
         auto = start - (clips[0]["cam"] + 0.5)
-        phone = phone_check(src.get("focusBeforeStart"), clips[0]["cam"] + 0.5, start)
+        # 2026-11-22 (FIXES-TODO #13): someone else scored on THEIR phone (Nov 21: another parent) - that phone never ran
+        # Mimo, so its hide/show times say nothing about the camera; both phones are on network time, so the
+        # camera clock (synced to the owner's phone) is used as it is
+        other = bool(cur.get("otherScorer") or src.get("otherScorer"))
+        phone = None if other else phone_check(src.get("focusBeforeStart"), clips[0]["cam"] + 0.5, start)
         if phone and phone["ok"]:
             # 2026-11-03 (#2): the camera started recording while the scorekeeper page was in the background (Mimo in
             # front) - the camera clock agrees with the phone, whatever the record->START wait was
@@ -214,7 +218,7 @@ def main(folder, dry=False):
                 offset, how = mo, f"phone + video check, camera clock was off by {auto - mo:+.1f} s ({detail})"
             else:
                 offset, how = round(rough, 2), f"phone check, camera clock was off by {auto - rough:+.1f} s (video {detail}; +-2 s)"
-        elif CLOCK_OK[0] <= auto <= CLOCK_OK[1]:
+        elif CLOCK_OK[0] <= auto <= CLOCK_OK[1] or (other and -60.0 <= auto <= 180.0):
             offset, how = round(auto, 2), "camera clock"
         else:
             # 2026-11-03 ("really fix the timing"): camera clock looks off (Mimo didn't sync it,
@@ -288,7 +292,7 @@ def main(folder, dry=False):
             set_at.append((w, x["set"]))
         prev_sc = sc
     real_w = [w for w, _ in set_at]
-    # time-outs: a tap inside a camera stop is no longer dropped (2026-11-02): it is put just
+    # time-outs: a tap inside a camera stop is no longer dropped (2026-11-02, the owner): it is put just
     # before the restart so the time-out cut covers the join
     new_to, to_clock = [], []
     for x in tos:

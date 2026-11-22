@@ -1,5 +1,5 @@
 """
-make-picture-check.py — the early picture check (2026-10-08: every match, because the
+make-picture-check.py — the early picture check (2026-10-08, the owner: every match, because the
 camera spot or ISO can change even in a familiar gym).
 
     PY make-picture-check.py <video clip> <out.jpg>

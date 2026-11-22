@@ -1,5 +1,5 @@
 """
-Volleyball Autopilot — copy every match folder to the owner's external hard drive (2026-10-03).
+Home Team — copy every match folder to the owner's external hard drive (2026-10-03).
 
     python archive-matches.py            # find the external drive by itself
     python archive-matches.py X:         # or name it
@@ -130,8 +130,21 @@ def main():
             if ds.st_size == sz and sha1(d) == sha1(s):
                 same += 1
                 continue
-            problems.append(f"DIFFERENT file already on the drive, left alone: {rel}")
-            continue
+            # 2026-11-09 (review finding 24): a re-run changes working files (review sheet, text, audio, intro...).
+            # Those are saved beside the old copy under a dated name; camera clips and videos (.mp4) still count
+            # as a problem - the old copy is never touched either way.
+            base_, ext_ = os.path.splitext(d)
+            if ext_.lower() == ".mp4":
+                problems.append(f"DIFFERENT file already on the drive, left alone: {rel}")
+                continue
+            d = f"{base_} (changed {time.strftime('%Y-%m-%d %H%M', time.localtime(os.stat(s).st_mtime))}){ext_}"
+            if os.path.exists(d):
+                if os.stat(d).st_size == sz and sha1(d) == sha1(s):
+                    same += 1
+                else:                                # never overwrite anything on the drive
+                    problems.append(f"DIFFERENT file already on the drive, left alone: {os.path.relpath(d, dest)}")
+                continue
+            log(f"newer working file - saved beside the old one: {os.path.relpath(d, dest)}")
         os.makedirs(os.path.dirname(d), exist_ok=True)
         tmp = d + ".partial"
         h = hashlib.sha1()
@@ -147,7 +160,7 @@ def main():
         os.replace(tmp, d)
         shutil.copystat(s, d)
         copied += 1
-        log(f"copied + verified: {rel} ({sz / 1e9:.2f} GB)")
+        log(f"copied + verified: {os.path.relpath(d, dest)} ({sz / 1e9:.2f} GB)")
     for p in problems:
         log("*** " + p)
     mins = (time.time() - t0) / 60

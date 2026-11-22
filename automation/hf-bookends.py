@@ -1,5 +1,5 @@
 """
-Volleyball Autopilot - HyperFrames intro + FINAL screens (the owner approved 2026-10-04).
+Home Team - HyperFrames intro + FINAL screens (the owner approved 2026-10-04).
 
 Not run on its own: make-bookends.py "render intro|summary" exec()s this file and
 calls render(kind, p, log, logo_for). It writes the SAME files the classic
@@ -141,7 +141,7 @@ def _norm_logo(src, logos_dir):
 
 
 def intro_name2(p):
-    """2026-11-09 (the owner): the intro shows the opponent's age group ("Lakeview Thunder 15U") when the match
+    """2026-11-09: the intro shows the opponent's age group ("Lakeview Lightning 15U") when the match
     folder has youtube-age.txt (--age) and the name doesn't already end with it. The scoreboard keeps the short name."""
     name = p["team2"]
     try:

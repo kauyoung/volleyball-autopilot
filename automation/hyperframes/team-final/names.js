@@ -1,10 +1,10 @@
 // ================= TEAM-NAME RULES (shared by intro + FINAL summary) =================
 // Layout: CLUB big on line 1 · TEAM + AGE GROUP smaller on line 2.
 // How the club/team split is decided (first match wins):
-//   1. Exact-name override from intro-names.txt  ("Riverside Rapids = Riverside | Rapids 14U")
+//   1. Exact-name override from intro-names.txt  ("Home Team = Home | Home Team 14U")
 //   2. A "|" typed in the name                   ("Mississauga | Mavericks 13U")
-//   3. A natural separator typed in the name      ("Durham Attack - Gold U14", "X: Y")
-//   4. Known club list, longest match first       ("Durham Attack" beats "Durham");
+//   3. A natural separator typed in the name      ("Westfield - Gold U14", "X: Y")
+//   4. Known club list, longest match first       ("Westfield" beats "Westfield");
 //      singular/plural typed either way still matches; "Volleyball/Club/VC" typed right
 //      after the club is dropped ("Reach Volleyball Club Elites 14U" → REACH / ELITES 14U);
 //      the big line always uses the list's spelling
@@ -39,7 +39,7 @@
     if (!t) return { top: "OPPONENT", bottom: "", how: "blank name" };
     const ov = Object.keys(M.overrides || {}).find(k => fold(clean(k)) === fold(t));
     if (ov) t = clean(M.overrides[ov]);
-    // singular/plural typed either way ("Maverick"/"Mavericks", "Barrie Elite"/"Elites")
+    // singular/plural typed either way ("Maverick"/"Mavericks", "Southgate Elite"/"Elites")
     const same = (a, b) => a === b || a + "S" === b || a === b + "S";
     const clubs = (M.clubs || []).map(c => clean(c).split(" ")).sort((a, b) => b.length - a.length);
     if (t.includes("|")) {
@@ -100,11 +100,11 @@
     return best || { lines: [name], size: largestSize([name], o.oneMin, 24, false, o.maxw) || 24 };
   }
 
-  // "RIVERSIDE RAPIDS", "THUNDERCATS POLAR": club + team words, no age group (for headlines)
+  // "HOME TEAM", "NORTHSIDE POLAR": club + team words, no age group (for headlines)
   function fullName(parts) {
     return [parts.top, ...parts.bottom.split(" ").filter(x => x && !AGE.test(x))].join(" ").trim();
   }
-  // team words only ("REBELS", "POLAR"), or the club when there are none
+  // team words only ("HOME", "POLAR"), or the club when there are none
   function teamWord(parts) {
     const t = parts.bottom.split(" ").filter(x => x && !AGE.test(x)).join(" ");
     return t || parts.top;

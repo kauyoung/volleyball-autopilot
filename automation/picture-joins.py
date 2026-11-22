@@ -1,12 +1,12 @@
 """
-Volleyball Autopilot - picture check across camera restarts (2026-11-03, the owner #3; Nov 1 Niagara: after the SD-card
+Home Team - picture check across camera restarts (2026-11-03, the owner #3; Nov 1 Bayside: after the SD-card
 restart the camera came back with another profile - wider and darker - and nobody noticed until the owner did).
 
     C:\\Python314\\python.exe picture-joins.py "<match folder>"
 
 For every real camera stop (clip k+1 does not continue clip k) compares the frame 2 s before the stop with the
 frame 2 s after the restart: brightness and the picture's broad layout (walls, floor, ceiling). Nov 1: normal
-restarts 0.52-0.66, Niagara's wrong-mode clips 0.21-0.32 -> threshold 0.42; brightness change > 18% also flags.
+restarts 0.52-0.66, Bayside's wrong-mode clips 0.21-0.32 -> threshold 0.42; brightness change > 18% also flags.
 (A zoom/pan suggestion was tried and was not reliable - the wide mode bends the picture - so zoom/pan are set by eye.) Writes <folder>\\picture-joins.txt:
     PICTURE: restart before <clip>: same picture (...)          or
     FLAG: picture changed after the camera restart before <clip> (wider x1.75, darker -22%) - suggested fix in
@@ -121,7 +121,7 @@ def main(folder):
             continue                                 # chapter split, same recording
         name = os.path.basename(c["f"])
         tag = re.search(r"(_\d{4}_)", name).group(1)
-        # several frames each side (the camera may be handled for a moment around a stop - Nov 1 Georgetown);
+        # several frames each side (the camera may be handled for a moment around a stop - Nov 1 Greenfield);
         # the best-matching pair decides
         rd = info[ref_k]["dur"]
         As = [x for x in (frame(info[ref_k]["f"], rd - t) for t in (2.0, 15.0, 45.0) if rd - t > 0) if x is not None]
@@ -141,7 +141,7 @@ def main(folder):
                 why.append(f"{'darker' if dark < 1 else 'brighter'} by {abs(1 - dark) * 100:.0f}%")
             fixes.append({"clips": [tag], "zoom": 1.0, "pan": 0, "tilt": 0, "slope": slope, "power": power})
             lines.append(f"FLAG: picture changed after the camera restart before {name} - " + "; ".join(why) +
-                         " - probably another camera mode/profile (Nov 1 Niagara). See picture-joins.jpg; fix with clip-fix.txt "
+                         " - probably another camera mode/profile (Nov 1 Bayside). See picture-joins.jpg; fix with clip-fix.txt "
                          "after the owner OKs a preview (brightness hint in clip-fix.suggested.txt: slope "
                          f"{slope}, power {power}; zoom/pan must be set by eye)")
             sheet.append((name, A, B))

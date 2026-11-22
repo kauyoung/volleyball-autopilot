@@ -1,5 +1,5 @@
 """
-Volleyball Autopilot — game-play-only video for TAVO (AI stats), 2026-09-28 (approved).
+Home Team — game-play-only video for TAVO (AI stats), 2026-09-28 (the owner approved).
 
 TAVO's season budget is 120 hours of video and 20 GB per upload, so this makes a
 separate, trimmed 1080p file straight from the camera files (no Resolve, no
@@ -38,10 +38,10 @@ WORK = r"C:\Users\YOURNAME\scoreboard-pipeline"
 INFO = os.environ.get("TAVO_INFO") or os.path.join(WORK, "youtube-info.json")
 LOG = os.path.join(WORK, "tavo-log.txt")
 FPS_NUM, FPS_DEN = 60000, 1001
-BEFORE = float(os.environ.get("TAVO_BEFORE", 60))    # 1 min before each set's first point (the owner, 2026-09-28; was 2 min)
+BEFORE = float(os.environ.get("TAVO_BEFORE", 60))    # 1 min before each set's first point (2026-09-28; was 2 min)
 AFTER = float(os.environ.get("TAVO_AFTER", 5))
 MAX_GB = 19.5
-# 2026-10-26 (the owner, MYVB tournament): TAVO_4K=1 keeps 3840x2160 (H.264 ~40 Mbps, ~18 GB/hour - a
+# 2026-10-26 (MYVB tournament): TAVO_4K=1 keeps 3840x2160 (H.264 ~40 Mbps, ~18 GB/hour - a
 # 40-min match ~12 GB, under TAVO's 20 GB per upload); TAVO_BRIGHT=1 = the YouTube "brighter" look
 # (slope 1.06 / power 0.85) on the luma, full frame; TAVO_CUT_TIMEOUTS=1 cuts the time-outs exactly
 # like the YouTube video (the match's _workflow\bookends.json "timeout" cuts).
@@ -168,10 +168,30 @@ def encode(src, a, b, dst, gpu):
     return subprocess.run(cmd, capture_output=True, text=True)
 
 
+def tavo_suffix(folder):
+    """2026-11-22 (FIXES-TODO #20): the same opponent twice in a day gave the same TAVO name. Default suffix =
+    the stage from event.txt ("<event> \u00b7 Pool Play") + the match time from the folder name ("... 0859 vs ..."):
+    " (Pool Play, 08:59)" or " (08:59)". TAVO_SUFFIX still overrides it."""
+    if "TAVO_SUFFIX" in os.environ:
+        return os.environ["TAVO_SUFFIX"]
+    parts = [os.environ["TAVO_STAGE"].strip()] if os.environ.get("TAVO_STAGE", "").strip() else []   # from run-tournament --stage
+    if not parts:
+        try:
+            ev = open(os.path.join(folder, "event.txt"), encoding="utf-8").read().strip()
+            if " \u00b7 " in ev:
+                parts.append(ev.split(" \u00b7 ")[-1].strip())
+        except Exception:
+            pass
+    mt = re.search(r"\d{4}-\d{2}-\d{2} (\d{2})(\d{2}) vs ", os.path.basename(folder.rstrip("\\/")))
+    if mt:
+        parts.append(f"{mt.group(1)}:{mt.group(2)}")
+    return f" ({', '.join(parts)})" if parts else ""
+
+
 def main():
     info = json.load(open(INFO, encoding="utf-8"))
     folder = os.path.dirname(info["matchFile"])
-    out = os.path.join(folder, f'{info["date"]} {info["team1"]} vs {info["team2"]} - TAVO{os.environ.get("TAVO_SUFFIX", "")}.mp4')
+    out = os.path.join(folder, f'{info["date"]} {info["team1"]} vs {info["team2"]} - TAVO{tavo_suffix(folder)}.mp4')
     # never overwrite a TAVO file (2026-10-06): an existing one -> " v2", " v3", ...
     k = 2
     while os.path.exists(out):

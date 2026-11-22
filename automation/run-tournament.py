@@ -59,7 +59,7 @@ ROOT = r"E:\Volleyball Matches"
 YT_GB_H, TAVO_GB_H = 29.0, 13.5         # same as prepare-match.py (2026-10-26: 60M preset, 4K H.265 TAVO)
 COPY_S_PER_GB = 7.5      # 2026-11-09: Nov 8 copied 70.5 GB in 8 min 28 s, verified (138 MB/s, SanDisk Extreme); was 12.5
 NOWIN = 0x08000000
-UTF8 = dict(os.environ, PYTHONIOENCODING="utf-8")
+UTF8 = dict(os.environ, PYTHONIOENCODING="utf-8", VB_ALERT_PARENT="1")   # 2026-11-22: run-match children leave the alert to us
 T_START = time.time()
 R = {"matches": []}
 MS = R["matches"]
@@ -68,6 +68,9 @@ import offset_tools as ot                      # 2026-10-14: camera-start offset
 OFF_PENDING = W + r"\offset-pending.txt"
 OFF_ASKED = W + r"\offset-asked.txt"
 T_OFF_SUGGEST = W + r"\tournament-offset-suggestion.txt"
+
+
+_IO_LOCK = threading.RLock()                   # 2026-11-22: the upload-pump thread writes status too
 
 
 class Stop(Exception):
@@ -82,6 +85,9 @@ def mod(name, file):
 
 
 def st(msg, first=False):
+  with _IO_LOCK:
+    if first:                                        # 2026-11-09 (review finding 18): an old file can't pass for today's
+        msg += time.strftime("  [run date %Y-%m-%d]")
     with open(TSTATUS, "w" if first else "a", encoding="utf-8") as f:
         f.write(time.strftime("%H:%M:%S ") + msg + "\n")
 
@@ -92,7 +98,7 @@ def tlog(msg):
 
 
 def save():
-    with open(TRESULT, "w", encoding="utf-8") as f:
+    with _IO_LOCK, open(TRESULT, "w", encoding="utf-8") as f:
         json.dump(R, f, indent=1, ensure_ascii=False, default=str)
 
 
@@ -110,7 +116,7 @@ def iso(t):
 
 
 def write_summary(extra=()):
-    L = list(extra)
+    L = [time.strftime("written %Y-%m-%d %H:%M")] + list(extra)   # 2026-11-09 (review finding 18)
     L.append(f"tournament: {R.get('date')} — {len(MS)} matches — event: {R.get('event') or ('per match' if any(m.get('event_full') for m in MS) else 'none')} — "
              f"TAVO: {R.get('tavo_list') or 'off'}")
     for m in MS:
@@ -125,17 +131,70 @@ def write_summary(extra=()):
             L.append(f"  match {m['n']} OFFSET: {m['offset_note']}")
     if R.get("kit"):
         L.append("approval kit: " + " | ".join(R["kit"]))
+    if R.get("claude_sheet"):
+        L.append("claude sheet: " + R["claude_sheet"])          # 2026-11-09: the one image Claude reads
     with open(TSUMMARY, "w", encoding="utf-8") as f:
         f.write("\n".join(L) + "\n")
 
 
+
+def start_archive(say):
+    """2026-11-22 (FIXES-TODO #11): copy the match folders to the external drive (J:) right after the last export,
+    instead of by hand. Only when J:\\Volleyball Matches is there; archive-matches.py copies + verifies, never deletes.
+    Claude tells the owner "safe to format the card" only when archive-log.txt ends ARCHIVE OK."""
+    try:
+        if not os.path.isdir(r"J:\Volleyball Matches"):
+            say("archive not started - external drive J: not plugged in (run archive-matches.py later)")
+            return
+        subprocess.Popen([PY, W + r"\archive-matches.py", "J:"], cwd=W, stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=0x00000008 | 0x08000000)
+        say("archive to J: started in the background (archive-log.txt; ARCHIVE OK = safe to format the card)")
+    except Exception as e:
+        say(f"archive NOT started: {e!r:.200}")
+
+
+def rerun_hint():
+    """2026-11-22 (#6/#7): the exact rerun command - --folders for every match already copied to E:"""
+    keep, skip = [], False
+    for x in sys.argv[1:]:
+        if skip:
+            if x.startswith("--"):
+                skip = False
+            else:
+                continue
+        if x in ("--folders",):
+            skip = True; continue
+        if x in ("--resume", "--date"):
+            skip = x == "--date"; continue
+        keep.append(f'"{x}"' if " " in x else x)
+    done = [m["folder"] for m in MS if m.get("folder")]
+    if done and len(done) == len(MS):
+        return "run-tournament.py --folders " + " ".join(f'"{f}"' for f in done) + " --resume " + " ".join(keep)
+    return "run-tournament.py --resume " + " ".join(keep) + (f" --date {R['date']}" if R.get("date") else "") + \
+        "   (copied matches are skipped by their .sha1 files)"
+
+
 def tstop(reason):
+    try:                                             # 2026-11-22 (#6): name the cause + the exact rerun command
+        import alert as _al
+        cause = _al.resolve_cause((R.get("crash") or "") + reason)
+        if cause and cause not in reason:
+            reason = cause + " - " + reason
+        if "rerun:" not in reason and "--test only" not in reason and not reason.startswith("pre-flight"):
+            reason = reason.replace(" — rerun: run-tournament.py --folders … --resume", "") + " — rerun: " + rerun_hint()
+    except Exception:
+        _al = None
     save()
     try:
         write_summary(["TOURNAMENT STOPPED: " + reason])
     except Exception:
         pass
     st("TOURNAMENT STOPPED: " + reason)
+    try:                                             # 2026-11-22 (#1): sound + PC pop-up + phone push
+        os.environ.pop("VB_ALERT_PARENT", None)
+        _al.alert("Volleyball tournament STOPPED", reason[:300])
+    except Exception:
+        pass
     sys.exit(1)
 
 
@@ -169,6 +228,12 @@ def matches_from_card(a):
             docs.append((j, json.load(open(j, encoding="utf-8"))))
         except Exception:
             pass
+    other = [mj.get("team1") for _, mj in docs if not cc.team_matches(mj.get("team1"), a.team)]
+    docs = [(j, mj) for j, mj in docs if cc.team_matches(mj.get("team1"), a.team)]   # 2026-11-09: shared Drive folder
+    if not docs:
+        tstop(f"no scorekeeper files for team '{a.team}' in {cc.DRIVE_DIR}")
+    if other:
+        st(f"left out {len(other)} match file(s) of other teams ({', '.join(sorted({str(t) for t in other}))})")
     date = a.date or docs[0][1].get("date")
     seen = {}
     for j, mj in docs:                                     # newest first: a re-saved file wins
@@ -464,14 +529,58 @@ def copy_wait(m):
     save()
 
 
-def prepare_one(a, m):
-    args = [PY, W + r"\run-match.py", "--folder", m["folder"], "--hold-export", "--no-picture-check"]
+def resume_fill(m):
+    """2026-11-22 (FIXES-TODO #19, Nov 21 match 1): --resume used to keep a match whose finish had crashed, with no
+    thumbnail. Check every kit item and make what's missing. False = no review sheet (the finish never completed):
+    the caller rebuilds that match."""
+    if not os.path.exists(m["sheet"]) or os.path.exists(os.path.join(m["folder"], "_workflow", "clips-changed.txt")):
+        return False
+    env = dict(UTF8, PYTHONUTF8="1", PREP_INFO=os.path.join(m["folder"], "_workflow", "youtube-info.json"),
+               PREP_CAND=T + rf"\m{m['n']}\thumb-candidates")
+    made = []
+    if not os.path.exists(m["text"]):
+        subprocess.run([PY, W + r"\prep-upload.py", "text"], cwd=W, env=env, capture_output=True, timeout=120, creationflags=NOWIN)
+        made.append("YouTube text" if os.path.exists(m["text"]) else "YouTube text FAILED")
+    if not os.path.exists(m["thumbnail"]):
+        if not glob.glob(env["PREP_CAND"] + r"\cand-*.jpg"):
+            subprocess.run([PY, W + r"\prep-upload.py", "candidates"], cwd=W, env=env, capture_output=True, timeout=900, creationflags=NOWIN)
+        subprocess.run([PY, W + r"\prep-upload.py", "thumbnail", "auto"], cwd=W, env=env, capture_output=True, timeout=300, creationflags=NOWIN)
+        made.append("thumbnail" if os.path.exists(m["thumbnail"]) else "thumbnail FAILED")
+        cs = env["PREP_CAND"] + r"\contact.jpg"
+        if os.path.exists(cs) and not os.path.exists(T + rf"\m{m['n']}\contact-small.jpg"):
+            try:
+                from PIL import Image
+                im = Image.open(cs).convert("RGB"); w = min(im.width, 1400)
+                im.resize((w, round(im.height * w / im.width))).save(T + rf"\m{m['n']}\contact-small.jpg", quality=80)
+            except Exception:
+                pass
+    if not os.path.exists(os.path.join(m["folder"], "sync-check.txt")):
+        subprocess.Popen([PY, W + r"\sync-check.py", m["folder"]], cwd=W, env=UTF8, stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=NOWIN)
+        made.append("sync check (running)")
+    if made:
+        st(f"match {m['n']}: resume made the missing " + ", ".join(made))
+        for x in made:
+            if "FAILED" in x:
+                m.setdefault("flags", []).append(f"resume: {x} - make it by hand before the approval")
+    return True
+
+
+def prepare_one(a, m, rebuild=False):
+    args = [PY, W + r"\run-match.py", "--folder", m["folder"], "--hold-export", "--no-picture-check"] + (["--rebuild"] if rebuild else [])
     if m.get("event_full") or R.get("event"):
         args += ["--event", m.get("event_full") or R["event"]]
     if a.age:                                     # 2026-11-02: "15U" in YouTube titles only
         args += ["--age", a.age]
     if (a.two_sets or "").strip().lower() == "all" or m["n"] in [int(x) for x in re.findall(r"\d+", a.two_sets or "")]:
         args += ["--two-sets"]
+    if (a.other_scorer or "").strip().lower() == "all" or m["n"] in [int(x) for x in re.findall(r"\d+", a.other_scorer or "")]:
+        args += ["--other-scorer"]
+    wn = per_match(a.winner, len(MS)).get(m["n"])
+    if wn:
+        if wn not in ("1", "2"):
+            tstop(f"--winner: match {m['n']} needs 1 or 2, not '{wn}'")
+        args += ["--winner", wn]
     if m.get("offset") is not None:
         args += ["--offset", ot.fmt(m["offset"])]
     if a.test:
@@ -533,6 +642,26 @@ def approval_kit():
     comb = appr + r"\tournament review sheet.jpg"
     img.save(comb, quality=85)
     kit = [comb]
+    # 2026-11-09 (review finding 14): ONE small sheet for Claude to read (every match's small review sheet side by
+    # side, no thumbnails) - the per-match sheets below go to the owner unread. Same detail per match as a single match.
+    try:
+        smalls = [(m, Image.open(m["sheet_small"]).convert("RGB")) for m in MS if m.get("sheet_small") and os.path.exists(m["sheet_small"])]
+        if smalls:
+            cw, gap, hh = 588, 12, 56
+            smalls = [(m, s.resize((cw, round(s.height * cw / s.width)), Image.LANCZOS)) for m, s in smalls]
+            ch = hh + max(s.height for _, s in smalls)
+            cimg = Image.new("RGB", (len(smalls) * (cw + gap) - gap, ch), (2, 3, 3))
+            cd = ImageDraw.Draw(cimg)
+            for i, (m, s) in enumerate(smalls):
+                x = i * (cw + gap)
+                cd.text((x + 8, 10), f"M{m['n']} vs {m['team2']}"[:30], fill=(112, 213, 73), font=mpc.font(30))
+                cimg.paste(s, (x, hh))
+            if cimg.height > 7900:
+                cimg = cimg.resize((round(cimg.width * 7900 / cimg.height), 7900), Image.LANCZOS)
+            R["claude_sheet"] = appr + r"\claude sheet - all matches.jpg"
+            cimg.save(R["claude_sheet"], quality=85)
+    except Exception as e:
+        R["claude_sheet_error"] = repr(e)[:200]
     # 2026-10-26: the combined sheet is ~6,700 px per match and chat images max out at 8000 px,
     # so each match's part is also saved on its own ("review sheet - match <n>.jpg")
     y = 0
@@ -547,9 +676,12 @@ def approval_kit():
         y += h_
     for m in MS:
         for k in ("thumbnail", "text"):
-            if m.get(k) and os.path.exists(m[k]):
-                shutil.copy2(m[k], appr)
-                kit.append(appr + "\\" + os.path.basename(m[k]))
+            if m.get(k) and os.path.exists(m[k]):      # 2026-11-22 (#18): "match N - ..." (same opponent twice overwrote)
+                dst = appr + "\\" + f"match {m['n']} - " + os.path.basename(m[k])
+                shutil.copy2(m[k], dst)
+                kit.append(dst)
+            elif k == "thumbnail":
+                m.setdefault("flags", []).append("no thumbnail was made for this match - make one before the approval")
     R["kit"] = kit
     save()
     write_summary()
@@ -566,6 +698,7 @@ def project_etas(t, spf):
             t = max(t, m.get("eta_end", t))
             continue
         t += 60                                           # switch project + picture tweak
+        t += m["frames"] * 0.0028                          # 2026-11-09: scoreboard pictures first (Nov 8: 15 min for 324,872 frames)
         end = t + m["frames"] * spf
         eta = end + 120 + (180 if m["parts"] else 0)      # same margins as export_status
         m.update({"eta": hm(eta), "eta_iso": iso(eta), "eta_how": "estimate", "eta_end": end})
@@ -580,16 +713,37 @@ def project_etas(t, spf):
 UP_APPROVED = W + r"\upload-approved.txt"
 UP_STATUS = W + r"\yt-upload-status.txt"
 PLAYLIST = "Home Team 14U \u2013 2026-2027 Season"
+PLAYLIST_ID = "YOUR_PLAYLIST_ID"                     # 2026-11-09 (review finding 17): by id, checked on the channel that day
 UPQ, UPCUR = [], {}
 
 
+_APPROVAL_SAID = {}
+
+
 def approved_set():
+    """2026-11-19 fix (Polar sat 11 min after his OK because 'all sync-ok' matched no match):
+    'all' / 'ok' / 'yes' ANYWHERE in the text (e.g. 'all sync-ok', 'ok to all') = every match;
+    otherwise the match numbers in it ('1,3', '1,3 sync-ok'). Every new approval text is echoed in the
+    status as 'upload approval read: ...', and a fresh file that approves NO match is reported loudly."""
     if not fresh(UP_APPROVED):
         return None
-    txt = open(UP_APPROVED, encoding="utf-8").read().strip().lower()
-    if txt in ("all", "ok", "yes"):
-        return {m["n"] for m in MS}
-    return {int(x) for x in re.findall(r"\d+", txt)}
+    raw = open(UP_APPROVED, encoding="utf-8").read().strip()
+    txt = raw.lower()
+    words = re.sub(r"sync-ok", " ", txt)
+    if re.search(r"\b(all|ok|yes)\b", words):
+        got = {m["n"] for m in MS}
+    else:
+        got = {int(x) for x in re.findall(r"\d+", words)} & {m["n"] for m in MS}
+    key = (raw, os.path.getmtime(UP_APPROVED))
+    if _APPROVAL_SAID.get("k") != key:
+        _APPROVAL_SAID["k"] = key
+        if got:
+            st(f"upload approval read: '{raw}' -> match(es) {','.join(str(n) for n in sorted(got))}"
+               + (" (sync-ok)" if "sync-ok" in txt else ""))
+        else:
+            st(f"*** UPLOAD APPROVAL NOT UNDERSTOOD: upload-approved.txt says '{raw}' - approves no match; "
+               "write 'all', 'all sync-ok', '1,3' or '1,3 sync-ok'")
+    return got
 
 
 def sync_gate(m, force=False):
@@ -608,7 +762,32 @@ def sync_gate(m, force=False):
     return ("held: " + flags[0][6:140]) if flags else "ok"
 
 
+PUMP_LOCK = threading.RLock()
+
+
+def pump_thread(a):
+    """2026-11-22 (FIXES-TODO #14): uploads used to stall while the next match drew its scoreboard pictures and
+    during the 1-6 min speed sleep after EXPORT STARTED (pump_uploads only ran inside the export-wait loop).
+    This thread pumps every 20 s for the whole export stage."""
+    def loop():
+        while not PUMP_STOP.is_set():
+            try:
+                pump_uploads(a)
+            except Exception as e:
+                tlog("upload pump error: " + repr(e)[:300])
+            PUMP_STOP.wait(20)
+    threading.Thread(target=loop, name="upload-pump", daemon=True).start()
+
+
+PUMP_STOP = threading.Event()
+
+
 def pump_uploads(a):
+    with PUMP_LOCK:
+        return _pump_uploads(a)
+
+
+def _pump_uploads(a):
     """start / finish queued uploads; returns True while something is still waiting or uploading"""
     if UPCUR.get("proc") is not None:
         if UPCUR["proc"].poll() is None:
@@ -628,7 +807,27 @@ def pump_uploads(a):
             st(f"match {m['n']} UPLOAD FAILED: " + (tail[-1][9:] if tail else "no status"))
         UPCUR.clear(); save(); write_summary()
     ok = approved_set()
-    if ok is None:
+    ok = set(ok) if ok is not None else set()
+    try:                                             # 2026-11-22: auto-upload when nothing is flagged
+        import auto_upload as _au
+        if _au.enabled():
+            for m in UPQ:
+                if m["n"] in ok:
+                    continue
+                if _au.held(T_START, m["n"]):
+                    if m.get("auto_said") != "hold":
+                        m["auto_said"] = "hold"; st(f"match {m['n']}: auto-upload not used (the owner said hold) - waits for his OK")
+                    continue
+                c_, why_ = _au.clean(m.get("folder"), m.get("flags"))
+                if c_ == "ok":
+                    ok.add(m["n"]); m["auto_upload"] = True
+                    if m.get("auto_said") != "ok":
+                        m["auto_said"] = "ok"; st(f"match {m['n']}: auto-upload - nothing flagged, score timing OK - no OK needed")
+                elif c_ == "no" and m.get("auto_said") != why_:
+                    m["auto_said"] = why_; st(f"match {m['n']}: auto-upload not used ({why_}) - waits for the owner's OK")
+    except Exception as e:
+        tlog("auto-upload check error: " + repr(e)[:200])
+    if not ok:
         return bool(UPQ)
     for m in list(UPQ):
         if m["n"] not in ok:
@@ -637,7 +836,8 @@ def pump_uploads(a):
         if a.test:
             st(f"match {m['n']} upload skipped (test run)"); m["upload"] = "test - not uploaded"
             continue
-        g = sync_gate(m, force="sync-ok" in open(UP_APPROVED, encoding="utf-8").read().lower())
+        g = sync_gate(m, force=fresh(UP_APPROVED) and m["n"] in (approved_set() or set())
+                      and "sync-ok" in open(UP_APPROVED, encoding="utf-8").read().lower())
         if g != "ok":
             if g != "wait" and not m.get("held_said"):
                 m["upload"] = "HELD"; m["held_said"] = True
@@ -647,7 +847,7 @@ def pump_uploads(a):
             continue
         args = [PY, W + r"\yt-upload.py", "upload", "--channel", "main", "--expect-channel", "Home Team",
                 "--video", m["export_file"],
-                "--text", m["text"], "--thumb", m["thumbnail"], "--playlist", PLAYLIST]
+                "--text", m["text"], "--thumb", m["thumbnail"], "--playlist", PLAYLIST, "--playlist-id", PLAYLIST_ID]
         UPCUR.update({"m": m, "proc": subprocess.Popen(args, cwd=W, env=UTF8, creationflags=NOWIN)})
         st(f"match {m['n']} uploading \u2026")
         return True
@@ -661,6 +861,7 @@ def export_all(a, picks):
     def _stop(reason):
         raise Stop(reason)
     rm.stop = _stop
+    rm.RECOVER_MAX = 0                                    # 2026-11-22: crash recovery is for setup/finish (run-match children)
     try:
         r = rm.connect()
     except Stop as e:
@@ -669,7 +870,8 @@ def export_all(a, picks):
     ns = argparse.Namespace(event=None, tavo=False, project=None, export_name=None,
                             live_scoreboard=getattr(a, "live_scoreboard", False))
     spf = 0.95 / 59.94                                    # until measured (prepare-match's estimate)
-    ready_said = False
+    pump_thread(a)                                        # 2026-11-22 (#14)
+    ready_said = bool(R.get("ready_said"))               # 2026-11-09: already said after the approval kit
     project_etas(time.time(), spf)
     write_summary()
     for m in MS:
@@ -769,6 +971,9 @@ def tavo_all():
             continue
         st(f"match {m['n']} TAVO file …")
         env = dict(UTF8, TAVO_INFO=os.path.join(m["folder"], "_workflow", "youtube-info.json"))
+        stg = per_match((R.get("args") or {}).get("stage"), len(MS)).get(m["n"])   # 2026-11-22 (#20): stage in the TAVO name
+        if stg:
+            env["TAVO_STAGE"] = stg
         if "brighter" in str(m.get("picture", "")).lower():      # 2026-10-26: same look as YouTube, never the zoom
             env["TAVO_BRIGHT"] = "1"
         subprocess.run([PY, W + r"\make-tavo.py"], cwd=W, env=env, creationflags=NOWIN)
@@ -792,8 +997,10 @@ def repick(n, cand):
                        capture_output=True, text=True, creationflags=NOWIN)
     print(r.stdout + r.stderr)
     th = [l for l in r.stdout.splitlines() if l.startswith("THUMBNAIL: ")]
-    if th:
-        shutil.copy2(m["thumbnail"], T + r"\approval")
+    if th:                                          # 2026-11-22 (#18): same "match N - ..." name as the kit
+        dst = T + r"\approval" + "\\" + f"match {m['n']} - " + os.path.basename(m["thumbnail"])
+        shutil.copy2(m["thumbnail"], dst)
+        print("KIT COPY: " + dst)
 
 
 # ---------------------------------------------------------------- main
@@ -802,23 +1009,37 @@ def main():
         return repick(sys.argv[2], sys.argv[3])
     ap = argparse.ArgumentParser()
     ap.add_argument("--date"); ap.add_argument("--folders", nargs="+")
+    ap.add_argument("--team", default="Home Team")   # 2026-11-09: only this team's match files (Drive folder is shared)
     ap.add_argument("--event"); ap.add_argument("--ask-event", action="store_true")
     ap.add_argument("--tavo", nargs="?", const="all")
     ap.add_argument("--resume", action="store_true"); ap.add_argument("--test", action="store_true")
     ap.add_argument("--dry-run", action="store_true"); ap.add_argument("--no-picture-check", action="store_true")
     ap.add_argument("--live-scoreboard", action="store_true")   # 2026-10-19: skip the scoreboard pictures
     ap.add_argument("--offset")                  # camera started N s before START: "5" or "1:5,3:2"
-    ap.add_argument("--team2")                   # 2026-10-26: per-match opponent names "2:Ancaster Lions Stealth 15U,3:Unity Apex 15U"
+    ap.add_argument("--team2")                   # 2026-10-26: per-match opponent names "2:Oakridge Lions 15U,3:Eastview Apex 15U"
     ap.add_argument("--stage")                   # 2026-10-26: per-match stage "1-4:Pool Play,5:Play Off" -> event.txt "<event> \u00b7 <stage>"
     ap.add_argument("--age")                     # 2026-11-02: "15U" -> added after the opponent in YouTube titles/descriptions only
     ap.add_argument("--two-sets")                # 2026-11-02: "3" / "1,3" / "all": scorekeeper set to best of 3 by mistake -> 2 sets total
+    ap.add_argument("--other-scorer")            # 2026-11-22 (#13): "all" / "2,3" = someone else scored those matches on their phone
+    ap.add_argument("--winner")                  # 2026-11-22 (#8): "3:1" = match 3: count team 1 (us) the winners, its last set (time ran out) not counted
     a = ap.parse_args()
     st("TOURNAMENT STARTED " + " ".join(sys.argv[1:]), first=True)
     open(TLOG, "w", encoding="utf-8").write("run-tournament " + time.strftime("%Y-%m-%d %H:%M") + "\n")
+    try:                                                  # 2026-11-22 (#16): everything missing, in one go
+        import preflight as _pf
+        _mi, _wa, _ln = _pf.check(tournament=True, need_card=not a.folders)
+        st(_ln)
+        R["preflight"] = _ln
+        if _mi:
+            tstop("pre-flight: " + "; ".join(_mi))
+    except SystemExit:
+        raise
+    except Exception as e:
+        st(f"pre-flight check failed to run ({e!r:.120}) - carrying on")
     if a.test:
         if not a.folders or not all(os.path.basename(f.rstrip("\\")).lower().startswith("zz") for f in a.folders):
             tstop("--test only on zz test folders")
-        os.environ["PREP_OUT"] = OC + r"\zz-test-out"
+        os.environ.setdefault("PREP_OUT", OC + r"\zz-test-out")   # 2026-11-22: keep zz-test.py's own folder (kit looked in the wrong place)
         os.makedirs(os.environ["PREP_OUT"], exist_ok=True)
     if os.path.isdir(T):                                  # this run's own working copies only
         for x in glob.glob(T + r"\*"):                   # --resume keeps each match's m<n>\ (thumbnail choices)
@@ -923,12 +1144,23 @@ def main():
             m["export_name"] = f"zz tournament {m['n']}"
         if a.resume and os.path.exists(os.path.join(m["folder"], "_workflow", "prepare-state.json")):
             collect_kit(m)
-            st(f"match {m['n']}: already set up ({m['project']}) — kept")
+            if resume_fill(m):                         # 2026-11-22 (#19): make whatever a crash left undone
+                st(f"match {m['n']}: already set up ({m['project']}) — kept")
+                continue
+            st(f"match {m['n']}: set up but its finish never completed (no review sheet) — rebuilt as a new project version")
+            prepare_one(a, m, rebuild=True)
             continue
         prepare_one(a, m)
 
     # 5. one approval kit
     approval_kit()
+    # 2026-11-09 (review finding 11): the approval goes out as soon as the kit is ready, not after match 1's scoreboard
+    # pictures + 3 % of its export; the finish times are estimates and are re-measured once exporting
+    project_etas(time.time(), 0.95 / 59.94)
+    write_summary()
+    R["ready_said"] = True
+    st(f"TOURNAMENT READY FOR APPROVAL — kit ready, exports start now; estimated done: match 1 ~{MS[0].get('eta')}, "
+       f"all ~{MS[-1].get('eta')} ({MS[-1].get('eta_iso')}, estimate - re-measured while exporting)")
 
     # 6. one picture answer for every match
     picks = [None] * len(MS)
@@ -958,6 +1190,8 @@ def main():
     if UPQ:
         st("uploads NOT done (no OK in 3 h): " + ", ".join(str(m["n"]) for m in UPQ))
     tavo_all()
+    if not a.test:
+        start_archive(st)                                 # 2026-11-22 (#11): after the last export + TAVO
     okc = sum(1 for m in MS if m.get("export_state") in ("EXPORT OK", "already there"))
     save()
     write_summary()

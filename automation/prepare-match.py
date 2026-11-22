@@ -1,5 +1,5 @@
 """
-Volleyball Autopilot — prepare (and export) a match (2026-09-28).
+Home Team — prepare (and export) a match (2026-09-28, the owner approved).
 
 exec'd inside Resolve's scripting (Claude's run_script_unsafe), with `resolve`
 defined and PM_PHASE set. EVERY call is kept well under the 60 s tool limit: slow
@@ -9,7 +9,7 @@ again while the result says "waiting".
   PM_PHASE = "setup"    (~15-30 s)
       match folder = PM_FOLDER, else the newest folder by date (Python, not Lua)
       + its scorekeeper .json (PM_JSON overrides)
-      -> new project "<date> <HHMM> <Team> vs <Opponent>" (PM_PROJECT overrides)
+      -> new project "<date> <HHMM> Home vs <Opponent>" (PM_PROJECT overrides)
       -> assemble-match.lua with THAT folder passed in (MATCH_CLIP_FOLDER) — checked
       -> free-space check (YouTube + TAVO exports must fit on the drive)
       -> place-scoreboard.lua
@@ -64,6 +64,8 @@ PHASE = globals().get("PM_PHASE", "setup")
 DETACHED = 0x00000008 | 0x08000000   # DETACHED_PROCESS | CREATE_NO_WINDOW
 T0 = time.time()
 BUDGET = 42                          # seconds per call (tool limit is 60)
+STILL_BATCH = 10                     # 2026-11-22 (#3): review pictures queued per batch (was all ~43 at once)
+STILL_PAUSE = 2.0                    # seconds of rest + a project save between batches
 YT_GB_H, TAVO_GB_H = 29.0, 13.5      # 2026-10-26: ~65 Mbps YouTube export (60M preset), 4K H.265 TAVO ~30 Mbps
 UTF8 = dict(os.environ, PYTHONIOENCODING="utf-8")
 
@@ -152,9 +154,9 @@ def match_json(folder):
     return max(js, key=os.path.getmtime) if js else None
 
 
-YT_PRESET_60 = "Autopilot YouTube 4K60 H265 10-bit 60M"   # 2026-10-26: 60 Mbps target (YouTube's 4K60 guide 53-68); was ~32
-YT_PRESET_10 = "Autopilot YouTube 4K60 H265 10-bit"   # 2026-10-19: 10-bit like the camera (Main10), same encoder settings
-YT_PRESET_8 = "Autopilot YouTube 4K60 H265"          # fallback (8-bit) if the 10-bit preset is missing
+YT_PRESET_60 = "Home YouTube 4K60 H265 10-bit 60M"   # 2026-10-26: 60 Mbps target (YouTube's 4K60 guide 53-68); was ~32
+YT_PRESET_10 = "Home YouTube 4K60 H265 10-bit"   # 2026-10-19: 10-bit like the camera (Main10), same encoder settings
+YT_PRESET_8 = "Home YouTube 4K60 H265"          # fallback (8-bit) if the 10-bit preset is missing
 
 
 def load_youtube_preset(p):
@@ -220,7 +222,7 @@ def setup():
     hhmm = ""
     if m.get("startedAt"):
         hhmm = m["startedAt"][11:13] + m["startedAt"][14:16] + " "
-    name = globals().get("PM_PROJECT") or f'{date} {hhmm}{t1} vs {t2}'
+    name = globals().get("PM_PROJECT") or f'{date} {hhmm}{"Home" if t1 == "Home Team" else t1} vs {t2}'
     say(f"match folder: {folder}", out)
     fm = (m.get("format") or {}).get("code", "bo3 (old file)")
     say(f"match file: {os.path.basename(js)} — {t1} vs {t2}, {len(m.get('events', []))} points, format {fm}", out)
@@ -272,7 +274,7 @@ def setup():
         return out
 
     # 2) free space: the YouTube export (+ TAVO file when asked for) must fit (before any heavy work)
-    # TAVO is OFF by default (2026-10-06: the coach picks which games go to TAVO) —
+    # TAVO is OFF by default (2026-10-06, the owner: the coach picks which games go to TAVO) —
     # PM_TAVO = True turns it on for this match; later: make-tavo.py with TAVO_INFO (see its docstring)
     tavo = bool(globals().get("PM_TAVO"))
     n = re.search(r"Timeline is (\d+) frames", a)
@@ -365,6 +367,11 @@ def setup():
     pm.SaveProject()
     json.dump({"project": name, "folder": folder, "json": js, "team1": t1, "team2": t2, "date": date,
                "render_tries": 0, "tavo": tavo}, open(STATE, "w", encoding="utf-8"))
+    v1_layout_save("setup", folder)                           # 2026-11-22 (#15)
+    try:
+        os.remove(os.path.join(folder, "_workflow", "clips-changed.txt"))   # a fresh setup clears an old marker
+    except OSError:
+        pass
     out["ok"] = ("LUA ERROR" not in r) and ("BAKED OK" in b) and ("PLAN OK" in bp.stdout)
     say("SETUP DONE — run finish in ~3 min" if out["ok"] else "*** SETUP FINISHED WITH PROBLEMS — read the lines above ***", out)
     return out
@@ -480,11 +487,18 @@ def finish():
             time.sleep(0.5)
         if p.IsRenderingInProgress():
             return wait(f"review pictures still rendering ({len(missing())} of {len(plan)} to go)")
+    # 2026-11-22 (FIXES-TODO #3): Resolve crashed on Nov 21 with 43 one-frame jobs queued at once (~0.8 s each).
+    # Now at most STILL_BATCH jobs per batch, a short pause and a project save between batches; only the
+    # missing pictures are ever queued, so a crash loses one batch at most and a re-run carries on from there.
+    # render_tries counts only batches that made NO progress.
     todo = missing()
-    if todo:
-        st["render_tries"] = st.get("render_tries", 0) + 1
+    while todo and left() > 12:
+        batch = todo[:STILL_BATCH]
+        if st.get("stills_left") is not None and len(todo) >= st["stills_left"]:
+            st["render_tries"] = st.get("render_tries", 0) + 1
+        st["stills_left"] = len(todo)
         json.dump(st, open(STATE, "w", encoding="utf-8"))
-        if st["render_tries"] > 4:
+        if st.get("render_tries", 0) > 4:
             say(f"ERROR: {len(todo)} review pictures won't render — check the Deliver page", out)
             return out
         resolve.OpenPage("deliver")   # noqa: F821
@@ -493,7 +507,7 @@ def finish():
         if fc.get("codec") != "H265_NVIDIA":
             fc = load_youtube_preset(p)
         st0 = tl.GetStartFrame()
-        for row in todo:
+        for row in batch:
             p.SetRenderSettings({"SelectAllFrames": False, "MarkIn": st0 + row["frame"], "MarkOut": st0 + row["frame"],
                                  "TargetDir": RDIR, "CustomName": f'r-{row["frame"]}'})
             p.AddRenderJob()
@@ -502,7 +516,13 @@ def finish():
         while p.IsRenderingInProgress() and left() > 8:
             time.sleep(0.5)
         if p.IsRenderingInProgress():
-            return wait(f"review pictures rendering ({len(todo)} queued)")
+            return wait(f"review pictures rendering ({len(missing())} of {len(plan)} to go)")
+        p.DeleteAllRenderJobs()
+        resolve.GetProjectManager().SaveProject()   # noqa: F821
+        time.sleep(STILL_PAUSE)
+        todo = missing()
+    if todo:
+        return wait(f"review pictures: {len(todo)} of {len(plan)} to go (batches of {STILL_BATCH})")
     close_popups()
     p.DeleteAllRenderJobs()
     if missing():
@@ -543,6 +563,26 @@ def finish():
     shutil.copy2(RDIR + r"\plan.json", os.path.join(snap, "review-plan.json"))
     resolve.OpenPage("edit")   # noqa: F821
     pm.SaveProject()
+    v1_layout_save("finish", folder)                          # 2026-11-22 (#15)
+    # 2026-11-22 (#15 investigation): Nov 21 match 5 - every clip crossing the LAST review frame (369845, "End of
+    # video") was cut to that one frame on all tracks, between the review renders and the export 2.5 h later
+    # (most likely a Resolve glitch in this step). Checked here so the match stops now (rebuild) instead of at its export.
+    try:
+        _tlx = next((x for x in (p.GetTimelineByIndex(i) for i in range(1, p.GetTimelineCount() + 1))
+                     if x.GetName().startswith("Match ")), None)
+        bad = v1_problems(_tlx, folder, tags=("setup",)) if _tlx else []
+    except Exception as e:
+        bad = []
+        say(f"(camera clip check after finish failed to run: {e!r:.100})", out)
+    if bad:
+        say("ERROR: camera clips changed during finish (Resolve) - " + "; ".join(bad[:3]) + " - rebuild this match (--rebuild)", out)
+        out["ok"] = False
+        out["clips_changed"] = bad
+        try:                                                   # run-tournament --resume rebuilds a match with this marker
+            open(os.path.join(folder, "_workflow", "clips-changed.txt"), "w", encoding="utf-8").write("\n".join(bad))
+        except Exception:
+            pass
+        return out
     out["ok"] = (" 0 missing" in sheet) and bool(out.get("youtube_text"))
     say("FINISH DONE — pick the thumbnail (prep-upload.py thumbnail <n>), then show the owner the sheet + thumbnail + text"
         if out["ok"] else "*** FINISH HAD PROBLEMS ***", out)
@@ -567,7 +607,7 @@ def current_match():
             s[f] = json.load(open(os.path.join(snap, f), encoding="utf-8"))
         except Exception:
             pass
-    # 2026-11-02 (Nov 1 Niagara): a newer working bookends.json for THIS match (an edited cut list) wins
+    # 2026-11-02 (Nov 1 Bayside): a newer working bookends.json for THIS match (an edited cut list) wins
     # over the snapshot, and is copied into it so every later step uses the same cuts
     try:
         wb, sb = os.path.join(W, "bookends.json"), os.path.join(snap, "bookends.json")
@@ -579,6 +619,50 @@ def current_match():
     except Exception:
         pass
     return p, tl, folder, s
+
+
+def v1_layout_save(tag, folder):
+    """2026-11-22 (FIXES-TODO #15): record every camera clip on V1 (name, start, end) after setup and after finish
+    -> _workflow\\v1-layout-<tag>.json, so export() can check nothing shrank (Nov 21 match 5: one clip became
+    ONE frame, parts rendered black) and the setup/finish pair shows WHEN a clip changed."""
+    try:
+        p = resolve.GetProjectManager().GetCurrentProject()   # noqa: F821
+        tl = next((x for x in (p.GetTimelineByIndex(i) for i in range(1, p.GetTimelineCount() + 1))
+                   if x.GetName().startswith("Match ")), None)
+        lay = [{"name": i.GetName(), "start": i.GetStart(), "end": i.GetEnd()} for i in (tl.GetItemListInTrack("video", 1) or [])]
+        os.makedirs(os.path.join(folder, "_workflow"), exist_ok=True)
+        json.dump(lay, open(os.path.join(folder, "_workflow", f"v1-layout-{tag}.json"), "w", encoding="utf-8"), indent=1)
+    except Exception:
+        pass
+
+
+def v1_problems(tl, folder, tags=("finish", "setup")):
+    """2026-11-22 (#15): [] when every V1 camera clip still covers its recorded span"""
+    items = tl.GetItemListInTrack("video", 1) or []
+    cur = [{"name": i.GetName(), "start": i.GetStart(), "end": i.GetEnd()} for i in items]
+    bad = []
+    for i, c in zip(items, cur):                  # a clip of a few frames whose recording is much longer = shrunk
+        if c["end"] - c["start"] < 120:
+            try:
+                src = int(float(i.GetMediaPoolItem().GetClipProperty("Frames") or 0))
+            except Exception:
+                src = 0
+            if src > c["end"] - c["start"] + 600:
+                bad.append(f"{c['name']} is only {c['end'] - c['start']} frame(s) on V1 ({c['start']}-{c['end']}) "
+                           f"but its recording has {src} frames")
+    for tag in tags:
+        try:
+            ref = json.load(open(os.path.join(folder, "_workflow", f"v1-layout-{tag}.json"), encoding="utf-8"))
+        except Exception:
+            continue
+        for r in ref:
+            c = next((x for x in cur if x["name"] == r["name"] and abs(x["start"] - r["start"]) <= 2), None)
+            if not c:
+                bad.append(f"{r['name']} is no longer at {r['start']}-{r['end']} on V1 (as after {tag})")
+            elif abs((c["end"] - c["start"]) - (r["end"] - r["start"])) > 2:
+                bad.append(f"{r['name']} changed length on V1: {c['start']}-{c['end']} now, {r['start']}-{r['end']} after {tag}")
+        break
+    return bad
 
 
 def export():
@@ -600,6 +684,10 @@ def export():
             and not globals().get("PM_FORCE")):
         say("waiting: the TAVO file is still encoding (both use the graphics card) — try again in a few minutes", out)
         out["waiting"] = True
+        return out
+    bad = v1_problems(tl, folder)                             # 2026-11-22 (#15): never export a shrunken clip
+    if bad:
+        say("ERROR: camera clip check failed, nothing exported - " + "; ".join(bad[:3]), out)
         return out
     frames = bj["export_out"] - bj["export_in"] + 1
     # set-break cuts (2026-10-06): each kept stretch of the Match timeline is exported as

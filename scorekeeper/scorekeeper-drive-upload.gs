@@ -21,7 +21,7 @@
  *  - At most MAX_PER_DAY files a day.
  */
 
-const FOLDER_NAME = 'Venom Matches – Scorekeeper';
+const FOLDER_NAME = 'Volleyball Matches – Scorekeeper';
 const HELD_NAME   = '_held';
 const SECRET_KEY  = 'CHANGE-ME';    // must match DRIVE_KEY in the scorekeeper page
 const MAX_PER_DAY = 20;

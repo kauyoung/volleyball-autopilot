@@ -1,6 +1,6 @@
 --[[
 ================================================================================
- Volleyball Autopilot scoreboard — Fusion node graph builder
+ Home Team scoreboard — Fusion node graph builder
 ================================================================================
 
  Builds the entire scoreboard node graph described in
@@ -46,8 +46,6 @@
 -- 2026-10-20: now a photo of the OVA 14U ball (Mikasa VQ200W) with a
 -- thin white rim, 512px. The drawn icon above is the fallback: point this back
 -- at volleyball-serve-icon-bold.png and set SERVE_SIZE to 0.14.
--- Repo copy: the drawn icon (assets/volleyball-serve-icon-bold.png). The author's own build
--- uses a photo of the league ball at SERVE_SIZE 0.168 (photo not included).
 local SERVE_ICON_PATH = [[C:\Users\YOURNAME\Documents\Resolve Assets\volleyball-serve-icon-bold.png]]
 
 -- auto-overlay.lua fills these in from the match JSON automatically (via the
@@ -77,8 +75,8 @@ local NAME_FONT_STYLE = "Bold"
 -- 0.70 scale). The score/sets cells in the middle don't move — only the two
 -- outer name cells grow. Keep in step with BAR_WIDTH in apply-match.lua.
 -- 2026-10-21: 0.85 -> 0.875 (+3%, ~36px further out each end at 4K) so
--- "ANCASTER LIONS STEALTH" fits in full. Inner layout (scores, SETS, serve balls) unchanged.
-local BAR_WIDTH = 0.875
+-- "OAKRIDGE LIONS STEALTH" fits in full. Inner layout (scores, SETS, serve balls) unchanged.
+local BAR_WIDTH = 0.95  -- 2026-11-18 (option B): was 0.875; keep in step with apply-match.lua
 
 local CLEAR_EXISTING = true    -- true = delete every node except MediaOut1 first
 
@@ -114,7 +112,7 @@ local TAB_ALPHA  = 0.771
 -- while it shows) — the owner, 2026-09-27. Only used with the "tab" style.
 local OUTLINE       = true
 -- Matched to the cell separators (0.0008 wide at alpha 0.16) so the tab's side
--- lines continue the score cell's separator lines exactly (the owner, 2026-09-27:
+-- lines continue the score cell's separator lines exactly (2026-09-27:
 -- at 3 px / 0.22 they sat a few pixels off and looked like two lines).
 local OUTLINE_ALPHA = 0.16
 local OUTLINE_PX    = 0.0008 * 3840 * 0.70   -- = separator width on the 4K frame (~2.15 px)
@@ -124,7 +122,7 @@ local TAB_EXT       = 0.02     -- tabs are drawn this far down INTO the bar, the
 -- Team logo (optional). If a PNG named after Team 1 exists in LOGO_DIR
 -- (lower-case, spaces -> dashes, e.g. "home-team.png"), it's placed at the
 -- outer end of the Team 1 cell and the name shifts inward to make room. No file
--- = no logo, name back at the edge (so Thunderbolts works without one).
+-- = no logo, name back at the edge (so Lakeview works without one).
 -- apply-match.lua detects the Team1Logo node and allows for it when fitting.
 local LOGO_DIR    = "C:/Users/YOURNAME/scoreboard-pipeline/team-logos/"
 local LOGO_H      = 0.78    -- logo height as a fraction of the bar's height
@@ -159,7 +157,7 @@ local TAG_PREVIEW = rawget(_G, "SCOREBOARD_TAG_PREVIEW")
 -- Overall scale of the whole scorebar. 1.0 = the original full-width version.
 -- This drives the MasterSize Transform, which scales about the bar's own centre
 -- so the bar stays put at the bottom of frame as you change it.
-local OVERALL_SIZE = 0.7125 -- 2026-10-26: 5% smaller (0.75 since 2026-10-14, 0.70 before)
+local OVERALL_SIZE = 0.7125 -- 2026-10-26 (after comparing now / -5% / -10% / pre-Oct-14 on a Play Off frame): 5% smaller (was 0.75 since 2026-10-14, 0.70 before); names stay NAME_SIZE
 
 -- Serve ball size, relative to the SOURCE PNG (512px), not the frame.
 -- Set by measuring the render, not by calculation: the icon has transparent
@@ -171,8 +169,8 @@ local OVERALL_SIZE = 0.7125 -- 2026-10-26: 5% smaller (0.75 since 2026-10-14, 0.
 local SERVE_SIZE = 0.14    -- repo: drawn icon (0.168 = the author's photo ball)
 
 -- Club colours (from the brief — locked, don't change)
-local GREEN = { 0.439, 0.835, 0.286 }   -- #70D549  home team
--- 2026-09-27: one blue everywhere. Was the club blue #0A84FF, which
+local GREEN = { 0.439, 0.835, 0.286 }   -- #70D549  Home
+-- 2026-09-27: one blue everywhere . Was the club blue #0A84FF, which
 -- was too dark to read as text; sky blue #6BBDFF is now used for the accent
 -- line, tag words and score flash alike.
 local BLUE  = { 0.42,  0.74,  1.00  }   -- #6BBDFF  opponent
@@ -365,7 +363,7 @@ end
 --------------------------------------------------------------------------------
 
 comp:Lock()
-comp:StartUndo("Build scoreboard")
+comp:StartUndo("Build Home scoreboard")
 
 -- Optionally clear the graph
 if CLEAR_EXISTING then
@@ -526,7 +524,7 @@ local function slug(s)
   return (s:lower():gsub("[^%w]+", "-"):gsub("^%-+", ""):gsub("%-+$", ""))
 end
 -- Logo lookup (2026-10-02, both teams): team-logos\<club>.png matches any name
--- that STARTS with the club's words — "thundercats.png" serves "Thundercats
+-- that STARTS with the club's words — "northside.png" serves "Northside
 -- Polar 14U" — and team-logos\aliases.txt ("tvc = toronto-volleyball-club",
 -- one per line) covers nicknames. Same rules as make-bookends.py logo_for().
 local function fileExists(f) local fh = io.open(f, "rb") if fh then fh:close() return true end return false end
@@ -686,7 +684,7 @@ end
 -- inside that small canvas; the Merge then drops the whole canvas at frame
 -- centre, which is why the ball appeared near the middle of the picture instead
 -- of on the bar. A Merge's Center IS in frame coordinates, so it goes here.
--- 2026-10-21 (the owner, option A): the ball sat ~4px (finished 4K) above the centre
+-- 2026-10-21 (option A): the ball sat ~4px (finished 4K) above the centre
 -- of the team-name capitals; -0.0025 (x 2160 x OVERALL_SIZE 0.75 = 4px) centres it.
 local SERVE_Y_NUDGE = -0.0025
 local function serveAt(mergeName, cx)
@@ -872,7 +870,7 @@ local function makeTag(side)
   if style == "solid" then bgCol, bgA, txtCol = team, 1.0, (side == 1) and BLACK or WHITE
   elseif style == "text" then
     -- The club blue (#0A84FF) is too dark to read as small text on the dark
-    -- pill (the owner, 2026-09-26), so the opponent's words use a lighter sky blue.
+    -- pill (2026-09-26), so the opponent's words use a lighter sky blue.
     txtCol = (side == 1) and GREEN or TAG_TEXT_BLUE
     if pv and pv.rgb and ((pv.side == 2) and 2 or 1) == side then txtCol = pv.rgb end
   elseif style == "deep" then bgCol, bgA = { team[1] * 0.50, team[2] * 0.50, team[3] * 0.50 }, 0.95 end
@@ -1070,11 +1068,11 @@ comp:Unlock()
 --------------------------------------------------------------------------------
 
 print("=====================================================")
-print(" Volleyball Autopilot scoreboard built.")
+print(" Home Team scoreboard built.")
 print(string.format(" %d merges, chained left to right.", mergeCount))
 print(string.format(" Teams: %s  vs  %s", TEAM1_NAME, TEAM2_NAME))
 print(HAS_LOGO and (" Team 1 logo: " .. LOGO_FILE)
-               or  (" Team 1 logo: none (no logo for " .. tostring(TEAM1_NAME) .. ")"))   -- 2026-10-09: LOGO_FILE is nil here (non-home team 1)
+               or  (" Team 1 logo: none (no logo for " .. tostring(TEAM1_NAME) .. ")"))   -- 2026-10-09: LOGO_FILE is nil here (non-Home team 1)
 if type(TAG_PREVIEW) == "table" then print(" ** Tag PREVIEW built: " .. tostring(TAG_PREVIEW.text)) end
 print("")
 

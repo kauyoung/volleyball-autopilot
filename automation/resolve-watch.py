@@ -56,11 +56,25 @@ def write(msg):
         f.write(time.strftime("%Y-%m-%d %H:%M:%S ") + msg + "\n")
 
 
+def _alert(kind, msg):
+    """2026-11-22 (#1): GONE/FROZEN during a run -> sound + PC pop-up + phone push (once per change)"""
+    try:
+        os.environ.pop("VB_ALERT_PARENT", None)
+        sys.path.insert(0, WORK)
+        import alert as al
+        if al.run_active():
+            al.alert("Resolve " + kind, msg + " - a volleyball run is in progress. Reopen Resolve from the Start menu"
+                     " (or wait if frozen); the run will need a restart.", key="resolve " + kind + time.strftime(" %H"))
+    except Exception:
+        pass
+
+
 def main():
     if other_copy_running():
         return
     open(PID, "w").write(str(os.getpid()))
     t_start, hung_since, gone_since = time.time(), None, None
+    said = {}
     while time.time() - t_start < 8 * 3600:
         try:
             s = status()
@@ -73,14 +87,20 @@ def main():
             secs = int(now - hung_since)
             write(f"FROZEN for {secs} s (since {time.strftime('%H:%M:%S', time.localtime(hung_since))})"
                   if secs >= FROZEN_AFTER else f"SLOW ({secs} s not responding)")
+            if secs >= FROZEN_AFTER and not said.get("FROZEN"):
+                said["FROZEN"] = True
+                _alert("FROZEN", f"Resolve not responding for {secs} s")
         elif s == "GONE":
             hung_since = None
+            if not gone_since:
+                _alert("GONE", "Resolve closed or crashed at " + time.strftime("%H:%M"))
             gone_since = gone_since or now
             write("GONE (Resolve not running)")
             if now - gone_since > 15 * 60:
                 break
         else:
             hung_since = gone_since = None
+            said.clear()
             write(s)
         time.sleep(20)
     try:

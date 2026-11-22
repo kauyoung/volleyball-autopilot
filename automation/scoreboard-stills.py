@@ -1,5 +1,5 @@
 """
-Scoreboard stills (2026-10-19: "go" on step 3 of the export-speed work).
+Scoreboard stills (2026-10-19, the owner: "go" on step 3 of the export-speed work).
 
 Why: the live Fusion scoreboard caps the YouTube export at ~1x real time and makes it
 slow down after 15-23 min (47 -> 30 fps). Pre-drawing the scoreboard as pictures and
@@ -40,6 +40,104 @@ STATIC_TOOLS = {"RectangleMask", "Merge", "Loader", "TextPlus", "BezierSpline", 
 MAX_BUILD_MIN = 75                # give up (-> live scoreboard) after this long
 STALE_MIN = 15                    # an unfinished build untouched this long starts over
 DETACHED = 0x00000008 | 0x08000000
+# 2026-11-22 (the owner OK, replaces FIXES-TODO #5/#12): STRIP pictures - only a full-width strip around the board
+# (measured on every build from sample frames, + STRIP_PAD) is rendered instead of the whole 3840x2160 frame:
+# Scoreboard timeline output 3840 x h with "centerCrop" and the comp clip tilted so the strip is centred (Oct 27
+# test: pixel-identical, 40 -> 25 s on the fixture). Placed pictures are tilted back down on the Match timeline.
+# Anything outside the strip in a sample/check frame -> the build fails -> live scoreboard (as before).
+# W\scoreboard-strip.txt = "off" -> full-frame pictures as before.
+STRIP_PAD = 24
+STRIP_HEIGHTS = (216, 240, 270, 360, 432, 540, 720, 1080)   # divisors of 2160 (see _strip_measure)
+STRIP_ORIG = os.path.join(W, "sb-strip-orig.json")
+STRIP_KEYS = ["useCustomSettings", "timelineOutputResMatchTimelineRes", "timelineOutputResolutionWidth",
+              "timelineOutputResolutionHeight", "timelineOutputResMismatchBehavior"]
+
+
+def strip_on():
+    try:
+        return open(os.path.join(W, "scoreboard-strip.txt"), encoding="utf-8").read().strip().lower() != "off"
+    except Exception:
+        return True
+
+
+def _sb_comp_item(sbt):
+    its = sbt.GetItemListInTrack("video", 1) or []
+    return its[0] if its else None
+
+
+def _strip_apply(p, sbt, stt):
+    """Scoreboard timeline -> 3840 x h centre crop, comp clip tilted; originals saved first (undo survives a crash)"""
+    it = _sb_comp_item(sbt)
+    orig = {"project": p.GetName(), "settings": {k: sbt.GetSetting(k) for k in STRIP_KEYS},
+            "tilt": float(it.GetProperty("Tilt") or 0), "active": True}
+    json.dump(orig, open(STRIP_ORIG, "w", encoding="utf-8"))
+    sp = stt["strip"]
+    ok = [sbt.SetSetting("useCustomSettings", "1"), sbt.SetSetting("timelineOutputResMatchTimelineRes", "0"),
+          sbt.SetSetting("timelineOutputResolutionWidth", "3840"), sbt.SetSetting("timelineOutputResolutionHeight", str(sp["h"])),
+          sbt.SetSetting("timelineOutputResMismatchBehavior", "centerCrop"), it.SetProperty("Tilt", float(sp["tilt"]))]
+    if not all(ok) or sbt.GetSetting("timelineOutputResolutionHeight") != str(sp["h"]):
+        _strip_undo(p)
+        raise RuntimeError(f"couldn't switch the Scoreboard timeline to strip output ({ok})")
+
+
+def _strip_undo(p):
+    """idempotent; called after the render, by restore() and on any failure"""
+    try:
+        orig = json.load(open(STRIP_ORIG, encoding="utf-8"))
+    except Exception:
+        return False
+    if not orig.get("active") or orig.get("project") != p.GetName():
+        return False
+    sbt = _timeline(p, "Scoreboard")
+    if not sbt:
+        return False
+    it = _sb_comp_item(sbt)
+    for k in reversed(STRIP_KEYS):
+        v = orig["settings"].get(k)
+        if v is not None:
+            sbt.SetSetting(k, v)
+    if it:
+        it.SetProperty("Tilt", float(orig.get("tilt") or 0))
+    good = sbt.GetSetting("timelineOutputResolutionHeight") == orig["settings"].get("timelineOutputResolutionHeight")
+    if not good:
+        raise RuntimeError("couldn't put the Scoreboard timeline back to full frame (sb-strip-orig.json)")
+    orig["active"] = False
+    json.dump(orig, open(STRIP_ORIG, "w", encoding="utf-8"))
+    return True
+
+
+def _strip_measure(p, sbt, stt, runs):
+    """render a few full frames (holds + animation middles), alpha box over them -> strip or None (= full frame)"""
+    S = [r for r in runs if r[0] == "S"]; D = [r for r in runs if r[0] == "D"]
+    rnd = random.Random(stt["started"])
+    frames = sorted({S[0][1], S[-1][1]} | {r[1] for r in rnd.sample(S, min(2, len(S)))}
+                    | {(r[1] + r[2]) // 2 for r in rnd.sample(D, min(3, len(D)))}
+                    | {r[1] + 1 for r in rnd.sample(D, min(1, len(D)))})
+    mdir = os.path.join(stt["run_dir"], "measure")
+    os.makedirs(mdir, exist_ok=True)
+    if p.GetCurrentTimeline().GetName() != "Scoreboard":
+        p.SetCurrentTimeline(sbt)
+    got = []
+    for f in frames:
+        g = _render_one(p, stt["T0s"] + f, mdir, f"m{f:07d}x", True, FMT, CODEC)
+        if not g:
+            return None, f"sample frame {f} didn't render"
+        got.append(g)
+    r = _compare(stt, ["bbox", got])
+    if not isinstance(r, list) or r[0] is None:
+        return None, f"no board found in the samples ({r})"
+    need = (r[1] + 1 + STRIP_PAD) - (r[0] - STRIP_PAD)
+    # strip height must divide 2160: Resolve scales a smaller picture's Tilt by its own height (Tilt T moves it
+    # T * h / 2160 px), so the placement Tilt = -tilt * 2160 / h is then a whole number -> exact pixels
+    h = next((x for x in STRIP_HEIGHTS if x >= need), None)
+    if not h:
+        return None, f"board area too tall for a strip ({need} px)"
+    c = (r[0] + r[1] + 1) // 2
+    y0 = min(max(0, c - h // 2), 2160 - h)
+    return {"y0": y0, "h": h, "tilt": y0 + h // 2 - 1080, "place_tilt": -(y0 + h // 2 - 1080) * (2160 // h),
+            "samples": len(got), "alpha_rows": r}, None
+
+
 
 
 def mode():
@@ -121,6 +219,8 @@ def restore(p, tl):
     """Remove the stills track + media, switch the live scoreboard clip back on. Idempotent.
     Raises if it can't (then nothing should be exported until it's sorted out)."""
     done = []
+    if _strip_undo(p):
+        done.append("Scoreboard timeline back to full frame")
     cur = p.GetCurrentTimeline()
     tracks = [k for k in range(1, tl.GetTrackCount("video") + 1) if tl.GetTrackName("video", k) == TRACK_NAME]
     if tracks:
@@ -244,12 +344,33 @@ def load(f, fmt):
     raw = subprocess.run([FF, "-v", "error", "-i", f, "-f", "rawvideo", "-pix_fmt", fmt, "-"], capture_output=True).stdout
     return np.frombuffer(raw, np.uint16).astype(np.int32)
 out = []
-for a, b, fmt in json.loads(sys.argv[1]):
+args = json.loads(sys.argv[1])
+if args and args[0] == "bbox":                 # 2026-11-22: alpha bounding box over full frames -> [ymin, ymax] or None
+    lo, hi = None, None
+    for f in args[1]:
+        x = load(f, "rgba64le")
+        if x.size != 3840 * 2160 * 4:
+            print(json.dumps("bad size")); sys.exit()
+        al = x.reshape(2160, 3840, 4)[:, :, 3]
+        rows = np.nonzero(al.max(axis=1) > 0)[0]
+        if rows.size:
+            lo = int(rows[0]) if lo is None else min(lo, int(rows[0]))
+            hi = int(rows[-1]) if hi is None else max(hi, int(rows[-1]))
+    print(json.dumps([lo, hi])); sys.exit()
+for e in args:
+    a, b, fmt = e[:3]
     x, y = load(a, fmt), load(b, fmt)
+    outside = 0
+    if len(e) == 5 and x.size == 3840 * 2160 * 4:   # 2026-11-22 strip pictures: a = full frame, b = strip y0..y0+h
+        y0, h = e[3], e[4]
+        f_ = x.reshape(2160, 3840, 4)
+        al = f_[:, :, 3].copy(); al[y0:y0 + h] = 0
+        outside = int(al.max())
+        x = f_[y0:y0 + h].reshape(-1)
     if x.size == 0 or x.size != y.size:
         out.append(None); continue
     d = np.abs(x - y)
-    out.append([round(float(d.max()) / 257, 3), int((d > 257).sum())])
+    out.append([round(float(d.max()) / 257, 3), int((d > 257).sum())] + ([outside] if len(e) == 5 else []))
 print(json.dumps(out))
 ''' % FF
 
@@ -330,6 +451,13 @@ def _fresh(p, tl, folder):
     _log(stt, f"analysed in {stt['analyse_s']} s: {len(runs)} runs, "
               f"{sum(1 for r in runs if r[0] == 'S')} holds, {sum(r[2] - r[1] for r in runs if r[0] == 'D')} frames; {info}")
     json.dump(runs, open(os.path.join(run_dir, "plan.json"), "w"))
+    stt["strip"] = None
+    if strip_on():
+        t1 = time.time()
+        stt["strip"], why = _strip_measure(p, sbt, stt, runs)
+        _log(stt, (f"strip pictures: rows {stt['strip']['y0']}-{stt['strip']['y0'] + stt['strip']['h']} "
+                   f"({stt['strip']['h']} px, tilt {stt['strip']['tilt']}), measured in {time.time() - t1:.0f} s")
+             if stt["strip"] else f"strip pictures off for this build: {why} - full frames")
     _save(stt)
     return stt
 
@@ -344,6 +472,8 @@ def _queue(p, stt, end):
         p.SetCurrentTimeline(sbt)
     if stt["queued"] == 0:
         p.DeleteAllRenderJobs()
+        if stt.get("strip"):
+            _strip_apply(p, sbt, stt)
     if not p.SetCurrentRenderFormatAndCodec(FMT, CODEC):
         raise RuntimeError("couldn't set the EXR render format")
     runs, T0 = stt["runs"], stt["T0s"]
@@ -385,6 +515,8 @@ def _render_wait(p, stt):
     if missing:
         raise RuntimeError(f"{len(missing)} scoreboard pictures weren't rendered (e.g. {missing[0]}) — render stopped?")
     p.DeleteAllRenderJobs()
+    if stt.get("strip"):
+        _strip_undo(p)                         # live scoreboard back to full frame before anything else
     stt["render_s"] = round(time.time() - stt["render_started"])
     stt["stage"] = "import"
     _log(stt, f"rendered {total} files in {stt['render_s']} s")
@@ -543,8 +675,23 @@ def _place(p, tl, stt, end):
         blk = [it for it in items if it.GetStart() == _m(stt, stt["B"])]
         if blk and not tl.DeleteClips(blk):
             raise RuntimeError("couldn't remove the end marker")
-        stt["stage"] = "verify"
+        stt["stage"] = "position" if stt.get("strip") else "verify"; stt["i"] = 0
         _log(stt, "placed")
+        _save(stt)
+    if stt["stage"] == "position":                    # strip pictures: tilt each piece down onto the board's rows
+        items = sorted(tl.GetItemListInTrack("video", K) or [], key=lambda i: i.GetStart())
+        tv = float(stt["strip"]["place_tilt"])
+        while stt["i"] < len(items) and time.time() < end:
+            if not items[stt["i"]].SetProperty("Tilt", tv):
+                raise RuntimeError(f"couldn't position strip piece {stt['i']}")
+            stt["i"] += 1
+        if stt["i"] < len(items):
+            _save(stt); return f"positioning the pictures ({stt['i']}/{len(items)})"
+        bad = [i.GetStart() for i in items if abs(float(i.GetProperty("Tilt") or 0) - tv) > 0.01]
+        if bad:
+            raise RuntimeError(f"{len(bad)} strip pieces not positioned (first at {bad[0]})")
+        stt["stage"] = "verify"
+        _log(stt, f"positioned {len(items)} strip pieces (tilt {tv:.0f})")
         _save(stt)
     return None
 
@@ -605,9 +752,13 @@ def _check(p, tl, stt, end):
         got = _render_one(p, T0 + f, cdir, f"chk{f:07d}x", True, FMT, CODEC)
         if not got:
             raise RuntimeError(f"check render of frame {f} failed")
-        r = _compare(stt, [[got, os.path.join(stt["run_dir"], f"hold-{a:07d}-x{EXT}"), "rgba64le"]])[0]
+        sp = stt.get("strip")
+        pair = [got, os.path.join(stt["run_dir"], f"hold-{a:07d}-x{EXT}"), "rgba64le"] + ([sp["y0"], sp["h"]] if sp else [])
+        r = _compare(stt, [pair])[0]
         if r is None or r[0] > 1.0:
             raise RuntimeError(f"the scoreboard changes inside a hold (comp frame {f}, diff {r}) — analysis missed something")
+        if sp and r[2] > 0:
+            raise RuntimeError(f"the board reaches outside the strip at comp frame {f} — strip too small")
         stt["ci"] += 1
         _save(stt)
     if stt["ci"] < len(stt["checks"]):
@@ -678,7 +829,7 @@ def step(p, tl, folder, end):
                 return {"state": "waiting", "retry_s": 15, "msg": "scoreboard stills: " + msg}
         elif st_ == "import":
             msg = _import(p, tl, stt, end)
-        elif st_ in ("place_d", "place_s"):
+        elif st_ in ("place_d", "place_s", "position"):
             msg = _place(p, tl, stt, end)
         elif st_ == "verify":
             _verify(p, tl, stt); msg = "checking"

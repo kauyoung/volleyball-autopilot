@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="gsap.min.js"></script>
+    <script src="CustomEase.min.js"></script>
+    <script src="motion.js"></script>
+    <script src="wipe.js"></script>
+    <link rel="stylesheet" href="base.css" />
+    <style>
+      /* opaque: this panel hides the cut */
+      #panel .fill { background: linear-gradient(104deg, #050806 0%, #0a100d 50%, #050806 100%); }
+      #lines { opacity: 0.045; }
+      #ghost { position: absolute; left: 0; right: 0; top: 50%; text-align: center; font-weight: 800; line-height: 1; white-space: nowrap;
+        color: transparent; -webkit-text-stroke: 2px rgba(242,244,241,0.085); transform: translateY(-50%); }
+      #label { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; }
+      #label .big { font-weight: 700; font-size: 230px; line-height: 1; letter-spacing: 0.06em; padding-left: 0.06em; white-space: nowrap; }
+      #label .small { margin-top: 26px; font-weight: 700; font-size: 58px; line-height: 1.1; letter-spacing: 0.12em; padding-left: 0.12em; color: var(--soft); white-space: nowrap; }
+      #label.long .big { font-size: 120px; }
+    </style>
+  </head>
+  <body>
+    <!-- 173 frames at 59.94: frames 0-52 = wipe-in (0.8 s sweep + 5 covered frames), 53-172 = wipe-out (1.2 s covered + 0.8 s sweep) -->
+    <div id="root" data-composition-id="main" data-start="0" data-duration="2.886" data-width="3840" data-height="2160">
+      <div id="scene" class="clip" data-start="0" data-duration="2.886" data-track-index="0">
+        <div id="plate"></div>
+        <div id="panel"><div class="fill"></div>
+          <div id="stage">
+            <div id="lines"></div>
+            <div id="ghost" aria-hidden="true" data-layout-allow-overflow></div>
+            <div id="label"><div class="big"></div><div class="small"></div></div>
+          </div>
+        </div>
+        <div id="edges"><div class="edge lead b"></div><div class="edge lead a"></div><div class="edge trail b"></div><div class="edge trail a"></div></div>
+      </div>
+    </div>
+    <script src="plate.js"></script>
+    <script>
+      // wipe.js: window.WIPE = { label: "SET 2", ghost: "2", sub: "" }   (TIME-OUT / CAMERA TECHNICAL DIFFICULTY the same way)
+      const W = Object.assign({ label: "SET 2", ghost: "", sub: "" }, window.WIPE || {});
+      ["label", "ghost", "sub"].forEach(k => { if (VM.q.get(k) !== null) W[k] = VM.q.get(k); });
+      const big = document.querySelector("#label .big"), small = document.querySelector("#label .small"), ghost = document.getElementById("ghost");
+      big.textContent = W.label; small.textContent = W.sub; if (!W.sub) small.style.display = "none";
+      if (W.label.length > 12) document.getElementById("label").classList.add("long");
+      ghost.textContent = W.ghost || W.label;
+      ghost.style.fontSize = (W.ghost && W.ghost.length <= 2 ? 1180 : 560) + "px";
+      if (W.ghost && W.ghost.length <= 2) ghost.style.left = "880px";
+      if (W.label.length > 12) ghost.style.display = "none";
+
+      const F = 1001 / 60000, T_IN = 0.8, T_COVER = 5 * F + 1.2, T_OUT = 0.8, END = 173 * F;
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      window.__timelines["main"] = tl;
+      VM.init();
+      document.fonts.load('700 230px "Barlow Condensed"').catch(() => {}).then(() => document.fonts.load('800 230px "Barlow Condensed"')).catch(() => {}).then(() => {
+        // The words are printed on the panel: its green edge uncovers them, its blue edge wipes them away.
+        // Only a slow drift underneath (words one way, the outline the other) keeps the hold alive.
+        VM.panelIn(tl, 0, T_IN);
+        VM.panelOut(tl, T_IN + T_COVER, T_OUT);
+        tl.fromTo("#label", { x: -22 }, { x: 22, duration: END, ease: "none" }, 0)
+          .fromTo("#ghost", { x: 70 }, { x: -70, duration: END, ease: "none" }, 0)
+          .fromTo("#lines", { x: -40 }, { x: 40, duration: END, ease: "none" }, 0);
+        tl.seek(0); window.__ready = true;
+        if (window.__hfForceTimelineRebind) window.__hfForceTimelineRebind();
+      });
+    </script>
+  </body>
+</html>

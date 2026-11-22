@@ -8,162 +8,134 @@
     <script src="motion.js"></script>
     <script src="names.js"></script>
     <script src="match.js"></script>
+    <link rel="stylesheet" href="base.css" />
     <style>
-      @font-face { font-family: "Barlow Condensed"; font-weight: 600; src: url("fonts/barlow-condensed-latin-600-normal.woff2") format("woff2"); }
-      @font-face { font-family: "Barlow Condensed"; font-weight: 700; src: url("fonts/barlow-condensed-latin-700-normal.woff2") format("woff2"); }
-      @font-face { font-family: "Barlow Condensed"; font-weight: 800; src: url("fonts/barlow-condensed-latin-800-normal.woff2") format("woff2"); }
+      #panel .fill { background: linear-gradient(180deg, rgba(5,8,6,0.93) 0%, rgba(6,9,7,0.88) 55%, rgba(5,8,6,0.94) 100%); }
 
-      :root {
-        --team1: #70d549;
-        --opp: #6bbdff;
-        --paper: #f2f4f1;
-        --muted: rgba(242, 244, 241, 0.66);
-      }
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { width: 3840px; height: 2160px; overflow: hidden; background: transparent; }
-      #root { position: relative; width: 3840px; height: 2160px; overflow: hidden; background: transparent;
-        font-family: "Barlow Condensed", sans-serif; color: var(--paper); font-variant-numeric: tabular-nums; }
-      .clip { position: absolute; inset: 0; }
-      #stage { position: absolute; inset: 0; }
+      #title { position: absolute; top: 78px; left: 0; right: 0; height: 104px; display: flex; justify-content: center; }
+      #title span { font-weight: 800; font-size: 100px; line-height: 104px; letter-spacing: 0.1em; padding-left: 0.1em; }
 
-      /* Diagonal panel wipe — same as the intro */
-      #panelWrap { position: absolute; inset: 0; overflow: hidden; }
-      #panel { position: absolute; top: -10%; left: -30%; width: 160%; height: 120%; background: rgba(6,9,7,0.86); transform: skewX(-14deg); }
-      #panel .edgeIn { position: absolute; top: 0; bottom: 0; right: -14px; width: 14px; background: var(--team1); }
-
-      /* Header (2026-10-06: no club / season line, FINAL higher with room under it) */
-      #title { position: absolute; top: 78px; left: 0; right: 0; text-align: center; }
-      #title span { display: inline-block; font-weight: 800; font-size: 100px; line-height: 104px; letter-spacing: 0.1em; padding-left: 0.1em; }
-
-      /* Score table */
-      #heads { position: absolute; top: 254px; left: 0; width: 1920px; height: 30px; }
-      #heads span { position: absolute; width: 130px; margin-left: -65px; text-align: center; font-weight: 700; font-size: 24px; letter-spacing: 0.12em; padding-left: 0.12em; color: var(--muted); }
-      /* Rounded like the in-game scoreboard bar (corner radius ≈ a quarter of the height) */
-      .row { position: absolute; left: 310px; width: 1300px; height: 112px; border-radius: 28px; overflow: hidden; }
+      /* Score table: two open rows on hairlines (no boxes) */
+      #heads { position: absolute; top: 246px; left: 0; width: 1920px; height: 30px; }
+      #heads .mask { position: absolute; width: 130px; margin-left: -65px; height: 30px; text-align: center; }
+      #heads span { font-weight: 700; font-size: 24px; line-height: 30px; letter-spacing: 0.14em; padding-left: 0.14em; color: var(--muted); }
+      .hl { position: absolute; left: 310px; width: 1300px; height: 2px; background: var(--hair); transform-origin: 0 50%; }
+      #hl0 { top: 288px; } #hl1 { top: 406px; } #hl2 { top: 524px; }
+      .row { position: absolute; left: 310px; width: 1300px; height: 116px; }
       #row1 { top: 290px; }
-      #row2 { top: 414px; }
-      .row .bg { position: absolute; inset: 0; background: rgba(242,244,241,0.07); }
+      #row2 { top: 408px; }
       .row .tint { position: absolute; inset: 0; opacity: 0; }
-      #row1 .tint { background: rgba(112,213,73,0.16); }
-      #row2 .tint { background: rgba(107,189,255,0.16); }
-      /* team-colour accent: a small pill set just inside the end, like the scoreboard's */
-      .row .bar { position: absolute; left: 13px; top: 24px; bottom: 24px; width: 7px; border-radius: 4px; transform-origin: 50% 50%; }
-      #row1 .bar { background: var(--team1); }
+      #row1 .tint { background: linear-gradient(90deg, rgba(112,213,73,0.24) 0%, rgba(112,213,73,0.08) 55%, rgba(112,213,73,0) 100%); }
+      #row2 .tint { background: linear-gradient(90deg, rgba(107,189,255,0.24) 0%, rgba(107,189,255,0.08) 55%, rgba(107,189,255,0) 100%); }
+      .row .bar { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; transform-origin: 50% 50%; }
+      #row1 .bar { background: var(--team); }
       #row2 .bar { background: var(--opp); }
-
-      .mini { position: absolute; left: 32px; top: 10px; width: 92px; height: 92px; }
+      .mini { position: absolute; left: 34px; top: 12px; width: 92px; height: 92px; }
       .mini svg { position: absolute; inset: 0; overflow: visible; }
       .mini .disc { position: absolute; inset: 7px; border-radius: 50%; overflow: hidden; display: grid; place-items: center; background: #0d110f; }
       .mini .mono { width: 84%; height: 84%; object-fit: contain; display: block; }
       .mini .genericWrap { width: 64%; height: 64%; }
       .mini .generic { width: 100%; height: 100%; display: block; overflow: visible; }
-
-      .names { position: absolute; left: 150px; top: 0; height: 112px; display: flex; flex-direction: column; justify-content: center; }
-      .names .club span { display: block; font-weight: 800; font-size: 54px; line-height: 1.04; text-transform: uppercase; letter-spacing: 0.015em; white-space: nowrap; }
-      .names .team span { display: block; font-weight: 700; font-size: 29px; line-height: 1.2; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; color: rgba(242,244,241,0.82); }
-
-      .cell { position: absolute; top: 0; height: 112px; overflow: hidden; }
-      .cell span { position: absolute; left: 0; right: 0; top: 0; height: 112px; display: grid; place-items: center; line-height: 1; }
+      .names { position: absolute; left: 150px; top: 0; height: 116px; display: flex; flex-direction: column; justify-content: center; }
+      .names .club span { font-weight: 800; font-size: 54px; line-height: 1.04; text-transform: uppercase; letter-spacing: 0.015em; white-space: nowrap; }
+      .names .team span { font-weight: 700; font-size: 29px; line-height: 1.2; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; color: var(--soft); }
+      .cell { position: absolute; top: 0; height: 116px; overflow: hidden; }
+      .cell span { position: absolute; left: 0; right: 0; top: 0; height: 116px; display: grid; place-items: center; line-height: 1; }
       .score { width: 120px; margin-left: -60px; }
       .score span { font-weight: 700; font-size: 64px; }
       .sets { width: 140px; margin-left: -70px; }
       .sets span { font-weight: 800; font-size: 92px; }
-      .vline { position: absolute; top: 24px; bottom: 24px; width: 3px; border-radius: 2px; background: rgba(242,244,241,0.14); }
+      .vline { position: absolute; top: 26px; bottom: 26px; width: 2px; background: var(--hair); }
 
-      /* Result */
-      #result { position: absolute; top: 566px; left: 0; right: 0; text-align: center; }
-      #result span { display: inline-block; font-weight: 800; font-size: 58px; line-height: 72px; letter-spacing: 0.04em; white-space: nowrap; text-transform: uppercase; }
+      #result { position: absolute; top: 570px; left: 0; right: 0; height: 72px; display: flex; justify-content: center; }
+      #result span { font-weight: 800; font-size: 58px; line-height: 72px; letter-spacing: 0.04em; white-space: nowrap; text-transform: uppercase; }
 
-      /* Stat tiles — flat blocks (2026-10-06: narrower and taller, even padding all round) */
-      #tiles { position: absolute; top: 676px; left: 0; width: 1920px; height: 148px; }
-      .tile { position: absolute; top: 0; width: 290px; height: 148px; border-radius: 28px; background: rgba(242,244,241,0.07); text-align: center; }
-      .tile .lab { position: absolute; top: 26px; left: 0; right: 0; font-weight: 700; font-size: 24px; line-height: 28px; letter-spacing: 0.12em; padding-left: 0.12em; color: var(--muted); }
-      .tile .val { position: absolute; top: 62px; left: 0; right: 0; height: 62px; display: flex; justify-content: center; align-items: baseline; gap: 10px; white-space: nowrap; }
-      .tile .val b { font-weight: 800; font-size: 62px; line-height: 62px; }
-      .tile .val em { font-style: normal; font-weight: 800; font-size: 34px; letter-spacing: 0.04em; text-transform: uppercase; }
+      /* Stats: one open band, four columns split by hairlines */
+      #tiles { position: absolute; top: 690px; left: 340px; width: 1240px; height: 124px; display: flex; }
+      .tile { position: relative; flex: 1; text-align: center; }
+      .tile + .tile::before { content: ""; position: absolute; left: -1px; top: 14px; bottom: 14px; width: 2px; background: var(--hair); transform: scaleY(var(--sy, 0)); }
+      .tile .lab { height: 28px; }
+      .tile .lab span { font-weight: 700; font-size: 24px; line-height: 28px; letter-spacing: 0.14em; padding-left: 0.14em; color: var(--muted); }
+      .tile .val { margin-top: 18px; height: 70px; }
+      .tile .val > span { display: flex; justify-content: center; align-items: baseline; gap: 10px; white-space: nowrap; }
+      .tile .val b { font-weight: 800; font-size: 66px; line-height: 70px; }
+      .tile .val em { font-style: normal; font-weight: 800; font-size: 32px; letter-spacing: 0.05em; text-transform: uppercase; }
 
-      /* Match details — same line as the intro */
-      #infoRule { position: absolute; left: 560px; top: 870px; width: 800px; height: 3px; border-radius: 2px; background: rgba(242,244,241,0.2); }
-      #info { position: absolute; left: 0; right: 0; top: 890px; display: flex; justify-content: center; align-items: center; gap: 26px;
-        font-weight: 700; font-size: 36px; letter-spacing: 0.1em; white-space: nowrap; }
-      #info .dot { width: 9px; height: 9px; background: rgba(242,244,241,0.4); transform: rotate(45deg); }
-      #info .muted { color: rgba(242,244,241,0.82); }
-      #info .hl { color: var(--team1); }
-
-      #measure, #measure2 { position: absolute; left: -9999px; top: 0; font-family: "Barlow Condensed", sans-serif; text-transform: uppercase; white-space: nowrap; visibility: hidden; }
-      #measure { font-weight: 800; letter-spacing: 0.015em; }
-      #measure2 { font-weight: 700; letter-spacing: 0.08em; }
-          /* workflow copy: laid out at 1920x1080, drawn at 4K (fast capture, no upscale) */
-      #scene { zoom: 2; }
+      #infoRule { position: absolute; left: 460px; top: 866px; width: 1000px; height: 2px; background: rgba(242,244,241,0.22); }
+      #info { position: absolute; left: 0; right: 0; top: 888px; height: 52px; display: flex; justify-content: center; align-items: center; gap: 26px;
+        font-weight: 700; font-size: 36px; line-height: 52px; letter-spacing: 0.1em; white-space: nowrap; }
+      #info .mask { height: 52px; }
+      #info .dot { width: 8px; height: 8px; background: rgba(242,244,241,0.4); transform: rotate(45deg); }
+      #info .muted { color: var(--soft); }
+      #info .hl2 { color: var(--team); }
     </style>
   </head>
   <body>
     <div id="root" data-composition-id="main" data-start="0" data-duration="6.9" data-width="3840" data-height="2160">
       <div id="scene" class="clip" data-start="0" data-duration="6.9" data-track-index="0">
-        <div id="panelWrap"><div id="panel"><div class="edgeIn"></div></div></div>
-        <div id="stage">
-          <div id="title"><span>FINAL</span></div>
+        <div id="plate"></div>
+        <div id="panel"><div class="fill"></div>
+          <div id="stage">
+            <div id="title" class="mask"><span>FINAL</span></div>
 
-          <div id="heads"></div>
-          <div class="row" id="row1">
-            <div class="bg"></div><div class="tint"></div><div class="bar"></div>
-            <div class="mini"><svg viewBox="0 0 92 92"><circle class="ring" cx="46" cy="46" r="43" fill="none" stroke="#70d549" stroke-width="4" transform="rotate(-90 46 46)" /></svg><div class="disc"></div></div>
-            <div class="names"><div class="club"><span></span></div><div class="team"><span></span></div></div>
-          </div>
-          <div class="row" id="row2">
-            <div class="bg"></div><div class="tint"></div><div class="bar"></div>
-            <div class="mini"><svg viewBox="0 0 92 92"><circle class="ring" cx="46" cy="46" r="43" fill="none" stroke="#6bbdff" stroke-width="4" transform="rotate(-90 46 46)" /></svg><div class="disc"></div></div>
-            <div class="names"><div class="club"><span></span></div><div class="team"><span></span></div></div>
-          </div>
+            <div id="heads"></div>
+            <div class="hl" id="hl0"></div><div class="hl" id="hl1"></div><div class="hl" id="hl2"></div>
+            <div class="row" id="row1">
+              <div class="tint"></div><div class="bar"></div>
+              <div class="mini"><svg viewBox="0 0 92 92"><circle class="ring" cx="46" cy="46" r="43" fill="none" stroke="#70d549" stroke-width="4" transform="rotate(-90 46 46)" /></svg><div class="disc"></div></div>
+              <div class="names"><div class="club mask"><span></span></div><div class="team mask"><span></span></div></div>
+            </div>
+            <div class="row" id="row2">
+              <div class="tint"></div><div class="bar"></div>
+              <div class="mini"><svg viewBox="0 0 92 92"><circle class="ring" cx="46" cy="46" r="43" fill="none" stroke="#6bbdff" stroke-width="4" transform="rotate(-90 46 46)" /></svg><div class="disc"></div></div>
+              <div class="names"><div class="club mask"><span></span></div><div class="team mask"><span></span></div></div>
+            </div>
 
-          <div id="result"><span></span></div>
-          <div id="tiles"></div>
+            <div id="result" class="mask"><span></span></div>
+            <div id="tiles"></div>
 
-          <div id="infoRule"></div>
-          <div id="info">
-            <span class="muted" id="iDate"></span>
-            <span class="dot"></span>
-            <span class="hl" id="iFormat"></span>
-            <span class="dot"></span>
-            <span class="muted" id="iDetail"></span>
+            <div id="infoRule"></div>
+            <div id="info">
+              <div class="mask"><span class="muted" id="iDate"></span></div>
+              <span class="dot"></span>
+              <div class="mask"><span class="hl2" id="iFormat"></span></div>
+              <span class="dot"></span>
+              <div class="mask"><span class="muted" id="iDetail"></span></div>
+            </div>
           </div>
         </div>
+        <div id="edges"><div class="edge lead b"></div><div class="edge lead a"></div></div>
         <span id="measure"></span><span id="measure2"></span>
       </div>
     </div>
+    <script src="plate.js"></script>
 
     <script>
-      // ===== MATCH DATA (the workflow fills this in per match) =====
-      // Match data comes from match.js (written by the workflow for each match).
-      // ==============================================================
-
-      const V = window.VNames;
-      const M = window.MATCH;
-      const DASH = "–";
+      // Match data comes from match.js (written by the workflow for each match) - same fields as before.
+      const V = window.VNames, M = window.MATCH, DASH = "–";
       const GENERIC_BALL = (() => {
         const seam = "M0 0 C 0 -45 35 -78 70 -71", par = "M-30 -17 C -34 -60 0 -97 30 -95";
         const g = [0, 120, 240].map(a => `<g transform="rotate(${a})"><path d="${seam}"/><path d="${par}"/></g>`).join("");
         return `<div class="mono genericWrap"><svg class="generic" viewBox="-115 -115 230 230" fill="none" stroke="#6bbdff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"><circle r="100"/>${g}</svg></div>`;
       })();
 
-      // 2026-10-04: scrimmages can have more than 3 sets (up to 8 fit). 1-3 sets keep the
-      // approved layout; 4+ narrow the columns (names get the space that is left).
+      // up to 8 sets fit (scrimmages); 1-3 sets keep the wide columns
       const nSets = Math.max(1, Math.min(8, M.sets.length));
-      const ROW_L = 310;                     // row left edge (2026-10-06 tidy-up: rows 1300 px wide, centred)
-      const SETS_X = 1530, COL_W = nSets <= 3 ? 120 : Math.max(84, Math.min(120, Math.floor(400 / (nSets - 1))));
-      const COL_STEP_T = nSets <= 3 ? 0.14 : 0.28 / (nSets - 1);   // same total count-up time as 3 sets
+      const ROW_L = 310, SETS_X = 1530;
+      const COL_W = nSets <= 3 ? 120 : Math.max(84, Math.min(120, Math.floor(400 / (nSets - 1))));
+      const COL_STEP_T = nSets <= 3 ? 0.24 : 0.48 / (nSets - 1);
       const colX = i => 1385 - (nSets - 1 - i) * COL_W;
       const parts = [V.splitName(M.team1.name, M), V.splitName(M.team2.name, M)];
-      const teamCol = ["var(--team1)", "var(--opp)"];
+      const teamCol = ["#70d549", "#6bbdff"];
 
       [["iDate", M.date], ["iFormat", M.format], ["iDetail", M.detail]].forEach(([id, v]) => {
         const el = document.getElementById(id); el.textContent = v || "";
-        if (!v) { el.style.display = "none"; const d = el.previousElementSibling; if (d && d.classList.contains("dot")) d.style.display = "none"; }
+        if (!v) { el.parentElement.style.display = "none"; const d = el.parentElement.previousElementSibling; if (d && d.classList.contains("dot")) d.style.display = "none"; }
       });
 
       const heads = document.getElementById("heads");
-      for (let i = 0; i < nSets; i++) heads.insertAdjacentHTML("beforeend", `<span style="left:${colX(i)}px">SET ${i + 1}</span>`);
-      heads.insertAdjacentHTML("beforeend", `<span style="left:${SETS_X}px">SETS</span>`);
+      for (let i = 0; i < nSets; i++) heads.insertAdjacentHTML("beforeend", `<div class="mask" style="left:${colX(i)}px"><span>SET ${i + 1}</span></div>`);
+      heads.insertAdjacentHTML("beforeend", `<div class="mask" style="left:${SETS_X}px"><span>SETS</span></div>`);
 
       [["row1", M.team1, 0], ["row2", M.team2, 1]].forEach(([id, t, k]) => {
         const row = document.getElementById(id);
@@ -191,25 +163,22 @@
       const res = document.querySelector("#result span");
       res.textContent = resTxt; res.style.color = M.winner ? teamCol[M.winner - 1] : "var(--paper)";
 
-      const label = k => k === 0 ? ["EACH", "#f2f4f1"] : (k === 1 ? [V.teamWord(parts[0]), teamCol[0]] : ["OPP", teamCol[1]]);  // 2026-10-26: 0 = tie
+      const label = k => k === 0 ? ["EACH", "#f2f4f1"] : (k === 1 ? [V.teamWord(parts[0]), teamCol[0]] : ["OPP", teamCol[1]]);
       const tiles = [
         ["TOTAL POINTS", `<b class="cnt" data-to="${M.total[0]}">0</b><b>${DASH}</b><b class="cnt" data-to="${M.total[1]}">0</b>`],
         ["LONGEST RUN", `<b class="cnt" data-to="${M.run[1]}">0</b>` + (M.run[1] ? `<em style="color:${label(M.run[0])[1]}">${label(M.run[0])[0]}</em>` : "")],
         ["BIGGEST LEAD", `<b>+</b><b class="cnt" data-to="${M.lead[1]}" style="margin-left:-12px">0</b>` + (M.lead[1] ? `<em style="color:${label(M.lead[0])[1]}">${label(M.lead[0])[0]}</em>` : "")],
         ["MATCH TIME", `<b>${M.matchTime}</b>`]
       ];
-      const tw = 290, gap = 28, tx0 = (1920 - (4 * tw + 3 * gap)) / 2;
       const tilesEl = document.getElementById("tiles");
-      tiles.forEach(([lab, val], i) => tilesEl.insertAdjacentHTML("beforeend",
-        `<div class="tile" style="left:${tx0 + i * (tw + gap)}px"><div class="lab">${lab}</div><div class="val">${val}</div></div>`));
+      tiles.forEach(([lab, val]) => tilesEl.insertAdjacentHTML("beforeend",
+        `<div class="tile"><div class="lab mask"><span>${lab}</span></div><div class="val mask"><span>${val}</span></div></div>`));
 
+      // Timing contract with hf-bookends.py (unchanged): 6.9 s of motion, the workflow holds the last frame.
       window.__timelines = window.__timelines || {};
-      // The design is authored in "tl" and everything has landed by authored time 4.05 s; the
-      // registered "main" timeline plays it back at VMotion.TEMPO. Only the moving part is rendered:
-      //   page data-duration = 4.05 × TEMPO (= 6.9 s at 1.7); the workflow holds the last frame to 12 s.
       const tl = gsap.timeline({ paused: true });
-      const master = gsap.timeline({ paused: true });
-      window.__timelines["main"] = master;
+      window.__timelines["main"] = tl;
+      VM.init();
 
       Promise.all([
         document.fonts.load('800 62px "Barlow Condensed"'),
@@ -229,78 +198,72 @@
         });
         const subSize = subFit.length ? Math.min(...subFit) : 29;
         document.querySelectorAll(".names .team span").forEach(s => s.style.fontSize = subSize + "px");
-        const rw = res.getBoundingClientRect().width;
+        const rw = res.getBoundingClientRect().width / (document.documentElement.classList.contains("preview") ? 1 : 2);
         if (rw > 1300) res.style.fontSize = Math.floor(58 * 1300 / rw) + "px";
 
-        // ================= MOTION (same language as the intro) =================
-        const SNAP = VMotion.OUT, WIPE = VMotion.IN_OUT;
-        const { hideL, hideC, hideB, show, showB } = VMotion.CLIP;
-        const C = 2 * Math.PI * 43;
+        const OUT = VM.OUT, C = 2 * Math.PI * 43;
         const rows = [document.getElementById("row1"), document.getElementById("row2")];
-        // Numbers count up from 0 and decelerate onto the final value (strong ease-out),
-        // the way broadcast stat reveals do. Whole numbers only; tabular digits keep width steady.
-        function countUp(el, at) {
-          const o = { v: 0 }, to = +el.dataset.to;
-          tl.to(o, { v: to, duration: VMotion.COUNT, ease: VMotion.OUT, onUpdate: () => { el.textContent = Math.round(o.v); } }, at);
-        }
 
-        gsap.set("#panel", { xPercent: -100 });
-        gsap.set("#title span, #result span, #info", { clipPath: hideC });
-        gsap.set("#heads span", { clipPath: hideC });
-        const ROW_HIDE = "inset(0% 100% 0% 0% round 28px)", ROW_SHOW = "inset(0% 0% 0% 0% round 28px)";
-        gsap.set(".row", { clipPath: ROW_HIDE });
+        gsap.set(".mask > span", { yPercent: 108 });
+        gsap.set(".hl", { scaleX: 0 });
+        gsap.set(".ring", { attr: { "stroke-dasharray": C, "stroke-dashoffset": C } });
+        gsap.set(".mini .disc", { scale: 0.8, opacity: 0 });
         gsap.set(".row .bar", { scaleY: 0 });
-        gsap.set(".score span", { opacity: 0 });
+        gsap.set(".score span", { opacity: 0, y: 14 });
         gsap.set(".sets span", { yPercent: 100 });
         gsap.set(".vline", { scaleY: 0 });
-        gsap.set(".tile", { clipPath: "inset(100% 0% 0% 0% round 28px)" });
         gsap.set("#infoRule", { scaleX: 0 });
+        gsap.set("#info .dot", { scale: 0, rotation: 45 });
 
-        // Beat 1 — panel + header
-        tl.to("#panel", { xPercent: 0, duration: VMotion.PANEL, ease: VMotion.DRAWER }, 0)
-          .to("#title span", { clipPath: show, duration: VMotion.ENTER, ease: SNAP }, 0.45);
+        // Beat 1 - panel + title
+        VM.panelIn(tl, 0, 1.0);
+        tl.to("#title span", { yPercent: 0, duration: 0.85, ease: OUT }, 0.62);
 
-        // Beat 2 — the table
-        tl.to(".row", { clipPath: ROW_SHOW, duration: VMotion.ENTER, ease: SNAP, stagger: VMotion.STAGGER }, 0.75)
-          .to("#heads span", { clipPath: show, duration: 0.3, ease: SNAP, stagger: VMotion.STAGGER }, 0.9)
-          .to(".vline", { scaleY: 1, duration: 0.3, ease: SNAP }, 1.0);
+        // Beat 2 - the table draws itself: hairlines, badges, names, headers
+        tl.to(".hl", { scaleX: 1, duration: 0.9, ease: OUT, stagger: 0.08 }, 1.05)
+          .to(".mini .disc", { scale: 1, opacity: 1, duration: 0.8, ease: OUT, stagger: 0.1 }, 1.2)
+          .to(".ring", { attr: { "stroke-dashoffset": 0 }, duration: 0.9, ease: OUT, stagger: 0.1 }, 1.22)
+          .to(".club span", { yPercent: 0, duration: 0.75, ease: OUT, stagger: 0.1 }, 1.3)
+          .to(".team span", { yPercent: 0, duration: 0.75, ease: OUT, stagger: 0.1 }, 1.4)
+          .to("#heads span", { yPercent: 0, duration: 0.6, ease: OUT, stagger: 0.06 }, 1.5)
+          .to(".vline", { scaleY: 1, duration: 0.6, ease: OUT }, 1.7);
 
-        // Set scores appear in place at 0 and count up, column by column; the losing score dims
+        // Set scores rise in and count up column by column; the losing score dims
+        const T0 = 2.0;
         for (let i = 0; i < nSets; i++) {
-          const at = 1.3 + i * COL_STEP_T;
+          const at = T0 + i * COL_STEP_T;
           const cells = Array.from(document.querySelectorAll(".score")).filter(el => +el.dataset.col === i);
-          tl.to(cells.map(c => c.querySelector("span")), { opacity: 1, duration: 0.06, ease: "none" }, at);
-          cells.forEach(c => countUp(c.querySelector("span"), at));
-          cells.filter(c => c.dataset.win === "0").forEach(c => tl.to(c.querySelector("span"), { color: "rgba(242,244,241,0.34)", duration: 0.25, ease: VMotion.EASE }, at + VMotion.COUNT));
+          tl.to(cells.map(c => c.querySelector("span")), { opacity: 1, y: 0, duration: 0.5, ease: OUT }, at);
+          cells.forEach(c => VM.count(tl, c.querySelector("span"), at, 0.9));
+          cells.filter(c => c.dataset.win === "0").forEach(c => tl.to(c.querySelector("span"), { color: "rgba(242,244,241,0.36)", duration: 0.4, ease: VM.SOFT }, at + 0.8));
         }
-        const tEnd = 1.3 + (nSets - 1) * COL_STEP_T + VMotion.COUNT;
+        const tEnd = T0 + (nSets - 1) * COL_STEP_T + 0.9;        // 3.38 s for 3 sets
         const setsSpans = Array.from(document.querySelectorAll(".sets span"));
-        tl.to(setsSpans, { yPercent: 0, duration: 0.3, ease: SNAP }, tEnd);
+        tl.to(setsSpans, { yPercent: 0, duration: 0.6, ease: OUT, stagger: 0.06 }, tEnd - 0.1);
 
-        // Winner: colour bar, row fill and sets-won number in the team colour
+        // Winner: colour bar, soft wash across the row, sets-won number in the team colour
         if (M.winner) {
           const w = M.winner, wr = rows[w - 1];
-          tl.to(wr.querySelector(".bar"), { scaleY: 1, duration: 0.3, ease: SNAP }, tEnd + 0.2)
-            .to(wr.querySelector(".tint"), { opacity: 1, duration: 0.3, ease: VMotion.EASE }, tEnd + 0.2)
-            .to(setsSpans[w - 1], { color: w === 1 ? "#70d549" : "#6bbdff", duration: 0.2, ease: VMotion.EASE }, tEnd + 0.2)
-            .to(setsSpans[2 - w], { color: "rgba(242,244,241,0.36)", duration: 0.2, ease: VMotion.EASE }, tEnd + 0.2);
+          tl.to(wr.querySelector(".bar"), { scaleY: 1, duration: 0.6, ease: OUT }, tEnd + 0.3)
+            .fromTo(wr.querySelector(".tint"), { opacity: 0, clipPath: "inset(0% 100% 0% 0%)" }, { opacity: 1, clipPath: "inset(0% 0% 0% 0%)", duration: 0.9, ease: OUT }, tEnd + 0.3)
+            .to(setsSpans[w - 1], { color: teamCol[w - 1], duration: 0.4, ease: VM.SOFT }, tEnd + 0.35)
+            .to(setsSpans[2 - w], { color: "rgba(242,244,241,0.36)", duration: 0.4, ease: VM.SOFT }, tEnd + 0.35);
         }
 
-        // Beat 3 — result, stats, match details
-        tl.to("#result span", { clipPath: show, duration: VMotion.ENTER, ease: SNAP }, tEnd + 0.4)
-          .to(".tile", { clipPath: "inset(0% 0% 0% 0% round 28px)", duration: VMotion.ENTER, ease: SNAP, stagger: VMotion.STAGGER }, tEnd + 0.6)
-          .to("#infoRule", { scaleX: 1, duration: VMotion.ENTER, ease: SNAP }, tEnd + 0.8)
-          .to("#info", { clipPath: show, duration: VMotion.ENTER, ease: SNAP }, tEnd + 0.85);
-
+        // Beat 3 - result, stats, match details
+        const b3 = tEnd + 0.7;
+        tl.to("#result span", { yPercent: 0, duration: 0.85, ease: OUT }, b3)
+          .to(".tile .lab span", { yPercent: 0, duration: 0.7, ease: OUT, stagger: 0.07 }, b3 + 0.35)
+          .to(".tile .val > span", { yPercent: 0, duration: 0.8, ease: OUT, stagger: 0.07 }, b3 + 0.42)
+          .to(".tile", { "--sy": 1, duration: 0.6, ease: OUT, stagger: 0.07 }, b3 + 0.4)
+          .to("#infoRule", { scaleX: 1, duration: 0.8, ease: OUT }, b3 + 0.8)
+          .to("#info .mask > span", { yPercent: 0, duration: 0.7, ease: OUT, stagger: 0.08 }, b3 + 0.9)
+          .to("#info .dot", { scale: 1, duration: 0.4, ease: OUT, stagger: 0.08 }, b3 + 1.0);
         document.querySelectorAll(".tile").forEach((tile, i) =>
-          tile.querySelectorAll(".cnt").forEach(el => countUp(el, tEnd + 0.6 + i * VMotion.STAGGER)));
+          tile.querySelectorAll(".cnt").forEach(el => VM.count(tl, el, b3 + 0.42 + i * 0.07, 1.0)));
 
-        // Then it holds still; only these 6 s are rendered and the workflow holds the
-        // last frame for the rest of the 12 s (the video ends on this screen).
-        tl.set("#panel", { xPercent: 0 }, 4.04);
-
-        master.add(tl.tweenFromTo(0, 4.05, { duration: 4.05 * VMotion.TEMPO, ease: "none" }));
-        master.seek(0);
+        tl.to({}, { duration: 0.01 }, 6.89);
+        tl.seek(0); window.__ready = true; window.__lastMove = b3 + 1.9;
         if (window.__hfForceTimelineRebind) window.__hfForceTimelineRebind();
       }
     </script>

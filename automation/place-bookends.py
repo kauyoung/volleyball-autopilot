@@ -1,5 +1,5 @@
 """
-Volleyball Autopilot — put the intro/summary overlay clips into the match timeline (2026-09-28).
+Home Team — put the intro/summary overlay clips into the match timeline (2026-09-28).
 
 exec'd inside Resolve's scripting with `resolve` defined:
     exec(open(r"C:\\Users\\YOURNAME\\scoreboard-pipeline\\place-bookends.py", encoding="utf-8").read(),

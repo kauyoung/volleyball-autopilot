@@ -37,7 +37,7 @@
 -- Keep one folder per match inside CLIP_ROOT, named by date:
 --
 --   D:\Volleyball Matches\
---       2026-08-09 vs Durham Attack\
+--       2026-08-09 vs Westfield Talons\
 --           DJI_0001.MP4
 --           DJI_0002.MP4
 --       2026-08-16 vs Riverside\

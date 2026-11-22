@@ -1,5 +1,5 @@
 """
-Volleyball Autopilot — prepare the YouTube upload while the export is still rendering.
+Home Team — prepare the YouTube upload while the export is still rendering.
 (2026-09-27, the owner approved "#5: make the thumbnail while the video exports")
 
 Everything here reads the RAW camera files and the scorekeeper data, never the
@@ -101,7 +101,7 @@ def cmd_text():
     # The result stays in the description.
     # 2026-10-25: our own channel - the title starts with the opponent ("vs X"); the
     # description still says "Home Team 14U vs X"
-    # 2026-10-26 (the owner, after the MYVB tournament): the match folder's event.txt (event + stage,
+    # 2026-10-26 (after the MYVB tournament): the match folder's event.txt (event + stage,
     # e.g. "MYVB 15U Tier 1 \u00b7 Pool Play") goes into the title and on top of the description;
     # an optional description-note.txt (e.g. a camera-gap note) goes on the line after it.
     def _opt(name):
@@ -114,7 +114,7 @@ def cmd_text():
         event = ""
     note = _opt("description-note.txt")
     # 2026-11-02: the scoreboard keeps the short name; the YouTube title/description get the
-    # full name from the match folder's youtube-name.txt (e.g. "Niagara Rapids 15U"), or the short name
+    # full name from the match folder's youtube-name.txt (e.g. "Bayside Rapids 15U"), or the short name
     # + youtube-age.txt (e.g. "15U") when the name doesn't already end with it
     full = _opt("youtube-name.txt")
     age = _opt("youtube-age.txt")
@@ -124,8 +124,7 @@ def cmd_text():
         t2 = f"{t2} {age}"
     title = f'vs {t2}{kind}' + (f' | {event}' if event else '') + f' | {short}'
     if len(title) > 100:                       # YouTube's limit: drop the stage first, then the event
-        ev_short = event.split(" \u00b7 ")[0] if event else ""
-    title = f'vs {t2}{kind} | {ev_short} | {short}' if event else title
+        title = f'vs {t2}{kind} | {event.split(" \u00b7 ")[0]} | {short}' if event else title
     if len(title) > 100:
         title = f'vs {t2}{kind} | {short}'
     team1_full = "Home Team 14U" if t1 == "Home Team" else t1

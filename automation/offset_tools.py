@@ -1,5 +1,5 @@
 """
-offset_tools.py — camera-start offset helpers (2026-10-14).
+offset_tools.py — camera-start offset helpers (2026-10-14, the owner approved).
 
 "offset" = seconds the camera was already recording before START was tapped
 (positive = camera started early). apply-match.lua shifts every score by it

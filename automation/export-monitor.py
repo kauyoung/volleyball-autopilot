@@ -1,5 +1,5 @@
 """
-Volleyball Autopilot — export monitor (2026-10-14). Watches a Resolve export and logs, once a minute,
+Home Team — export monitor (2026-10-14). Watches a Resolve export and logs, once a minute,
 how fast it is going and what the PC is doing, so a slow export can be explained.
 
     python export-monitor.py <folder the render writes into> [<final .mp4>]
@@ -108,6 +108,57 @@ def main():
             if done or idle > 900:
                 break
     summarize(rows, os.path.join(wf, "export-monitor-summary.txt"))
+    try:
+        history(rows, final, t0, last_grow)
+    except Exception as e:
+        open(os.path.join(wf, "export-monitor-error.txt"), "a").write("history: " + repr(e) + "\n")
+
+
+HISTORY = r"C:\Users\YOURNAME\scoreboard-pipeline\_perf\export-history.csv"
+FFPROBE = r"C:\ffmpeg\bin\ffprobe.exe"
+
+
+def history(rows, final, t0, t_end, path=HISTORY):
+    """2026-11-09 (review finding 9, the open row 10 "measure"): one row per export in _perf\export-history.csv -
+    real speed (render time / video length), Resolve's uptime and memory, and what else kept the PC busy (Nov 8:
+    VLC playing the raw card footage slowed the export to 0.69x)."""
+    vid_s = None
+    if final and os.path.exists(final):
+        r = subprocess.run([FFPROBE, "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", final],
+                           capture_output=True, text=True, timeout=60, creationflags=NOWIN)
+        try: vid_s = float(r.stdout.strip())
+        except ValueError: pass
+    render_s = max(0.0, t_end - t0)
+    up_h = None
+    if psutil:
+        ts = [p.info["create_time"] for p in psutil.process_iter(["name", "create_time"])
+              if (p.info["name"] or "").lower() == "resolve.exe" and p.info.get("create_time")]
+        if ts:
+            up_h = round((t0 - min(ts)) / 3600, 1)
+    num = lambda r, k: float(r.get(k) or 0) if str(r.get(k) or "").replace(".", "", 1).isdigit() else 0.0
+    busy = {}
+    for r in rows:
+        for part in (r.get("top_processes") or "").split(" | "):
+            if part and not part.lower().startswith("resolve.exe"):
+                nm = part.rsplit(" ", 1)[0]; busy[nm] = busy.get(nm, 0) + 1
+    others = ", ".join(f"{k} {n} min" for k, n in sorted(busy.items(), key=lambda x: -x[1])[:3] if n >= 3)
+    avg = lambda k: round(sum(num(r, k) for r in rows) / len(rows)) if rows else ""
+    row = {"date": time.strftime("%Y-%m-%d %H:%M", time.localtime(t0)), "file": os.path.basename(final or "?"),
+           "video_min": round(vid_s / 60, 1) if vid_s else "", "render_min": round(render_s / 60, 1),
+           "speed_x": round(render_s / vid_s, 2) if vid_s else "",
+           "size_GB": round(os.path.getsize(final) / 1e9, 1) if final and os.path.exists(final) else "",
+           "enc%": avg("enc%"), "dec%": avg("dec%"), "gpu%": avg("gpu%"),
+           "resolve_up_h": up_h if up_h is not None else "",
+           "resolve_GB_start": rows[0].get("resolve_GB") if rows else "",
+           "resolve_GB_peak": max((num(r, "resolve_GB") for r in rows), default=""),
+           "ram%_peak": max((num(r, "ram%") for r in rows), default=""), "also_busy": others}
+    new = not os.path.exists(path)
+    with open(path, "a", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=list(row.keys()))
+        if new:
+            w.writeheader()
+        w.writerow(row)
+    return row
 
 
 def summarize(rows, path):
