@@ -12,7 +12,7 @@ Start from team-config.example.json (copy it to team-config.json and fill it in)
 questions: the Volleyball Autopilot skill (skill/volleyball-autopilot/SKILL.md) runs this for you.
 Prints one "SETUP OK ..." / "SETUP NEEDS ..." summary; every check line starts with OK / MISSING / NOTE.
 """
-import argparse, json, ntpath, os, re, shutil, subprocess, sys
+import argparse, json, ntpath, os, re, secrets, shutil, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TEXT = (".py", ".lua", ".js", ".json", ".html", ".css", ".txt", ".md", ".gs")
@@ -159,6 +159,47 @@ def logo(c, work):
         return f"MISSING team logo could not be prepared ({e!r:.80}) - needs Pillow"
 
 
+def scorekeeper(c, work):
+    """2026-11-22: the phone app's Google Drive upload. Makes the secret key ONCE (kept in the work folder's
+    team-config.json, so re-running setup never breaks a deployed script), writes the Apps Script with the key and
+    folder filled in, and a ready-to-host website folder (index.html = the scorekeeper with the key + the script's
+    web-app URL once it is in the config)."""
+    src = os.path.join(HERE, "..", "scorekeeper")
+    if not os.path.isdir(src):
+        return ["NOTE scorekeeper folder not found next to automation - skipped the phone app files"]
+    key = (c.get("drive_upload_key") or "").strip()
+    if not key:
+        try:
+            key = json.load(open(os.path.join(work, "team-config.json"), encoding="utf-8")).get("drive_upload_key") or ""
+        except Exception:
+            key = ""
+    key = key or secrets.token_urlsafe(24)
+    c["drive_upload_key"] = key
+    url = (c.get("drive_upload_url") or "").strip()
+    gs = open(os.path.join(src, "scorekeeper-drive-upload.gs"), encoding="utf-8").read()
+    gs = gs.replace("const SECRET_KEY  = 'CHANGE-ME';", "const SECRET_KEY  = " + json.dumps(key).replace('"', "'") + ";")
+    open(os.path.join(work, "scorekeeper-drive-upload.gs"), "w", encoding="utf-8", newline="\n").write(gs)
+    site = os.path.join(work, "scorekeeper-site")
+    os.makedirs(site, exist_ok=True)
+    for f in os.listdir(src):
+        if f.endswith(".gs"):
+            continue
+        sp = os.path.join(src, f)
+        if f == "volleyball-scorekeeper.html":
+            h = open(sp, encoding="utf-8").read()
+            h = h.replace("const DRIVE_KEY = 'CHANGE-ME';", "const DRIVE_KEY = " + json.dumps(key).replace('"', "'") + ";")
+            if url:
+                h = h.replace("const DRIVE_URL = '';", "const DRIVE_URL = " + json.dumps(url).replace('"', "'") + ";")
+            open(os.path.join(site, "index.html"), "w", encoding="utf-8", newline="\n").write(h)
+        elif os.path.isfile(sp):
+            shutil.copy2(sp, os.path.join(site, f))
+    if url:
+        return [f"OK scorekeeper website folder ready to host: {site} (sends to {url[:60]}...)"]
+    return [f"NOTE scorekeeper: paste {os.path.join(work, 'scorekeeper-drive-upload.gs')} into script.google.com, deploy it as a "
+            "web app, put its /exec URL in the config as drive_upload_url and run setup again; then host the "
+            f"{site} folder (Netlify Drop or GitHub Pages)"]
+
+
 def checks(c, py, ffb, work):
     L = []
     def ok(cond, good, bad):
@@ -235,6 +276,7 @@ def main():
             p = os.path.join(work, name)
             if not os.path.exists(p):
                 open(p, "w", encoding="utf-8").write(body)
+        sk = scorekeeper(c, work)
         json.dump(c, open(os.path.join(work, "team-config.json"), "w", encoding="utf-8"), indent=1, ensure_ascii=False)
         if os.name == "nt":
             try:
@@ -252,6 +294,7 @@ def main():
         lines.append(f"OK {n} files written to {work} for '{c['team_name']} {c['age_group']}'")
         lines.append(("MISSING placeholders still in: " + ", ".join(left[:8])) if left else "OK no placeholders left")
         lines.append(logo(c, work))
+        lines += sk
     lines += checks(c, py, ffb, work)
     miss = [l for l in lines if l.startswith("MISSING")]
     print("\n".join(lines))

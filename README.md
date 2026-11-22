@@ -248,6 +248,10 @@ to find every line that needs a personal value.
 <details>
 <summary>Send the match file from the phone to Google Drive automatically</summary>
 
+With `automation/team-setup.py` most of this is done for you: it writes the script with a fresh secret key
+(`<work folder>\scorekeeper-drive-upload.gs`) and a ready-to-host copy of the app (`scorekeeper-site\`), and the
+Claude run sheet walks you through every click. By hand:
+
 1. Create a new project at script.google.com, paste in
    `scorekeeper/scorekeeper-drive-upload.gs`, and change `SECRET_KEY` to a
    long random string (and `FOLDER_NAME` if you like).

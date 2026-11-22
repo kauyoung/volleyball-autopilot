@@ -33,10 +33,27 @@ never edited: `team-setup.py` writes the working copy into W. Speak plainly; the
    folder "Volleyball Matches – Scorekeeper"; YouTube: a Google Cloud project with "YouTube Data API v3", OAuth client "Desktop app",
    consent screen External + In production, its JSON saved as `W\_youtube-api\client_secret.json`, then
    `PY yt-upload.py auth --channel main` - THEY sign in in the browser and pick their channel (never ask for or type passwords).
-6. Scorekeeper: the phone app is `scorekeeper/volleyball-scorekeeper.html` in the repo. For uploads to their Drive they deploy their own
-   copy (Netlify or GitHub Pages) with their own Apps Script (`scorekeeper-drive-upload.gs`) and set its URL + key in the page; until then
-   they can share the match file to Drive from the phone. Explain the record-then-START habit: press record on the camera, then tap START
-   in the app within 10 s.
+6. Phone scorekeeper -> their Google Drive (walk them through it, one step per message; they do the clicking, you never
+   sign in for them). `team-setup.py` already made `W\scorekeeper-drive-upload.gs` (their secret key + folder name filled in)
+   and `W\scorekeeper-site\` (the app, ready to host).
+   a. Google Drive for desktop installed and signed in on the PC; in My Drive, a folder named exactly
+      `Volleyball Matches – Scorekeeper` (the script also creates it on the first upload). `--check` confirms the PC sees it.
+   b. script.google.com -> New project -> name it "Volleyball scorekeeper upload" -> delete the sample code -> paste the whole of
+      `W\scorekeeper-drive-upload.gs` (open it for them in Notepad, or show it to copy) -> Save.
+   c. Deploy -> New deployment -> gear icon -> Web app. Execute as: **Me**. Who has access: **Anyone** (the app on any phone can
+      send; the script only accepts real match files, never replaces one and takes at most 20 a day). Deploy -> Authorize access
+      -> pick their Google account -> "Google hasn't verified this app" is expected for their own script: Advanced -> Go to ...
+      (unsafe) -> Allow. Copy the Web app URL (ends in `/exec`) and paste it to you.
+   d. Put it in team-config.json as `drive_upload_url` and re-run `team-setup.py` - `scorekeeper-site\index.html` now sends there.
+   e. Host the app: app.netlify.com/drop (free account) -> drag the `scorekeeper-site` folder onto the page -> they get an address
+      like `https://<name>.netlify.app`; or GitHub Pages if they prefer. Re-run setup + re-drop the folder after any change.
+   f. Phone test: open the address in Safari/Chrome -> Share -> Add to Home Screen. Score a 2-point test match (any names) and tap
+      FINISH MATCH: the app says it uploaded, and the file shows up in `<My Drive>\Volleyball Matches – Scorekeeper` on the PC
+      within a minute (you check with device tools). Ask them to delete the test file themselves.
+   g. If the upload fails: wrong/old URL (redeploy -> Manage deployments -> edit -> New version keeps the same URL), access not
+      "Anyone", or the key changed (always re-run setup, never edit the key by hand). Without the upload the app still works:
+      they can share the match file to Drive from the phone.
+   Then the record-then-START habit: press record on the camera, then tap START in the app within 10 s.
 7. `SETUP OK` -> practice run: `PY make-zz-fixture.py "<a 5-min clip of theirs>"`, then `launch([PY, W+r"\zz-test.py"])`; the last line of
    `zz-test-status.txt` must be `ZZ TEST PASSED`. Then tell them they're ready, and how a match day goes (below) in five lines.
 Re-run `team-setup.py` whenever they change team details, colours, the playlist (new season) or update the repo (`git pull`).
